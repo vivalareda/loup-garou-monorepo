@@ -1,0 +1,3939 @@
+
+> server@1.0.0 dev /Users/reda/github/loup-garou/apps/server
+> tsx --watch src/index.ts
+
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'sound-play' imported from /Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:255:9)
+    at packageResolve (node:internal/modules/esm/resolve:767:81)
+    at moduleResolve (node:internal/modules/esm/resolve:853:18)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///Users/reda/github/loup-garou/node_modules/tsx/dist/esm/index.mjs?1755510201313:2:3811)
+    at resolveDirectory (file:///Users/reda/github/loup-garou/node_modules/tsx/dist/esm/index.mjs?1755510201313:2:4310)
+    at resolveTsPaths (file:///Users/reda/github/loup-garou/node_modules/tsx/dist/esm/index.mjs?1755510201313:2:5051)
+    at resolve (file:///Users/reda/github/loup-garou/node_modules/tsx/dist/esm/index.mjs?1755510201313:2:5428)
+    at nextResolve (node:internal/modules/esm/hooks:748:28) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'sound-play' imported from /Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:255:9)
+    at packageResolve (node:internal/modules/esm/resolve:767:81)
+    at moduleResolve (node:internal/modules/esm/resolve:853:18)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///Users/reda/github/loup-garou/node_modules/tsx/dist/esm/index.mjs?1755510212036:2:3811)
+    at resolveDirectory (file:///Users/reda/github/loup-garou/node_modules/tsx/dist/esm/index.mjs?1755510212036:2:4310)
+    at resolveTsPaths (file:///Users/reda/github/loup-garou/node_modules/tsx/dist/esm/index.mjs?1755510212036:2:5051)
+    at resolve (file:///Users/reda/github/loup-garou/node_modules/tsx/dist/esm/index.mjs?1755510212036:2:5428)
+    at nextResolve (node:internal/modules/esm/hooks:748:28) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:40:13: ERROR: Expected ":" but found ","
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restRestarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+RestartingRestarting 'src/
+node:inte
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restRestartingRestarting 'src/
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:inte
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:93:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.jFailed runFailed running 'src/index.ts'. Waiting for file changes before restRestartingRestarting 'src/
+node:inte
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:92:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.jFailed runFailed running 'src/index.ts'. Waiting for file changes before restRestartingRestarting 'src/
+node:inte
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:92:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restRestarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:90:2: ERROR: Expected identifier but found "}"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+RestartingRestarting 'src/Werewolf Gnode:events:485
+      throw er; Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:12
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:12:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:12
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:12:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before res/Users/redaRestarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:13:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:17
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:17:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:17
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:17:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before res/Users/redaRestarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:17
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:17:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:17
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:17:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:17
+    this.deathManager = new DeathManager();
+                            ^
+
+
+ReferenceError: DeathManager is not defined
+    at new Game (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:17:29)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:6:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/core/game.ts:5
+imort;
+^
+
+
+ReferenceError: imort is not defined
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/core/game.ts:5:1)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:eventnode:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.jFailed runFailed running 'src/index.ts'. Waiting for file changes before restRestartingRestarting 'src/Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:44
+      action: cupidAction.bind(this),
+              ^
+
+
+ReferenceError: cupidAction is not defined
+    at SegmentsManager.initializeSegments (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:44:15)
+    at new SegmentsManager (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:33:10)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:7:25)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:37
+    this.segments.push(options);
+                  ^
+
+
+TypeError: Cannot read properties of undefined (reading 'push')
+    at SegmentsManager.initializeSegment (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:37:19)
+    at SegmentsManager.initializeSegments (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:49:10)
+    at new SegmentsManager (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:33:10)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:7:25)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:37
+    this.segments.set(options.type, options);
+                  ^
+
+
+TypeError: Cannot read properties of undefined (reading 'set')
+    at SegmentsManager.initializeSegment (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:37:19)
+    at SegmentsManager.initializeSegments (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:49:10)
+    at new SegmentsManager (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:33:10)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:7:25)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Player disconnected: lmQwM-7_079_pVMkAAAB
+Player disconnected: cQvf8TnZWfjtnO1tAAAD
+Playing audio: ./assets/Intro.mp3
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Player disconnected: qEe_GYoKnSWPeYOVAAAD
+Player disconnected: NJ6fasqk4k1g-xglAAAB
+Playing audio: ./assets/Intro.mp3
+Playing audio: ./assets/Cupidon/Cupidon-1.mp3
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Playing audio: ./assets/Cupidon/Cupidon-1.mp3
+Cupid action triggered
+Player disconnected: ZyGhDXHdhdAQAqG1AAAC
+Player disconnected: 8FmVCXgUGWULuMG8AAAD
+Player disconnected: QjX6_bUzG1yhEoOvAAAR
+Player disconnected: CBA_4aVmDoc1SjmlAAAQ
+Player disconnected: 8wy0rWrBWiiBJLAGAAAN
+Player disconnected: fFRExzkVW4kMBWyAAAAL
+Player disconnected: 4qiDO2Tpp1Cnc-rBAAAJ
+Player disconnected: lmj-zA_tPd0vB1S7AAAH
+Player disconnected: BiT2vIEI3HNRzjsAAAAF
+Playing audio: ./assets/Cupidon/Cupidon-1.mp3
+Cupid action triggered
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Player disconnected: sVsFB7a7ArH14QCaAAAB
+Player joined: reda (ID: XNTdyF7Epc00I2u3AAAD), player count: [object Map]
+Player joined: p1 (ID: eECUbaUQxl_Mut1CAAAF), player count: [object Map]
+Player joined: p2 (ID: ftcv3Odaf1gnILgRAAAH), player count: [object Map]
+Player joined: player1 (ID: ByCZc_mIltrvZYjVAAAJ), player count: [object Map]
+Player joined: player2 (ID: N2MTjWriD4v63gN1AAAL), player count: [object Map]
+Player joined: player5 (ID: DynviLf8koFlYIM_AAAN), player count: [object Map]
+Playing audio: ./assets/Cupidon/Cupidon-1.mp3
+Cupid action triggered
+Player disconnected: eECUbaUQxl_Mut1CAAAF
+Player disconnected: DynviLf8koFlYIM_AAAN
+Player disconnected: N2MTjWriD4v63gN1AAAL
+Player disconnected: ByCZc_mIltrvZYjVAAAJ
+Player disconnected: ftcv3Odaf1gnILgRAAAH
+Player disconnected: XNTdyF7Epc00I2u3AAAD
+Player joined: reda (ID: QmlOGPuFOcRBjWfaAAAP), player count: [object Map]
+Playing audio: ./assets/Cupidon/Cupidon-1.mp3
+Cupid action triggered
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Player disconnected: A9twxebT_pACzMkXAAAN
+Player disconnected: Lm1kfMcWSp2sPbtdAAAF
+Player disconnected: s6sSqR8-Ov5CW9HvAAAH
+Player disconnected: ntgB2sG7dfepZI_yAAAJ
+Player disconnected: fN5D4I9MTfqokwDsAAAL
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:28
+    this.segments.set(segment, options);
+                  ^
+
+
+TypeError: this.segments.set is not a function
+    at SegmentsManager.initializeSegment (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:28:19)
+    at SegmentsManager.initializeSegments (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:39:10)
+    at new SegmentsManager (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:24:10)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:7:25)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:28
+    this.segments.set(segment, options);
+                  ^
+
+
+TypeError: this.segments.set is not a function
+    at SegmentsManager.initializeSegment (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:28:19)
+    at SegmentsManager.initializeSegments (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:39:10)
+    at new SegmentsManager (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:24:10)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:7:25)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:41:34: ERROR: Expected ")" but found ":"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:9
+  position: number,
+            ^
+
+
+ReferenceError: number is not defined
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:9:13)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:7:0: ERROR: Expected "from" but found "type"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:42
+    this.segments.push(segment);
+                  ^
+
+
+TypeError: Cannot read properties of undefined (reading 'push')
+    at SegmentsManager.initializeSegment (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:42:19)
+    at SegmentsManager.initializeSegments (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:54:10)
+    at new SegmentsManager (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:38:10)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:7:25)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:28
+    this.segments.push(segment);
+                  ^
+
+
+TypeError: Cannot read properties of undefined (reading 'push')
+    at SegmentsManager.initializeSegment (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:28:19)
+    at SegmentsManager.initializeSegments (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:40:10)
+    at new SegmentsManager (/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:24:10)
+    at <anonymous> (/Users/reda/github/loup-garou/apps/server/src/index.ts:7:25)
+    at ModuleJob.run (node:internal/modules/esm/module_job:358:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 2 errors:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:13:6: ERROR: The constant "test" must be initialized
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:16:2: ERROR: Unexpected ":"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:15:20: ERROR: Expected "}" but found ";"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:19:0: ERROR: Expected identifier but found "const"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { type Segment, SegmentMap, type SegmentType } from '@repo/types';
+                       ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SegmentMap'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { type Segment, SegmentMap, type SegmentType } from '@repo/types';
+                       ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SegmentMap'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { type Segment, SegmentMap, type SegmentType } from '@repo/types';
+                       ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SegmentMap'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { type Segment, SegmentMap, type SegmentType } from '@repo/types';
+                       ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SegmentMap'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { type Segment, SegmentMap, type SegmentType } from '@repo/types';
+                       ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SegmentMap'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { type Segment, SegmentMap, type SegmentType } from '@repo/types';
+                       ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SegmentMap'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { type Segment, SegmentMap, type SegmentType } from '@repo/types';
+                       ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SegmentMap'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { type Segment, SegmentMap, type SegmentType } from '@repo/types';
+                       ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SegmentMap'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { type Segment, type SegmentType, segments } from '@repo/types';
+                                         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'segments'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+Werewolf Game Server running on port 3000
+Restarting 'src/index.ts'
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:3
+  SEGMENT_INDEX,
+  ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENT_INDEX'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:4
+  SEGMENTS,
+  ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:4
+  SEGMENTS,
+  ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment, type SegmentType } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment, type SegmentType } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment, type SegmentType } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment, type SegmentType } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:47:4: ERROR: Expected identifier but found ")"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:39:4: ERROR: Expected identifier but found ")"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:47:4: ERROR: Expected identifier but found ")"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:48:4: ERROR: Expected identifier but found ")"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:48:4: ERROR: Expected identifier but found ")"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:48:4: ERROR: Expected identifier but found ")"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:44:10: ERROR: Expected ")" but found ";"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:48:4: ERROR: Expected identifier but found ")"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment, type SegmentType } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment, type SegmentType } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:42:8: ERROR: Unexpected ")"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [TransformError]: Transform failed with 1 error:
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:42:8: ERROR: Unexpected ")"
+    at failureErrorWithLog (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/reda/github/loup-garou/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:507:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment, type SegmentType } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment, type SegmentType } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment, type SegmentType } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment, type SegmentType } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+ule_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...
+Restarting 'src/index.ts'
+/Users/reda/github/loup-garou/apps/server/src/segments/segments-manager.ts:2
+import { SEGMENTS, type Segment } from '@repo/types';
+         ^
+
+SyntaxError: The requested module '@repo/types' does not provide an export named 'SEGMENTS'
+    at #_instantiate (node:internal/modules/esm/module_job:248:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:350:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+
+Node.js v24.2.0
+Failed running 'src/index.ts'. Waiting for file changes before restarting...

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.2.0/schema.json",
+  "extends": ["ultracite"],
+  "formatter": {
+    "enabled": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/tsconfig.json",
+      "!app/**/dist/",
+      "!apps/**/lib/android-navigation-bar.tsx",
+      "!apps/mobile/global.css",
+      "!apps/mobile/metro.config.js",
+      "!apps/mobile/babel.config.js"
+    ]
+  },
+  "linter": {
+    "rules": {
+      "nursery": {
+        "useSortedClasses": "off"
+      },
+      "suspicious": {
+        "noConsole": "off"
+      },
+      "style": {
+        "noMagicNumbers": "off"
+      }
+    }
+  }
+}

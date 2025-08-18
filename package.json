@@ -7,15 +7,24 @@
   ],
   "scripts": {
     "dev": "turbo dev",
+    "lint": "turbo run lint",
     "build": "turbo build",
     "check-types": "turbo check-types",
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev"
   },
-  "dependencies": {},
   "devDependencies": {
-    "turbo": "^2.5.4"
+    "@biomejs/biome": "2.2.0",
+    "lint-staged": "^16.1.5",
+    "turbo": "^2.5.4",
+    "typescript": "5.8.3",
+    "ultracite": "5.1.8"
   },
-  "packageManager": "pnpm@10.14.0"
+  "packageManager": "pnpm@10.14.0",
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
+      "npx ultracite format"
+    ]
+  }
 }

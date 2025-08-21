@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { SEGMENTS, type Segment } from '@repo/types';
+import type { Segment } from '@repo/types';
 import sound from 'sound-play';
 import type { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
@@ -11,7 +11,6 @@ export class SegmentsManager {
   gameActions: GameActions;
   currentSegment: number;
   segments: Segment[] = [];
-  firstNightSegments: Segment[] = [];
 
   constructor(game: Game, io: SocketType) {
     this.io = io;
@@ -30,26 +29,32 @@ export class SegmentsManager {
       type: 'CUPID',
       audioFiles: ['Cupidon/Cupidon-1', 'Cupidon/Cupidon-2'],
       action: () => this.gameActions.cupidAction(),
-      onFirstNightOnly: true,
       skip: false,
     };
 
     const loversSegment: Segment = {
       type: 'LOVERS',
-      audioFiles: ['Lovers/Lover-1-fixed', 'Lovers/Lover-2', 'Lovers/Lover-3'],
+      audioFiles: ['Lovers/combined_lover', 'Lovers/Lover-3'],
       action: () => this.gameActions.loversAction(),
-      onFirstNightOnly: true,
+      skip: false,
+    };
+
+    const werewolfSegment: Segment = {
+      type: 'WEREWOLF',
+      audioFiles: ['Werewolf/Werewolf-1', 'Werewolf/Werewolf-2'],
+      action: () => this.gameActions.werewolfAction(),
       skip: false,
     };
 
     this.initializeSegment(cupidSegment);
     this.initializeSegment(loversSegment);
+    this.initializeSegment(werewolfSegment);
   }
 
-  firstNightSegment() {
+  startGame() {
     //TODO: add intro back audio (need to put async in front of firstNightSegment)
     // await this.playAudio('Intro');
-    this.playSement();
+    this.playSegment();
   }
 
   findValidSegment() {
@@ -72,18 +77,25 @@ export class SegmentsManager {
     }
   }
 
+  isFirstNightSegment(type: string) {
+    return type === 'CUPID' || type === 'LOVERS';
+  }
+
+  markFirstNightSegment(segment: Segment) {
+    if (!this.isFirstNightSegment(segment.type)) {
+      return;
+    }
+    segment.skip = true;
+  }
+
   async playSegment() {
     const segment = this.segments[this.currentSegment];
 
-    if (segment.type === SEGMENTS[1]) {
-      await this.playAudio(segment.audioFiles[0]);
-      segment.action();
-      await this.playAudio(segment.audioFiles[1]);
-      return;
-    }
-
-    if (segment.type === SEGMENTS[3]) {
-      segment.action();
+    if (segment.type === 'LOVERS') {
+      this.playAudio(segment.audioFiles[0]);
+      setTimeout(() => {
+        segment.action();
+      }, 5000);
       return;
     }
 
@@ -93,27 +105,25 @@ export class SegmentsManager {
 
   async finishSegment() {
     const segment = this.segments[this.currentSegment];
+    console.log(
+      `current segment: ${segment.type} and length is ${segment.audioFiles.length}`
+    );
 
     if (!segment.skip && segment.audioFiles.length > 1) {
-      await this.playAudio(segment.audioFiles[-1]);
+      const audioFile = segment.audioFiles.at(-1);
+
+      if (!audioFile) {
+        throw new Error(`No audio file found for segment: ${segment.type}`);
+      }
+
+      await this.playAudio(audioFile);
     }
 
+    this.markFirstNightSegment(segment);
     this.currentSegment++;
-
     this.findValidSegment();
 
     await this.playSegment();
-  }
-
-  async playSement() {
-    const segment = this.segments[this.currentSegment];
-
-    if (!segment) {
-      throw new Error(`Segment not found: ${this.currentSegment}`);
-    }
-
-    await this.playAudio(segment.audioFiles[0]);
-    segment.action();
   }
 
   async playAudio(file: string) {

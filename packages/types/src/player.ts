@@ -8,6 +8,12 @@ export type GamePlayer = {
   role: Role;
 };
 
+export type PlayerGetters = {
+  [K in keyof GamePlayer as `get${Capitalize<K>}`]: () => GamePlayer[K];
+};
+
+export type PlayerListItem = Pick<Player, 'name' | 'sid'>;
+
 export type WaitingRoomPlayer = Pick<GamePlayer, 'name' | 'sid'> & {
   type: 'waiting';
 };

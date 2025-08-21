@@ -1,5 +1,6 @@
 import { getRoleDescription, isGamePlayer } from '@repo/types';
-import { useEffect, useRef, useState } from 'react';
+import LottieView from 'lottie-react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -20,12 +21,23 @@ const CARD_HEIGHT = CARD_WIDTH * 1.4;
 
 export default function GameInterface() {
   const { player } = usePlayerStore();
-  const { playersList } = usePlayersList();
-  const { showPickModal } = useGameEvents();
+  const { playersList, villagersList } = usePlayersList();
+  const { showModal, showLoversAlert } = useGameEvents();
   const { openModal } = useModalStore();
   const [isRevealed, setIsRevealed] = useState(false);
   const flipAnimation = useRef(new Animated.Value(0)).current;
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const getPlayerSid = useCallback(
+    (name: string) => {
+      const foundPlayer = playersList.find((p) => p.name === name);
+      if (!foundPlayer) {
+        throw new Error(`Player with name ${name} not found in players list`);
+      }
+      return foundPlayer.sid;
+    },
+    [playersList]
+  );
 
   useEffect(() => {
     return () => {
@@ -40,18 +52,61 @@ export default function GameInterface() {
       return;
     }
 
-    if (showPickModal && player.role === 'CUPID') {
+    if (showModal && player.role === 'CUPID') {
       openModal({
         type: 'selection',
         title: 'Choisissez les amoureux',
-        data: playersList.filter((p) => p !== player.name),
+        data: playersList.map((p) => p.name),
         selectionCount: 2,
         onConfirm: (selectedPlayers: string[]) => {
-          socket.emit('cupid:lovers-pick', selectedPlayers);
+          console.log('Selected lovers:', selectedPlayers);
+          const loversSid = selectedPlayers.map((name) => {
+            return getPlayerSid(name);
+          });
+          socket.emit('cupid:lovers-pick', loversSid);
         },
       });
     }
-  }, [showPickModal, openModal, player, playersList]);
+
+    if (showModal && player.role === 'CUPID') {
+      openModal({
+        type: 'selection',
+        title: 'Qui sera votre victime'
+        data: villagersList,
+        selectionCount: 
+      });
+    }
+
+    if (showLoversAlert) {
+      openModal({
+        type: 'confirm',
+        title: 'Vous êtes amoureux !',
+        data: (
+          <LottieView
+            autoPlay
+            loop
+            source={require('../../assets/cupid-animation.json')}
+            style={{
+              width: '100%',
+              height: '100%',
+              alignSelf: 'center',
+            }}
+          />
+        ),
+        buttonDelay: 8000,
+        onConfirm: () => {
+          socket.emit('alert:lover-closed-alert');
+        },
+      });
+    }
+  }, [
+    showModal,
+    openModal,
+    playersList,
+    showLoversAlert,
+    player,
+    getPlayerSid,
+  ]);
 
   if (!player) {
     return (

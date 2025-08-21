@@ -9,7 +9,10 @@ type BatchAddPlayersModalProps = {
   onClose: () => void;
 };
 
-export function BatchAddPlayersModal({ isOpen, onClose }: BatchAddPlayersModalProps) {
+export function BatchAddPlayersModal({
+  isOpen,
+  onClose,
+}: BatchAddPlayersModalProps) {
   const [playerCount, setPlayerCount] = useState('');
   const [namePrefix, setNamePrefix] = useState('');
   const addPlayer = useMockPlayerStore((state) => state.addPlayer);
@@ -17,14 +20,15 @@ export function BatchAddPlayersModal({ isOpen, onClose }: BatchAddPlayersModalPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const count = Number.parseInt(playerCount, 10);
-    
-    if (count > 0 && count <= 20) { // Reasonable limit
+
+    if (count > 0 && count <= 20) {
+      // Reasonable limit
       const prefix = namePrefix.trim() || 'player';
-      
+
       for (let i = 1; i <= count; i++) {
         addPlayer(`${prefix}${i}`);
       }
-      
+
       setPlayerCount('');
       setNamePrefix('');
       onClose();
@@ -40,7 +44,7 @@ export function BatchAddPlayersModal({ isOpen, onClose }: BatchAddPlayersModalPr
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
           <label
-            className="block text-sm font-medium text-gray-700 mb-1"
+            className="mb-1 block text-sm font-medium text-gray-700"
             htmlFor="playerCount"
           >
             Number of Players (1-20)
@@ -48,18 +52,18 @@ export function BatchAddPlayersModal({ isOpen, onClose }: BatchAddPlayersModalPr
           <Input
             autoFocus
             id="playerCount"
-            min="1"
             max="20"
+            min="1"
             onChange={(e) => setPlayerCount(e.target.value)}
             placeholder="Enter number of players..."
             type="number"
             value={playerCount}
           />
         </div>
-        
+
         <div>
           <label
-            className="block text-sm font-medium text-gray-700 mb-1"
+            className="mb-1 block text-sm font-medium text-gray-700"
             htmlFor="namePrefix"
           >
             Name Prefix (optional)
@@ -71,25 +75,26 @@ export function BatchAddPlayersModal({ isOpen, onClose }: BatchAddPlayersModalPr
             type="text"
             value={namePrefix}
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="mt-1 text-xs text-gray-500">
             Leave empty to use "player" as prefix
           </p>
         </div>
 
         {isValidCount && (
-          <div className="bg-gray-50 p-3 rounded border">
-            <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
+          <div className="rounded border bg-gray-50 p-3">
+            <p className="mb-2 text-sm font-medium text-gray-700">Preview:</p>
             <div className="flex flex-wrap gap-1">
               {Array.from({ length: Math.min(count, 10) }, (_, i) => (
                 <span
-                  key={i}
-                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs"
+                  className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800"
+                  key={`key ${prefix}`}
                 >
-                  {prefix}{i + 1}
+                  {prefix}
+                  {i + 1}
                 </span>
               ))}
               {count > 10 && (
-                <span className="text-gray-500 text-xs px-2 py-1">
+                <span className="px-2 py-1 text-xs text-gray-500">
                   ... and {count - 10} more
                 </span>
               )}
@@ -97,7 +102,7 @@ export function BatchAddPlayersModal({ isOpen, onClose }: BatchAddPlayersModalPr
           </div>
         )}
 
-        <div className="flex gap-2 justify-end">
+        <div className="flex justify-end gap-2">
           <Button onClick={onClose} type="button" variant="outline">
             Cancel
           </Button>
@@ -109,3 +114,4 @@ export function BatchAddPlayersModal({ isOpen, onClose }: BatchAddPlayersModalPr
     </Modal>
   );
 }
+

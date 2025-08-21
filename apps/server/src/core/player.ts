@@ -1,4 +1,4 @@
-import type { Role, WaitingRoomPlayer } from '@repo/types';
+import type { PlayerListItem, Role, WaitingRoomPlayer } from '@repo/types';
 
 export class Player {
   readonly name: string;
@@ -11,6 +11,14 @@ export class Player {
     this.role = null;
     this.isAlive = true;
     this.sid = sid;
+  }
+
+  getPlayerForClient() {
+    const playerListItem: PlayerListItem = {
+      name: this.name,
+      sid: this.sid,
+    };
+    return playerListItem;
   }
 
   getWaitingRoomData() {

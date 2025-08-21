@@ -15,8 +15,15 @@ function getStatusClassName(
 }
 
 export function PlayerView() {
-  const { players, activePlayerId, connectPlayer, disconnectPlayer } =
-    useMockPlayerStore();
+  const {
+    players,
+    activePlayerId,
+    connectPlayer,
+    disconnectPlayer,
+    sendLoverClosedAlert,
+    toggleLoverSelection,
+    sendLoverSelection,
+  } = useMockPlayerStore();
 
   const activePlayer = activePlayerId ? players.get(activePlayerId) : null;
 
@@ -56,6 +63,16 @@ export function PlayerView() {
                 >
                   {activePlayer.isConnected ? 'Connected' : 'Disconnected'}
                 </span>
+                {activePlayer.isLover && (
+                  <span className="rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+                    💕 Lover
+                  </span>
+                )}
+                {activePlayer.isCupid && (
+                  <span className="rounded bg-pink-100 px-2 py-1 text-xs font-medium text-pink-800">
+                    💘 Cupid
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex gap-2">
@@ -116,6 +133,72 @@ export function PlayerView() {
                   )}
                 </>
               )}
+              {activePlayer.isLover && (
+                <div>
+                  <div className="text-sm font-medium text-gray-600">
+                    Lover Status
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">💕</span>
+                    <span className="font-medium text-red-600">
+                      In love with {activePlayer.loverName}
+                    </span>
+                  </div>
+                  {activePlayer.canCloseLoverAlert && (
+                    <Button
+                      className="mt-2"
+                      onClick={() => sendLoverClosedAlert(activePlayer.id)}
+                      size="sm"
+                    >
+                      Close Lover Alert
+                    </Button>
+                  )}
+                </div>
+              )}
+              {activePlayer.isCupid && activePlayer.canSelectLovers && (
+                <div>
+                  <div className="text-sm font-medium text-gray-600">
+                    Cupid - Select Two Lovers
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    {activePlayer.playersList
+                      .filter(player => player.name !== activePlayer.name)
+                      .map((player) => (
+                      <div
+                        key={player.sid}
+                        className={`flex items-center gap-2 rounded p-2 cursor-pointer transition-colors ${
+                          activePlayer.selectedLovers.includes(player.name)
+                            ? 'bg-pink-100 border-2 border-pink-300'
+                            : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
+                        }`}
+                        onClick={() => toggleLoverSelection(activePlayer.id, player.name)}
+                      >
+                        <span className="text-gray-600">
+                          {activePlayer.selectedLovers.includes(player.name) ? '💘' : '👤'}
+                        </span>
+                        <span className="text-gray-800">{player.name}</span>
+                        {activePlayer.selectedLovers.includes(player.name) && (
+                          <span className="text-xs text-pink-600 font-medium">Selected</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex items-center gap-2">
+                    <Button
+                      onClick={() => sendLoverSelection(activePlayer.id)}
+                      disabled={activePlayer.selectedLovers.length !== 2}
+                      className="bg-pink-600 hover:bg-pink-700"
+                    >
+                      Confirm Lover Selection ({activePlayer.selectedLovers.length}/2)
+                    </Button>
+                    {activePlayer.selectedLovers.length > 0 && (
+                      <span className="text-sm text-gray-600">
+                        Selected: {activePlayer.selectedLovers.join(', ')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -130,14 +213,14 @@ export function PlayerView() {
               </div>
             ) : (
               <div className="space-y-2">
-                {activePlayer.playersList.map((playerName) => (
+                {activePlayer.playersList.map((player) => (
                   <div
                     className="flex items-center gap-2 rounded bg-gray-50 p-2"
-                    key={playerName}
+                    key={player.sid}
                   >
                     <span className="text-gray-600">👤</span>
-                    <span className="text-gray-800">{playerName}</span>
-                    {playerName === activePlayer.name && (
+                    <span className="text-gray-800">{player.name}</span>
+                    {player.name === activePlayer.name && (
                       <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
                         You
                       </span>

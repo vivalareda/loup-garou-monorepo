@@ -12,11 +12,12 @@ export class GameActions {
 
   cupidAction() {
     const cupid = this.game.getSpecialRolePlayers('CUPID');
+    console.log(`cupid is ${cupid?.getName()}`);
     const socket = cupid?.getSocket();
     if (!socket) {
       throw new Error('Cupid player not found');
     }
-    this.io.to(socket).emit('action:cupid-pick-required');
+    this.io.to(socket).emit('cupid:pick-required');
   }
 
   loversAction() {
@@ -28,5 +29,11 @@ export class GameActions {
     this.io
       .to(lovers[1].getSocket())
       .emit('alert:player-is-lover', lovers[0].getSocket());
+  }
+
+  werewolfAction() {
+    for (const werewolf of this.game.getWerewolfList()) {
+      this.io.to(werewolf.getSocket()).emit('werewolf:pick-required');
+    }
   }
 }

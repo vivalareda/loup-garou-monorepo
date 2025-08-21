@@ -9,6 +9,8 @@ if (!process.env.EXPO_PUBLIC_BACKEND_SERVER_URL) {
 const backendUrl = process.env.EXPO_PUBLIC_BACKEND_SERVER_URL;
 // export let isConnected = false;
 
+console.log('🔗 Connecting to:', backendUrl);
+
 export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
   backendUrl,
   {

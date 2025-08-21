@@ -10,6 +10,7 @@ export class GameEvents {
   private readonly io: SocketType;
   private readonly game: Game;
   private readonly segmentsManager: SegmentsManager;
+  private loversAlertClosed = 0;
 
   constructor(game: Game, segmentsManager: SegmentsManager, io: SocketType) {
     this.io = io;
@@ -22,7 +23,10 @@ export class GameEvents {
       socket.on('player:join', (name: string) => {
         const player = this.game.addPlayer(name, socket.id);
         socket.emit('lobby:player-data', player.getWaitingRoomData());
-        socket.broadcast.emit('lobby:update-players-list', player.getName());
+        socket.broadcast.emit(
+          'lobby:update-players-list',
+          player.getPlayerForClient()
+        );
         console.log(
           `Player joined: ${name} (ID: ${socket.id}), player count: ${this.game.getPlayerList()}`
         );
@@ -30,7 +34,8 @@ export class GameEvents {
         if (this.game.getPlayerList().size >= MAX_PLAYERCOUNT) {
           this.game.assignRoles();
           this.game.alertPlayersOfRoles();
-          this.segmentsManager.firstNightSegment();
+          socket.emit('lobby:villagers-list', this.game.getVillagersList());
+          this.segmentsManager.startGame();
         }
       });
 
@@ -40,6 +45,7 @@ export class GameEvents {
 
       this.setupGettersEvents(socket);
       this.setupCupidEvents(socket);
+      this.setupLoversEvents(socket);
     });
   }
 
@@ -47,9 +53,7 @@ export class GameEvents {
     socket: Socket<ClientToServerEvents, ServerToClientEvents>
   ) {
     socket.on('lobby:get-players-list', () => {
-      const playersArray = Array.from(this.game.getPlayerList().values()).map(
-        (player) => player.name
-      );
+      const playersArray = this.game.getClientPlayerList();
       socket.emit('lobby:players-list', playersArray);
     });
   }
@@ -61,12 +65,29 @@ export class GameEvents {
     });
   }
 
-  setupLoversEvents(socket: Socket) {
-    socket.on('lover-alert-closed', () => {
-      // this.loversAlertClosed++;
-      // if (this.loversAlertClosed === 2) {
-      //   this.segmentsManager.finishSegment();
-      // }
+  setupLoversEvents(
+    socket: Socket<ClientToServerEvents, ServerToClientEvents>
+  ) {
+    socket.on('alert:lover-closed-alert', () => {
+      this.loversAlertClosed++;
+      if (this.loversAlertClosed === 2) {
+        this.segmentsManager.finishSegment();
+      }
     });
+  }
+
+  setupWerewolfEvents(
+    socket: Socket<ClientToServerEvents, ServerToClientEvents>
+  ) {
+    socket.on('werewolf:player-voted', (targetPlayer: string) => {
+      this.game.handleWerewolfVote(targetPlayer);
+      socket.emit('werewolf:villagers-list', this.game.getVillagersList());
+    });
+  }
+
+  cleanup() {
+    this.io.removeAllListeners();
+    this.loversAlertClosed = 0;
+    this.setupSocketHandlers();
   }
 }

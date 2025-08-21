@@ -1,11 +1,7 @@
-import type { Role } from '@repo/types';
+import type { PlayerListItem, Role } from '@repo/types';
 import { DeathManager } from '@/core/death-manager';
 import { Player } from '@/core/player';
 import type { SocketType } from '@/server/sockets';
-
-function assertNever(value: never): never {
-  throw new Error(`Unexpected value: ${value}`);
-}
 
 export class Game {
   private readonly io: SocketType;
@@ -14,6 +10,7 @@ export class Game {
   private readonly deathManager: DeathManager;
   private readonly lovers: Player[] = [];
   private availableRoles: Role[] = [];
+  private werewolvesVote: Map<string, number> = new Map();
 
   constructor(io: SocketType) {
     this.io = io;
@@ -25,7 +22,17 @@ export class Game {
   addPlayer(name: string, sid: string) {
     const player = new Player(name, sid);
     this.players.set(sid, player);
+    console.log(
+      `new players list: ${JSON.stringify(Array.from(this.players.keys()))}`
+    );
     return player;
+  }
+
+  getClientPlayerList(): PlayerListItem[] {
+    return Array.from(this.players.values()).map((player) => ({
+      name: player.getName(),
+      sid: player.getSocket(),
+    }));
   }
 
   initRolesList() {
@@ -39,7 +46,8 @@ export class Game {
         this.availableRoles.push('WEREWOLF');
       }
 
-      this.availableRoles.push('SEER');
+      // this.availableRoles.push('SEER');
+      this.availableRoles.push('CUPID');
 
       if (playerCount >= 6) {
         this.availableRoles.push('WITCH');
@@ -65,6 +73,11 @@ export class Game {
     return this.players;
   }
 
+  getVillagersList() {
+    const list = this.deathManager.getTeamVillagers();
+    return list.map((player) => player.getName());
+  }
+
   getSpecialRolePlayers(role: Role) {
     return this.specialRolePlayers.get(role);
   }
@@ -81,23 +94,26 @@ export class Game {
   assignRoles() {
     this.initRolesList();
     const shuffledRoles = this.shuffleArray(this.availableRoles);
+    console.log(`Shuffled roles: ${shuffledRoles}`);
 
     // TODO: remove this for testing only
     for (const player of this.players.values()) {
-      if (player.getName() === 'reda') {
-        const role = 'CUPID';
-        player.assignRole(role);
-        shuffledRoles.splice(shuffledRoles.indexOf(role), 1);
-        this.setPlayerTeams(role, player);
-      } else {
-        player.assignRole('VILLAGER');
-        this.setPlayerTeams('VILLAGER', player);
-      }
-      // const role = shuffledRoles.pop();
-      // if (role) {
+      // if (player.getName() === 'reda') {
+      //   const role = 'CUPID';
       //   player.assignRole(role);
+      //   shuffledRoles.splice(shuffledRoles.indexOf(role), 1);
       //   this.setPlayerTeams(role, player);
+      // } else {
+      //   player.assignRole('VILLAGER');
+      //   this.setPlayerTeams('VILLAGER', player);
       // }
+      const role = shuffledRoles.pop();
+      if (!role) {
+        throw new Error('No roles available to assign, this shouldnt happen');
+      }
+
+      player.assignRole(role);
+      this.setPlayerTeams(role, player);
     }
   }
 
@@ -110,6 +126,10 @@ export class Game {
       }
       this.io.to(player.getSocket()).emit('player:role-assigned', role);
     }
+  }
+
+  getWerewolfList() {
+    return this.deathManager.getTeamWerewolves();
   }
 
   setPlayerTeams(roleName: Role, player: Player) {
@@ -137,20 +157,28 @@ export class Game {
         this.deathManager.addTeamVillager(player);
         break;
       default:
-        assertNever(roleName);
+        throw new Error(`Unknown role: ${roleName satisfies never}`);
     }
   }
 
   setLovers(selectedPlayers: string[]) {
     for (const sid of selectedPlayers) {
       const player = this.players.get(sid);
-      if (player) {
-        this.lovers.push(player);
+      if (!player) {
+        throw new Error(`Player with sid ${sid} not found`);
       }
+      this.lovers.push(player);
     }
   }
 
   getLovers() {
     return this.lovers;
   }
+
+  handleWerewolfVote(targetSid: string) {
+    const count = this.werewolvesVote.get(targetSid) || 0;
+    this.werewolvesVote.set(targetSid, count + 1);
+  }
+
+  getWerewolvesVotes() {}
 }

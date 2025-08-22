@@ -86,10 +86,11 @@ export function GlobalModal() {
       }
       return;
     }
-    setSelection([...selection, item]);
     if (modalData.werewolfModal) {
       setSelection([item]);
       sendVote(item);
+    } else {
+      setSelection([...selection, item]);
     }
   };
 

@@ -34,7 +34,7 @@ export default function GameInterface() {
       if (!foundPlayer) {
         throw new Error(`Player with name ${name} not found in players list`);
       }
-      return foundPlayer.sid;
+      return foundPlayer.socketId;
     },
     [playersList]
   );
@@ -71,9 +71,9 @@ export default function GameInterface() {
     if (showModal && player.role === 'CUPID') {
       openModal({
         type: 'selection',
-        title: 'Qui sera votre victime'
+        title: 'Qui sera votre victime',
         data: villagersList,
-        selectionCount: 
+        selectionCount: 1,
       });
     }
 
@@ -101,6 +101,7 @@ export default function GameInterface() {
     }
   }, [
     showModal,
+    villagersList,
     openModal,
     playersList,
     showLoversAlert,

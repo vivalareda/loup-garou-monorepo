@@ -10,12 +10,15 @@ import {
 } from 'react-native';
 import { useWerewolfVotes } from '@/hooks/use-werewolves-votes';
 import { useModalStore } from '@/hooks/useModalStore';
+import { usePlayersList } from '@/hooks/usePlayersList';
 
 export function GlobalModal() {
   const { isOpen, modalData, closeModal } = useModalStore();
+  const { villagersList, playersList } = usePlayersList();
   const { votes, sendVote } = useWerewolfVotes();
   const [selection, setSelection] = useState<string[]>([]);
   const [isDelayActive, setIsDelayActive] = useState(false);
+  const totalWerewolves = playersList.length - villagersList.length;
 
   useEffect(() => {
     if (modalData?.buttonDelay) {
@@ -81,13 +84,18 @@ export function GlobalModal() {
       if (modalData.werewolfModal) {
         sendVote(item);
       }
-    } else {
-      setSelection([...selection, item]);
+      return;
+    }
+    setSelection([...selection, item]);
+    if (modalData.werewolfModal) {
+      setSelection([item]);
+      sendVote(item);
     }
   };
 
-  const getVoteCount;
-  (item: string) => {};
+  const getVoteCount = (item: string) => {
+    return votes[item] || 0;
+  };
 
   const renderPlayerList = () => {
     if (!(modalData.data && Array.isArray(modalData.data))) {
@@ -114,7 +122,7 @@ export function GlobalModal() {
                 {isSelected(item) && <Text className="text-blue-600">✓</Text>}
               </View>
               {modalData.werewolfModal && (
-                <Text style={{ fontSize: 14 }}>
+                <Text className="text-sm">
                   {getVoteCount(item)}/{totalWerewolves}
                 </Text>
               )}
@@ -125,9 +133,6 @@ export function GlobalModal() {
       </View>
     );
   };
-
-  console.log(`is button disabled? ${isButtonDisabled()}`);
-  console.log(`selection count: ${selection.length}`);
 
   const renderChildren = (children: React.ReactNode) => {
     return (

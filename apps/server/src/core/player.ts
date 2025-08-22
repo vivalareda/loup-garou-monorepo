@@ -1,8 +1,14 @@
-import type { PlayerListItem, Role, WaitingRoomPlayer } from '@repo/types';
+import type {
+  PlayerGetters,
+  PlayerListItem,
+  PlayerSetters,
+  Role,
+  WaitingRoomPlayer,
+} from '@repo/types';
 
-export class Player {
+export class Player implements PlayerGetters, PlayerSetters {
   readonly name: string;
-  readonly sid: string;
+  readonly socketId: string;
   role: Role | null;
   isAlive: boolean;
 
@@ -10,13 +16,13 @@ export class Player {
     this.name = name;
     this.role = null;
     this.isAlive = true;
-    this.sid = sid;
+    this.socketId = sid;
   }
 
   getPlayerForClient() {
     const playerListItem: PlayerListItem = {
       name: this.name,
-      sid: this.sid,
+      socketId: this.socketId,
     };
     return playerListItem;
   }
@@ -25,21 +31,24 @@ export class Player {
     const waitingRoomPlayer: WaitingRoomPlayer = {
       type: 'waiting',
       name: this.name,
-      sid: this.sid,
+      socketId: this.socketId,
     };
     return waitingRoomPlayer;
   }
 
-  assignRole(role: Role) {
+  setRole(role: Role) {
     this.role = role;
   }
 
   getRole() {
+    if (!this.role) {
+      throw new Error('Role is not assigned to the player');
+    }
     return this.role;
   }
 
-  getSocket() {
-    return this.sid;
+  getSocketId() {
+    return this.socketId;
   }
 
   getName() {
@@ -48,5 +57,17 @@ export class Player {
 
   kill() {
     this.isAlive = false;
+  }
+
+  setIsAlive(value: boolean) {
+    this.isAlive = value;
+  }
+
+  getSocket() {
+    return this.socketId;
+  }
+
+  assignRole(role: Role) {
+    this.role = role;
   }
 }

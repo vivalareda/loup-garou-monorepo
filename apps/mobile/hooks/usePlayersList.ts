@@ -31,7 +31,6 @@ export function usePlayersList() {
       setRoleAssigned(role);
     });
 
-    // villager list when game starts
     socket.on('lobby:villagers-list', (villagers: string[]) => {
       setVillagersList(villagers);
     });
@@ -45,14 +44,9 @@ export function usePlayersList() {
     };
   }, [player]);
 
-  const getVillagersList = () => {
-    socket.emit('werewolf:get-villagers');
-  };
-
   return {
     playersList,
     roleAssigned,
     villagersList,
-    getVillagersList,
   };
 }

@@ -1,6 +1,7 @@
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  Button,
   ImageBackground,
   Keyboard,
   SafeAreaView,
@@ -17,6 +18,7 @@ export default function Home() {
   const router = useRouter();
   const [name, setName] = useState('');
   const { setPlayer } = usePlayerStore();
+  const isDev = process.env.NODE_ENV === 'development';
 
   const handleJoinGame = () => {
     socket.emit('player:join', name);
@@ -55,6 +57,14 @@ export default function Home() {
                   <Text>Join game</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+
+            <View>
+              {isDev && (
+                <Link asChild href="/modal-test">
+                  <Button title="🧪 Test Modal" />
+                </Link>
+              )}
             </View>
           </View>
         </SafeAreaView>

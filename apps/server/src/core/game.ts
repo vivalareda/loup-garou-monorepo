@@ -9,8 +9,9 @@ export class Game {
   private readonly specialRolePlayers: Map<Role, Player> = new Map();
   private readonly deathManager: DeathManager;
   private readonly lovers: Player[] = [];
+  private readonly werewolfVotes: Map<string, string> = new Map(); // voterSid → targetSid
+
   private availableRoles: Role[] = [];
-  private werewolvesVote: Map<string, number> = new Map();
 
   constructor(io: SocketType) {
     this.io = io;
@@ -31,7 +32,7 @@ export class Game {
   getClientPlayerList(): PlayerListItem[] {
     return Array.from(this.players.values()).map((player) => ({
       name: player.getName(),
-      sid: player.getSocket(),
+      socketId: player.getSocket(),
     }));
   }
 
@@ -175,10 +176,127 @@ export class Game {
     return this.lovers;
   }
 
-  handleWerewolfVote(targetSid: string) {
-    const count = this.werewolvesVote.get(targetSid) || 0;
-    this.werewolvesVote.set(targetSid, count + 1);
+  getPlayerBySocketId(socketId: string): Player | undefined {
+    return this.players.get(socketId);
   }
 
-  getWerewolvesVotes() {}
+  isWerewolf(socketId: string): boolean {
+    const player = this.players.get(socketId);
+    return player?.getRole() === 'WEREWOLF';
+  }
+
+  isValidTarget(targetSid: string): boolean {
+    const target = this.players.get(targetSid);
+    return target?.getRole() !== 'WEREWOLF';
+  }
+
+  handleWerewolfVote(voterSid: string, targetSid: string): void {
+    // Validate voter is werewolf
+    if (!this.isWerewolf(voterSid)) {
+      throw new Error(
+        `Player ${voterSid} is not a werewolf and cannot vote during werewolf phase`
+      );
+    }
+
+    // Validate target is not werewolf
+    if (!this.isValidTarget(targetSid)) {
+      throw new Error(
+        `Target ${targetSid} is not a valid target (cannot vote for werewolves)`
+      );
+    }
+
+    // Store vote (overwrites previous vote if any)
+    this.werewolfVotes.set(voterSid, targetSid);
+    console.log(`Werewolf ${voterSid} voted for ${targetSid}`);
+  }
+
+  handleWerewolfUpdateVote(
+    voterSid: string,
+    newTargetSid: string,
+    oldTargetSid: string
+  ): void {
+    // Validate voter is werewolf
+    if (!this.isWerewolf(voterSid)) {
+      throw new Error(
+        `Player ${voterSid} is not a werewolf and cannot update vote during werewolf phase`
+      );
+    }
+
+    // Validate new target is not werewolf
+    if (!this.isValidTarget(newTargetSid)) {
+      throw new Error(
+        `Target ${newTargetSid} is not a valid target (cannot vote for werewolves)`
+      );
+    }
+
+    // Validate old vote exists
+    const currentVote = this.werewolfVotes.get(voterSid);
+    if (currentVote !== oldTargetSid) {
+      throw new Error(
+        `Vote mismatch: expected ${oldTargetSid}, but current vote is ${currentVote}`
+      );
+    }
+
+    // Update vote
+    this.werewolfVotes.set(voterSid, newTargetSid);
+    console.log(
+      `Werewolf ${voterSid} changed vote from ${oldTargetSid} to ${newTargetSid}`
+    );
+  }
+
+  alertAllWerewolvesOfVotes() {
+    const player = this.getWerewolfVoteTarget();
+
+    for (const werewolf of this.getWerewolfList()) {
+      this.io.to(werewolf.getSocket()).emit('werewolf:voting-complete', player);
+    }
+
+    console.log(`Werewolf voting complete. Target: ${player}`);
+  }
+
+  calculateWerewolfVoteTallies(): Record<string, number> {
+    const tallies: Record<string, number> = {};
+
+    for (const targetSid of this.werewolfVotes.values()) {
+      const targetPlayer = this.players.get(targetSid);
+      if (targetPlayer) {
+        const targetName = targetPlayer.getName();
+        tallies[targetName] = (tallies[targetName] || 0) + 1;
+      }
+    }
+
+    return tallies;
+  }
+
+  getWerewolfVoteTallies(): Record<string, number> {
+    return this.calculateWerewolfVoteTallies();
+  }
+
+  hasAllWerewolvesVoted(): boolean {
+    const werewolves = this.getWerewolfList();
+    const werewolfSids = werewolves.map((werewolf) => werewolf.getSocket());
+
+    return werewolfSids.every((sid) => this.werewolfVotes.has(sid));
+  }
+
+  getWerewolfVoteTarget(): string | null {
+    if (!this.hasAllWerewolvesVoted()) {
+      return null;
+    }
+
+    const tallies = this.calculateWerewolfVoteTallies();
+
+    // Find player with most votes
+    let maxVotes = 0;
+    let targetName: string | null = null;
+
+    for (const [playerName, votes] of Object.entries(tallies)) {
+      if (votes > maxVotes) {
+        maxVotes = votes;
+        targetName = playerName;
+      }
+    }
+
+    return targetName;
+  }
 }

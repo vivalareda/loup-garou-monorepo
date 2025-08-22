@@ -24,24 +24,28 @@ export class SegmentsManager {
     this.segments.push(segment);
   }
 
+  getGameActions() {
+    return this.gameActions;
+  }
+
   initializeSegments() {
     const cupidSegment: Segment = {
       type: 'CUPID',
       audioFiles: ['Cupidon/Cupidon-1', 'Cupidon/Cupidon-2'],
       action: () => this.gameActions.cupidAction(),
-      skip: false,
+      skip: true,
     };
 
     const loversSegment: Segment = {
       type: 'LOVERS',
       audioFiles: ['Lovers/combined_lover', 'Lovers/Lover-3'],
       action: () => this.gameActions.loversAction(),
-      skip: false,
+      skip: true,
     };
 
     const werewolfSegment: Segment = {
       type: 'WEREWOLF',
-      audioFiles: ['Werewolf/Werewolf-1', 'Werewolf/Werewolf-2'],
+      audioFiles: ['Werewolves/Werewolves-1', 'Werewolves/Werewolves-2'],
       action: () => this.gameActions.werewolfAction(),
       skip: false,
     };
@@ -122,6 +126,8 @@ export class SegmentsManager {
     this.markFirstNightSegment(segment);
     this.currentSegment++;
     this.findValidSegment();
+
+    console.log('Playing next segment:', this.currentSegment);
 
     await this.playSegment();
   }

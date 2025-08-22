@@ -5,6 +5,7 @@ import type { Role } from './role';
 type EventName = `${EventType}:${string}`;
 type EventType = 'lobby' | 'player' | 'alert' | Lowercase<Role>;
 
+export type WerewolvesVoteState = Record<string, number>;
 const serverEventSchemas = {
   'lobby:player-data': null as unknown as (player: Player) => void,
   'lobby:player-left': null as unknown as (playerName: string) => void,
@@ -24,6 +25,16 @@ const serverEventSchemas = {
   'alert:lovers-can-close-alert': null as unknown as () => void,
 
   'werewolf:pick-required': null as unknown as () => void,
+  'werewolf:current-votes': null as unknown as (
+    currentvotes: WerewolvesVoteState
+  ) => void,
+  'werewolf:voting-complete': null as unknown as (
+    targetPlayer: string | null
+  ) => void,
+  'werewolf:player-update-vote': null as unknown as (
+    targetPlayer: string,
+    oldVote: string
+  ) => void,
 } satisfies Record<EventName, (...args: any[]) => void>;
 
 export type ServerToClientEvents = typeof serverEventSchemas;
@@ -37,6 +48,15 @@ const clientEventSchemas = {
   'alert:lover-closed-alert': null as unknown as () => void,
 
   'werewolf:player-voted': null as unknown as (targetPlayer: string) => void,
+
+  //TODO: REMOVE THIS ONLY FOR TESTING
+  'werewolf:current-votes': null as unknown as (
+    currentvotes: WerewolvesVoteState
+  ) => void,
+  'werewolf:player-update-vote': null as unknown as (
+    targetPlayer: string,
+    oldVote: string
+  ) => void,
 } satisfies Record<EventName, (...args: any[]) => void>;
 
 export type ClientToServerEvents = typeof clientEventSchemas;

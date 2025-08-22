@@ -5,6 +5,7 @@ import type {
   Role,
   ServerToClientEvents,
 } from '@repo/types';
+import { isGamePlayer } from '@repo/types';
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
 import { create } from 'zustand';
@@ -43,6 +44,8 @@ type MockPlayerStore = MockPlayerState & {
   sendLoverClosedAlert: (id: string) => void;
   toggleLoverSelection: (playerId: string, loverName: string) => void;
   sendLoverSelection: (playerId: string) => void;
+  simulateAllWerewolfVotes: (targetPlayerName: string) => void;
+  assignWerewolfRole: (playerId: string) => void;
 };
 
 function createPlayerSocket(
@@ -89,7 +92,11 @@ function createPlayerSocket(
     console.log(`Player ${name} received new player:`, newPlayer);
     const currentPlayer = store.getState().players.get(id);
     const currentList = currentPlayer?.playersList || [];
-    if (!currentList.some((p) => p.sid === newPlayer.sid)) {
+    if (
+      !currentList.some(
+        (p: PlayerListItem) => p.socketId === newPlayer.socketId
+      )
+    ) {
       const updatedList = [...currentList, newPlayer];
       store.getState().updatePlayerData(id, { playersList: updatedList });
     }
@@ -107,7 +114,7 @@ function createPlayerSocket(
       const gamePlayer: Player = {
         type: 'game',
         name: currentPlayer.player.name,
-        sid: currentPlayer.player.sid,
+        socketId: currentPlayer.player.socketId,
         isAlive: true,
         role,
       };
@@ -124,12 +131,6 @@ function createPlayerSocket(
       isLover: true,
       loverName,
     });
-
-    // Automatically send lover closed alert after receiving the notification
-    setTimeout(() => {
-      socket.emit('alert:lover-closed-alert');
-      console.log(`Player ${name} automatically closed lover alert`);
-    }, 1000); // Small delay to simulate reading the notification
   });
 
   socket.on('alert:lovers-can-close-alert', () => {
@@ -294,7 +295,7 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
         if (!foundPlayer) {
           throw new Error(`Player with name ${name} not found in players list`);
         }
-        return foundPlayer.sid;
+        return foundPlayer.socketId;
       });
 
       console.log('Selected lovers (names):', player.selectedLovers);
@@ -303,6 +304,75 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
       player.socket.emit('cupid:lovers-pick', loversSid);
       get().updatePlayerData(playerId, {
         canSelectLovers: false,
+      });
+    }
+  },
+
+  // Test function to manually assign werewolf role
+  simulateAllWerewolfVotes: (targetPlayerName: string) => {
+    const { players } = get();
+
+    // Find the target player's socket ID
+    let targetSocketId: string | null = null;
+    for (const player of players.values()) {
+      const playerInList = player.playersList.find(
+        (p) => p.name === targetPlayerName
+      );
+      if (playerInList) {
+        targetSocketId = playerInList.socketId;
+        break;
+      }
+    }
+
+    if (!targetSocketId) {
+      console.error(
+        `Target player ${targetPlayerName} not found in any player list`
+      );
+      return;
+    }
+
+    // Find all werewolf players and send votes from each
+    const werewolfPlayers = Array.from(players.values()).filter(
+      (player) =>
+        player.isConnected &&
+        player.status === 'in-game' &&
+        player.player &&
+        isGamePlayer(player.player) &&
+        player.player.role === 'WEREWOLF'
+    );
+
+    if (werewolfPlayers.length === 0) {
+      console.error('No werewolf players found to simulate votes from');
+      return;
+    }
+
+    console.log(
+      `Simulating votes from ${werewolfPlayers.length} werewolves targeting ${targetPlayerName} (${targetSocketId})`
+    );
+
+    // Send vote from each werewolf
+    werewolfPlayers.forEach((werewolf, index) => {
+      setTimeout(() => {
+        werewolf.socket.emit('werewolf:player-voted', targetSocketId);
+        console.log(`Werewolf ${werewolf.name} voted for ${targetPlayerName}`);
+      }, index * 100); // Stagger the votes slightly to simulate real voting
+    });
+  },
+
+  assignWerewolfRole: (playerId: string) => {
+    const player = get().players.get(playerId);
+    if (
+      player?.isConnected &&
+      player.status === 'in-game' &&
+      player.player &&
+      isGamePlayer(player.player)
+    ) {
+      const updatedPlayer = {
+        ...player.player,
+        role: 'WEREWOLF' as Role,
+      };
+      get().updatePlayerData(playerId, {
+        player: updatedPlayer as Player,
       });
     }
   },

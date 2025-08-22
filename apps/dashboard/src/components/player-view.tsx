@@ -1,6 +1,9 @@
 import { isGamePlayer } from '@repo/types';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
+import { WerewolfSimulationModal } from './werewolf-simulation-modal';
+import { WerewolfVotingModal } from './werewolf-voting-modal';
 
 function getStatusClassName(
   status: 'waiting' | 'in-game' | 'disconnected'
@@ -15,6 +18,9 @@ function getStatusClassName(
 }
 
 export function PlayerView() {
+  const [isWerewolfVotingOpen, setIsWerewolfVotingOpen] = useState(false);
+  const [isWerewolfSimulationOpen, setIsWerewolfSimulationOpen] =
+    useState(false);
   const {
     players,
     activePlayerId,
@@ -23,6 +29,8 @@ export function PlayerView() {
     sendLoverClosedAlert,
     toggleLoverSelection,
     sendLoverSelection,
+    assignWerewolfRole,
+    simulateAllWerewolfVotes,
   } = useMockPlayerStore();
 
   const activePlayer = activePlayerId ? players.get(activePlayerId) : null;
@@ -129,6 +137,16 @@ export function PlayerView() {
                       <div className="text-lg font-bold text-blue-600">
                         {activePlayer.player.role}
                       </div>
+                      {/* Test button for werewolf role */}
+                      {activePlayer.player.role !== 'WEREWOLF' && (
+                        <Button
+                          className="mt-2 bg-red-600 text-xs hover:bg-red-700"
+                          onClick={() => assignWerewolfRole(activePlayer.id)}
+                          size="sm"
+                        >
+                          🧪 Test: Assign Werewolf Role
+                        </Button>
+                      )}
                     </div>
                   )}
                 </>
@@ -162,34 +180,43 @@ export function PlayerView() {
                   </div>
                   <div className="mt-2 space-y-2">
                     {activePlayer.playersList
-                      .filter(player => player.name !== activePlayer.name)
+                      .filter((player) => player.name !== activePlayer.name)
                       .map((player) => (
-                      <div
-                        key={player.sid}
-                        className={`flex items-center gap-2 rounded p-2 cursor-pointer transition-colors ${
-                          activePlayer.selectedLovers.includes(player.name)
-                            ? 'bg-pink-100 border-2 border-pink-300'
-                            : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
-                        }`}
-                        onClick={() => toggleLoverSelection(activePlayer.id, player.name)}
-                      >
-                        <span className="text-gray-600">
-                          {activePlayer.selectedLovers.includes(player.name) ? '💘' : '👤'}
-                        </span>
-                        <span className="text-gray-800">{player.name}</span>
-                        {activePlayer.selectedLovers.includes(player.name) && (
-                          <span className="text-xs text-pink-600 font-medium">Selected</span>
-                        )}
-                      </div>
-                    ))}
+                        <div
+                          className={`flex cursor-pointer items-center gap-2 rounded p-2 transition-colors${
+                            activePlayer.selectedLovers.includes(player.name)
+                              ? 'bg-pink-100 border-2 border-pink-300'
+                              : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
+                          }`}
+                          key={player.socketId}
+                          onClick={() =>
+                            toggleLoverSelection(activePlayer.id, player.name)
+                          }
+                        >
+                          <span className="text-gray-600">
+                            {activePlayer.selectedLovers.includes(player.name)
+                              ? '💘'
+                              : '👤'}
+                          </span>
+                          <span className="text-gray-800">{player.name}</span>
+                          {activePlayer.selectedLovers.includes(
+                            player.name
+                          ) && (
+                            <span className="text-xs font-medium text-pink-600">
+                              Selected
+                            </span>
+                          )}
+                        </div>
+                      ))}
                   </div>
                   <div className="mt-4 flex items-center gap-2">
                     <Button
-                      onClick={() => sendLoverSelection(activePlayer.id)}
-                      disabled={activePlayer.selectedLovers.length !== 2}
                       className="bg-pink-600 hover:bg-pink-700"
+                      disabled={activePlayer.selectedLovers.length !== 2}
+                      onClick={() => sendLoverSelection(activePlayer.id)}
                     >
-                      Confirm Lover Selection ({activePlayer.selectedLovers.length}/2)
+                      Confirm Lover Selection (
+                      {activePlayer.selectedLovers.length}/2)
                     </Button>
                     {activePlayer.selectedLovers.length > 0 && (
                       <span className="text-sm text-gray-600">
@@ -199,6 +226,27 @@ export function PlayerView() {
                   </div>
                 </div>
               )}
+
+              {/* Werewolf Voting Section */}
+              {activePlayer.status === 'in-game' &&
+                activePlayer.player &&
+                isGamePlayer(activePlayer.player) &&
+                activePlayer.player.role === 'WEREWOLF' && (
+                  <div>
+                    <h3 className="mb-3 text-lg font-semibold text-red-800">
+                      🐺 Werewolf Actions
+                    </h3>
+                    <p className="mb-3 text-sm text-gray-600">
+                      Vote to eliminate a villager during the night phase.
+                    </p>
+                    <Button
+                      className="bg-red-600 hover:bg-red-700"
+                      onClick={() => setIsWerewolfVotingOpen(true)}
+                    >
+                      Open Werewolf Voting
+                    </Button>
+                  </div>
+                )}
             </div>
           </div>
 
@@ -216,7 +264,7 @@ export function PlayerView() {
                 {activePlayer.playersList.map((player) => (
                   <div
                     className="flex items-center gap-2 rounded bg-gray-50 p-2"
-                    key={player.sid}
+                    key={player.socketId}
                   >
                     <span className="text-gray-600">👤</span>
                     <span className="text-gray-800">{player.name}</span>
@@ -232,6 +280,32 @@ export function PlayerView() {
           </div>
         </div>
 
+        {/* Werewolf Simulation Section */}
+        <div className="mt-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold text-gray-800">
+            🧪 Test Simulation
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <h3 className="mb-2 text-sm font-medium text-gray-700">
+                Werewolf Voting Simulation
+              </h3>
+              <p className="mb-3 text-xs text-gray-600">
+                Simulate all werewolves in the game voting for a single target
+                player. This will send votes from every player with the WEREWOLF
+                role.
+              </p>
+              <Button
+                className="bg-purple-600 hover:bg-purple-700"
+                onClick={() => setIsWerewolfSimulationOpen(true)}
+                size="sm"
+              >
+                🐺 Simulate All Werewolf Votes
+              </Button>
+            </div>
+          </div>
+        </div>
+
         {/* Socket Events Log */}
         <div className="mt-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-gray-800">
@@ -242,6 +316,23 @@ export function PlayerView() {
           </div>
         </div>
       </div>
+
+      {/* Werewolf Voting Modal */}
+      <WerewolfVotingModal
+        currentPlayerName={activePlayer.name}
+        isOpen={isWerewolfVotingOpen}
+        onClose={() => setIsWerewolfVotingOpen(false)}
+        playersList={activePlayer.playersList}
+      />
+
+      {/* Werewolf Simulation Modal */}
+      <WerewolfSimulationModal
+        currentPlayerName={activePlayer.name}
+        isOpen={isWerewolfSimulationOpen}
+        onClose={() => setIsWerewolfSimulationOpen(false)}
+        onSimulateVotes={simulateAllWerewolfVotes}
+        playersList={activePlayer.playersList}
+      />
     </div>
   );
 }

@@ -46,6 +46,7 @@ export class GameEvents {
       this.setupGettersEvents(socket);
       this.setupCupidEvents(socket);
       this.setupLoversEvents(socket);
+      this.setupWerewolfEvents(socket);
     });
   }
 
@@ -80,9 +81,21 @@ export class GameEvents {
     socket: Socket<ClientToServerEvents, ServerToClientEvents>
   ) {
     socket.on('werewolf:player-voted', (targetPlayer: string) => {
-      this.game.handleWerewolfVote(targetPlayer);
-      socket.emit('werewolf:villagers-list', this.game.getVillagersList());
+      this.game.handleWerewolfVote(socket.id, targetPlayer);
+      if (this.game.hasAllWerewolvesVoted()) {
+        this.segmentsManager.finishSegment();
+      }
     });
+
+    socket.on(
+      'werewolf:player-update-vote',
+      (targetPlayer: string, oldVote: string) => {
+        this.game.handleWerewolfUpdateVote(socket.id, targetPlayer, oldVote);
+        if (this.game.hasAllWerewolvesVoted()) {
+          this.segmentsManager.finishSegment();
+        }
+      }
+    );
   }
 
   cleanup() {

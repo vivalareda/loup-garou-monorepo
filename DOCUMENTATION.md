@@ -32,6 +32,86 @@ Executes specific actions for each game segment and manages player interactions.
 #### 3. Game Class (`apps/server/src/core/game.ts`)
 Central game state management including players, roles, teams, and game mechanics.
 
+## Segment Architecture Patterns
+
+### Established Architecture Pattern
+
+The current segment system follows a specific pattern that should be maintained for consistency:
+
+#### **Pattern 1: Simple Action Segments (Cupid)**
+For segments that only require triggering an action without tracking completion:
+```typescript
+// segments-manager.ts
+case SEGMENT_TYPE.CUPID:
+  this.gameActions.cupidAction(); // Just triggers the action
+  break;
+```
+
+#### **Pattern 2: Event-Driven Completion Segments (Werewolf, Lovers)**
+For segments that require player interaction and completion tracking:
+
+**Step 1 - Segment Trigger** (`segments-manager.ts`):
+```typescript
+case SEGMENT_TYPE.WEREWOLF:
+  this.gameActions.werewolfAction(); // Triggers player prompts
+  break;
+```
+
+**Step 2 - Event Handling** (`events.ts`):
+```typescript
+socket.on('werewolf:player-voted', (targetPlayer: string) => {
+  this.game.handleWerewolfVote(socket.id, targetPlayer);
+  if (this.game.hasAllWerewolvesVoted()) {
+    this.segmentsManager.finishSegment(); // Direct completion check
+  }
+});
+```
+
+**Step 3 - Game State Management** (`game.ts`):
+```typescript
+handleWerewolfVote(socketId: string, targetPlayer: string) {
+  // Update game state
+}
+
+hasAllWerewolvesVoted(): boolean {
+  // Check completion condition
+}
+```
+
+**Step 4 - Action Processing** (`game-actions.ts`):
+```typescript
+handleWerewolfVote(socketId: string, targetPlayer: string) {
+  this.game.handleWerewolfVote(socketId, targetPlayer);
+  this.broadcastWerewolfVotes(); // Handle side effects
+}
+```
+
+### **❌ Anti-Pattern to Avoid**
+Do NOT return boolean completion status from GameActions:
+```typescript
+// DON'T DO THIS
+if (gameActions.handleWerewolfVote(socketId, targetPlayer)) {
+  segmentsManager.finishSegment();
+}
+```
+
+### **✅ Preferred Pattern**
+Keep completion logic in events.ts for clear separation:
+```typescript
+// DO THIS
+gameActions.handleWerewolfVote(socketId, targetPlayer);
+if (game.hasAllWerewolvesVoted()) {
+  segmentsManager.finishSegment();
+}
+```
+
+### **Segment Responsibilities**
+
+- **SegmentsManager**: Orchestration, audio, segment progression
+- **GameActions**: Player notifications, action processing, broadcasting
+- **Game**: State management, validation, completion conditions  
+- **Events**: Socket handling, completion detection, segment finishing
+
 ## Game Segments
 
 The game follows a structured sequence of segments that repeat each night/day cycle:
@@ -57,10 +137,17 @@ The game follows a structured sequence of segments that repeat each night/day cy
 - **`lobby:player-left`** `(playerName: string)` - Notifies when a player leaves  
 - **`lobby:update-players-list`** `(player: PlayerListItem)` - Adds new player to client's list
 - **`lobby:players-list`** `(playersList: PlayerListItem[])` - Sends complete players list
+- **`lobby:villagers-list`** `(villagers: string[])` - Sends list of villagers for voting
 
 #### Game Events  
 - **`player:role-assigned`** `(role: Role)` - Assigns role to player at game start
+
+#### Cupid Events
 - **`cupid:pick-required`** `()` - Prompts Cupid to select lovers
+
+#### Werewolf Events  
+- **`werewolf:pick-required`** `()` - Prompts werewolves to vote for victim
+- **`werewolf:current-votes`** `(voteTallies: VoteTallies)` - Broadcasts current vote status to werewolves
 
 #### Alert Events
 - **`alert:player-is-lover`** `(loverName: string)` - Notifies player they are a lover
@@ -72,8 +159,14 @@ The game follows a structured sequence of segments that repeat each night/day cy
 - **`lobby:get-players-list`** `()` - Requests current players list
 - **`player:join`** `(playerName: string)` - Player joins the waiting room
 
-#### Action Events
+#### Cupid Events
 - **`cupid:lovers-pick`** `(selectedPlayers: string[])` - Cupid submits lover selection
+
+#### Werewolf Events
+- **`werewolf:player-voted`** `(targetPlayer: string)` - Werewolf votes for victim
+- **`werewolf:player-update-vote`** `(targetPlayer: string, oldVote: string)` - Werewolf changes their vote
+
+#### Alert Events  
 - **`alert:lover-closed-alert`** `()` - Lover confirms they've seen the alert
 
 ## Roles & Game Mechanics

@@ -16,4 +16,12 @@ export class DeathManager {
   addTeamVillager(player: Player) {
     this.teamVillagers.push(player);
   }
+
+  getTeamWerewolves(): Player[] {
+    return this.teamWerewolves;
+  }
+
+  getTeamVillagers(): Player[] {
+    return this.teamVillagers;
+  }
 }

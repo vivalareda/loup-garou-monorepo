@@ -19,7 +19,7 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
       const player: GamePlayer = {
         type: 'game',
         name: state.player.name,
-        sid: state.player.sid,
+        socketId: state.player.socketId,
         isAlive: true,
         role,
       };

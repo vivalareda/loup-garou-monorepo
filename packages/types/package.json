@@ -3,11 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "build": "tsc",
     "lint": "biome check . --write"
   },
   "exports": {
     ".": "./index.ts"
   },
+  "main": "./index.ts",
+  "types": "./index.ts",
   "devDependencies": {
     "@types/node": "^22.17.2",
     "tsx": "^4.20.4",

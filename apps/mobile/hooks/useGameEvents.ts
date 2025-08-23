@@ -2,15 +2,29 @@ import { useEffect, useState } from 'react';
 import { socket } from '@/utils/sockets';
 
 export function useGameEvents() {
-  const [showPickModal, setShowPickModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showLoversAlert, setShowLoversAlert] = useState(false);
 
   useEffect(() => {
-    socket.once('action:cupid-pick-required', () => {
-      setShowPickModal(true);
+    socket.once('cupid:pick-required', () => {
+      setShowModal(true);
     });
+
+    socket.once('alert:player-is-lover', () => {
+      setShowLoversAlert(true);
+    });
+
+    socket.on('werewolf:pick-required', () => {
+      setShowModal(true);
+    });
+
+    return () => {
+      socket.off('werewolf:pick-required');
+    };
   }, []);
 
   return {
-    showPickModal,
+    showModal,
+    showLoversAlert,
   };
 }

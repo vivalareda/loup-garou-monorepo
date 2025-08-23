@@ -1,9 +1,11 @@
 import type {
   ClientToServerEvents,
   Player,
+  PlayerListItem,
   Role,
   ServerToClientEvents,
 } from '@repo/types';
+import { isGamePlayer } from '@repo/types';
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
 import { create } from 'zustand';
@@ -16,9 +18,15 @@ type MockPlayer = {
   name: string;
   socket: Socket;
   player: Player | null;
-  playersList: string[];
+  playersList: PlayerListItem[];
   isConnected: boolean;
   status: 'disconnected' | 'waiting' | 'in-game';
+  isLover: boolean;
+  loverName: string | null;
+  canCloseLoverAlert: boolean;
+  isCupid: boolean;
+  canSelectLovers: boolean;
+  selectedLovers: string[];
 };
 
 type MockPlayerState = {
@@ -33,11 +41,17 @@ type MockPlayerStore = MockPlayerState & {
   updatePlayerData: (id: string, updates: Partial<MockPlayer>) => void;
   connectPlayer: (id: string) => void;
   disconnectPlayer: (id: string) => void;
+  sendLoverClosedAlert: (id: string) => void;
+  toggleLoverSelection: (playerId: string, loverName: string) => void;
+  sendLoverSelection: (playerId: string) => void;
+  simulateAllWerewolfVotes: (targetPlayerName: string) => void;
+  assignWerewolfRole: (playerId: string) => void;
 };
 
 function createPlayerSocket(
   id: string,
   name: string,
+  // biome-ignore lint/suspicious/noExplicitAny: <just for testing>
   store: any
 ): Socket<ClientToServerEvents, ServerToClientEvents> {
   const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
@@ -74,17 +88,21 @@ function createPlayerSocket(
     store.getState().updatePlayerData(id, { player: playerData });
   });
 
-  socket.on('lobby:update-players-list', (newPlayer: string) => {
+  socket.on('lobby:update-players-list', (newPlayer: PlayerListItem) => {
     console.log(`Player ${name} received new player:`, newPlayer);
     const currentPlayer = store.getState().players.get(id);
     const currentList = currentPlayer?.playersList || [];
-    if (!currentList.includes(newPlayer)) {
+    if (
+      !currentList.some(
+        (p: PlayerListItem) => p.socketId === newPlayer.socketId
+      )
+    ) {
       const updatedList = [...currentList, newPlayer];
       store.getState().updatePlayerData(id, { playersList: updatedList });
     }
   });
 
-  socket.on('lobby:players-list', (playersList: string[]) => {
+  socket.on('lobby:players-list', (playersList: PlayerListItem[]) => {
     console.log(`Player ${name} received full players list:`, playersList);
     store.getState().updatePlayerData(id, { playersList });
   });
@@ -96,7 +114,7 @@ function createPlayerSocket(
       const gamePlayer: Player = {
         type: 'game',
         name: currentPlayer.player.name,
-        sid: currentPlayer.player.sid,
+        socketId: currentPlayer.player.socketId,
         isAlive: true,
         role,
       };
@@ -105,6 +123,29 @@ function createPlayerSocket(
         status: 'in-game',
       });
     }
+  });
+
+  socket.on('alert:player-is-lover', (loverName: string) => {
+    console.log(`Player ${name} is a lover with:`, loverName);
+    store.getState().updatePlayerData(id, {
+      isLover: true,
+      loverName,
+    });
+  });
+
+  socket.on('alert:lovers-can-close-alert', () => {
+    console.log(`Player ${name} can close lover alert`);
+    store.getState().updatePlayerData(id, {
+      canCloseLoverAlert: true,
+    });
+  });
+
+  socket.on('cupid:pick-required', () => {
+    console.log(`Player ${name} (Cupid) needs to pick lovers`);
+    store.getState().updatePlayerData(id, {
+      isCupid: true,
+      canSelectLovers: true,
+    });
   });
 
   return socket;
@@ -127,6 +168,12 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
       playersList: [],
       isConnected: false,
       status: 'disconnected',
+      isLover: false,
+      loverName: null,
+      canCloseLoverAlert: false,
+      isCupid: false,
+      canSelectLovers: false,
+      selectedLovers: [],
     };
 
     set((state) => ({
@@ -150,15 +197,19 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
       const newPlayers = new Map(players);
       newPlayers.delete(id);
 
-      set((state) => ({
-        players: newPlayers,
-        activePlayerId:
-          state.activePlayerId === id
-            ? newPlayers.size > 0
-              ? Array.from(newPlayers.keys())[0]
-              : null
-            : state.activePlayerId,
-      }));
+      set((state) => {
+        let newActivePlayerId: string | null;
+        if (state.activePlayerId === id) {
+          newActivePlayerId =
+            newPlayers.size > 0 ? Array.from(newPlayers.keys())[0] : null;
+        } else {
+          newActivePlayerId = state.activePlayerId;
+        }
+        return {
+          players: newPlayers,
+          activePlayerId: newActivePlayerId,
+        };
+      });
     }
   },
 
@@ -194,8 +245,135 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
   disconnectPlayer: (id: string) => {
     const { players } = get();
     const player = players.get(id);
-    if (player && player.isConnected) {
+    if (player?.isConnected) {
       player.socket.disconnect();
+    }
+  },
+
+  sendLoverClosedAlert: (id: string) => {
+    const { players } = get();
+    const player = players.get(id);
+    if (player?.isConnected && player.canCloseLoverAlert) {
+      player.socket.emit('alert:lover-closed-alert');
+      get().updatePlayerData(id, {
+        canCloseLoverAlert: false,
+      });
+    }
+  },
+
+  toggleLoverSelection: (playerId: string, loverName: string) => {
+    const { players } = get();
+    const player = players.get(playerId);
+    if (player?.canSelectLovers) {
+      const currentSelection = [...player.selectedLovers];
+      const isSelected = currentSelection.includes(loverName);
+
+      if (isSelected) {
+        const updatedSelection = currentSelection.filter(
+          (name) => name !== loverName
+        );
+        get().updatePlayerData(playerId, { selectedLovers: updatedSelection });
+      } else if (currentSelection.length < 2) {
+        get().updatePlayerData(playerId, {
+          selectedLovers: [...currentSelection, loverName],
+        });
+      }
+    }
+  },
+
+  sendLoverSelection: (playerId: string) => {
+    const { players } = get();
+    const player = players.get(playerId);
+    if (
+      player?.isConnected &&
+      player.canSelectLovers &&
+      player.selectedLovers.length === 2
+    ) {
+      // Convert names to SIDs like the mobile app does
+      const loversSid = player.selectedLovers.map((name) => {
+        const foundPlayer = player.playersList.find((p) => p.name === name);
+        if (!foundPlayer) {
+          throw new Error(`Player with name ${name} not found in players list`);
+        }
+        return foundPlayer.socketId;
+      });
+
+      console.log('Selected lovers (names):', player.selectedLovers);
+      console.log('Selected lovers (SIDs):', loversSid);
+
+      player.socket.emit('cupid:lovers-pick', loversSid);
+      get().updatePlayerData(playerId, {
+        canSelectLovers: false,
+      });
+    }
+  },
+
+  // Test function to manually assign werewolf role
+  simulateAllWerewolfVotes: (targetPlayerName: string) => {
+    const { players } = get();
+
+    // Find the target player's socket ID
+    let targetSocketId: string | null = null;
+    for (const player of players.values()) {
+      const playerInList = player.playersList.find(
+        (p) => p.name === targetPlayerName
+      );
+      if (playerInList) {
+        targetSocketId = playerInList.socketId;
+        break;
+      }
+    }
+
+    if (!targetSocketId) {
+      console.error(
+        `Target player ${targetPlayerName} not found in any player list`
+      );
+      return;
+    }
+
+    // Find all werewolf players and send votes from each
+    const werewolfPlayers = Array.from(players.values()).filter(
+      (player) =>
+        player.isConnected &&
+        player.status === 'in-game' &&
+        player.player &&
+        isGamePlayer(player.player) &&
+        player.player.role === 'WEREWOLF'
+    );
+
+    if (werewolfPlayers.length === 0) {
+      console.error('No werewolf players found to simulate votes from');
+      return;
+    }
+
+    console.log(
+      `Simulating votes from ${werewolfPlayers.length} werewolves targeting ${targetPlayerName} (${targetSocketId})`
+    );
+
+    // Send vote from each werewolf
+    werewolfPlayers.forEach((werewolf, index) => {
+      setTimeout(() => {
+        werewolf.socket.emit('werewolf:player-voted', targetSocketId);
+        console.log(`Werewolf ${werewolf.name} voted for ${targetPlayerName}`);
+      }, index * 100); // Stagger the votes slightly to simulate real voting
+    });
+  },
+
+  assignWerewolfRole: (playerId: string) => {
+    const player = get().players.get(playerId);
+    if (
+      player?.isConnected &&
+      player.status === 'in-game' &&
+      player.player &&
+      isGamePlayer(player.player)
+    ) {
+      const updatedPlayer = {
+        ...player.player,
+        role: 'WEREWOLF' as Role,
+      };
+      get().updatePlayerData(playerId, {
+        player: updatedPlayer as Player,
+      });
     }
   },
 }));

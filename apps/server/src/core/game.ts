@@ -1,11 +1,7 @@
-import type { Role } from '@repo/types';
+import type { PlayerListItem, Role } from '@repo/types';
 import { DeathManager } from '@/core/death-manager';
 import { Player } from '@/core/player';
 import type { SocketType } from '@/server/sockets';
-
-function assertNever(value: never): never {
-  throw new Error(`Unexpected value: ${value}`);
-}
 
 export class Game {
   private readonly io: SocketType;
@@ -13,6 +9,8 @@ export class Game {
   private readonly specialRolePlayers: Map<Role, Player> = new Map();
   private readonly deathManager: DeathManager;
   private readonly lovers: Player[] = [];
+  private readonly werewolfVotes: Map<string, string> = new Map(); // voterSid → targetSid
+
   private availableRoles: Role[] = [];
 
   constructor(io: SocketType) {
@@ -25,7 +23,17 @@ export class Game {
   addPlayer(name: string, sid: string) {
     const player = new Player(name, sid);
     this.players.set(sid, player);
+    console.log(
+      `new players list: ${JSON.stringify(Array.from(this.players.keys()))}`
+    );
     return player;
+  }
+
+  getClientPlayerList(): PlayerListItem[] {
+    return Array.from(this.players.values()).map((player) => ({
+      name: player.getName(),
+      socketId: player.getSocket(),
+    }));
   }
 
   initRolesList() {
@@ -39,7 +47,8 @@ export class Game {
         this.availableRoles.push('WEREWOLF');
       }
 
-      this.availableRoles.push('SEER');
+      // this.availableRoles.push('SEER');
+      this.availableRoles.push('CUPID');
 
       if (playerCount >= 6) {
         this.availableRoles.push('WITCH');
@@ -65,6 +74,11 @@ export class Game {
     return this.players;
   }
 
+  getVillagersList() {
+    const list = this.deathManager.getTeamVillagers();
+    return list.map((player) => player.getName());
+  }
+
   getSpecialRolePlayers(role: Role) {
     return this.specialRolePlayers.get(role);
   }
@@ -81,23 +95,26 @@ export class Game {
   assignRoles() {
     this.initRolesList();
     const shuffledRoles = this.shuffleArray(this.availableRoles);
+    console.log(`Shuffled roles: ${shuffledRoles}`);
 
     // TODO: remove this for testing only
     for (const player of this.players.values()) {
-      if (player.getName() === 'reda') {
-        const role = 'CUPID';
-        player.assignRole(role);
-        shuffledRoles.splice(shuffledRoles.indexOf(role), 1);
-        this.setPlayerTeams(role, player);
-      } else {
-        player.assignRole('VILLAGER');
-        this.setPlayerTeams('VILLAGER', player);
-      }
-      // const role = shuffledRoles.pop();
-      // if (role) {
+      // if (player.getName() === 'reda') {
+      //   const role = 'CUPID';
       //   player.assignRole(role);
+      //   shuffledRoles.splice(shuffledRoles.indexOf(role), 1);
       //   this.setPlayerTeams(role, player);
+      // } else {
+      //   player.assignRole('VILLAGER');
+      //   this.setPlayerTeams('VILLAGER', player);
       // }
+      const role = shuffledRoles.pop();
+      if (!role) {
+        throw new Error('No roles available to assign, this shouldnt happen');
+      }
+
+      player.assignRole(role);
+      this.setPlayerTeams(role, player);
     }
   }
 
@@ -110,6 +127,10 @@ export class Game {
       }
       this.io.to(player.getSocket()).emit('player:role-assigned', role);
     }
+  }
+
+  getWerewolfList() {
+    return this.deathManager.getTeamWerewolves();
   }
 
   setPlayerTeams(roleName: Role, player: Player) {
@@ -137,20 +158,145 @@ export class Game {
         this.deathManager.addTeamVillager(player);
         break;
       default:
-        assertNever(roleName);
+        throw new Error(`Unknown role: ${roleName satisfies never}`);
     }
   }
 
   setLovers(selectedPlayers: string[]) {
     for (const sid of selectedPlayers) {
       const player = this.players.get(sid);
-      if (player) {
-        this.lovers.push(player);
+      if (!player) {
+        throw new Error(`Player with sid ${sid} not found`);
       }
+      this.lovers.push(player);
     }
   }
 
   getLovers() {
     return this.lovers;
+  }
+
+  getPlayerBySocketId(socketId: string): Player | undefined {
+    return this.players.get(socketId);
+  }
+
+  isWerewolf(socketId: string): boolean {
+    const player = this.players.get(socketId);
+    return player?.getRole() === 'WEREWOLF';
+  }
+
+  isValidTarget(targetSid: string): boolean {
+    const target = this.players.get(targetSid);
+    return target?.getRole() !== 'WEREWOLF';
+  }
+
+  handleWerewolfVote(voterSid: string, targetSid: string): void {
+    // Validate voter is werewolf
+    if (!this.isWerewolf(voterSid)) {
+      throw new Error(
+        `Player ${voterSid} is not a werewolf and cannot vote during werewolf phase`
+      );
+    }
+
+    // Validate target is not werewolf
+    if (!this.isValidTarget(targetSid)) {
+      throw new Error(
+        `Target ${targetSid} is not a valid target (cannot vote for werewolves)`
+      );
+    }
+
+    // Store vote (overwrites previous vote if any)
+    this.werewolfVotes.set(voterSid, targetSid);
+    console.log(`Werewolf ${voterSid} voted for ${targetSid}`);
+  }
+
+  handleWerewolfUpdateVote(
+    voterSid: string,
+    newTargetSid: string,
+    oldTargetSid: string
+  ): void {
+    // Validate voter is werewolf
+    if (!this.isWerewolf(voterSid)) {
+      throw new Error(
+        `Player ${voterSid} is not a werewolf and cannot update vote during werewolf phase`
+      );
+    }
+
+    // Validate new target is not werewolf
+    if (!this.isValidTarget(newTargetSid)) {
+      throw new Error(
+        `Target ${newTargetSid} is not a valid target (cannot vote for werewolves)`
+      );
+    }
+
+    // Validate old vote exists
+    const currentVote = this.werewolfVotes.get(voterSid);
+    if (currentVote !== oldTargetSid) {
+      throw new Error(
+        `Vote mismatch: expected ${oldTargetSid}, but current vote is ${currentVote}`
+      );
+    }
+
+    // Update vote
+    this.werewolfVotes.set(voterSid, newTargetSid);
+    console.log(
+      `Werewolf ${voterSid} changed vote from ${oldTargetSid} to ${newTargetSid}`
+    );
+  }
+
+  alertAllWerewolvesOfVotes() {
+    const player = this.getWerewolfVoteTarget();
+
+    for (const werewolf of this.getWerewolfList()) {
+      this.io.to(werewolf.getSocket()).emit('werewolf:voting-complete', player);
+    }
+
+    console.log(`Werewolf voting complete. Target: ${player}`);
+  }
+
+  calculateWerewolfVoteTallies(): Record<string, number> {
+    const tallies: Record<string, number> = {};
+
+    for (const targetSid of this.werewolfVotes.values()) {
+      const targetPlayer = this.players.get(targetSid);
+      if (targetPlayer) {
+        const targetName = targetPlayer.getName();
+        tallies[targetName] = (tallies[targetName] || 0) + 1;
+      }
+    }
+
+    return tallies;
+  }
+
+  getWerewolfVoteTallies(): Record<string, number> {
+    return this.calculateWerewolfVoteTallies();
+  }
+
+  hasAllWerewolvesVoted(): boolean {
+    const werewolves = this.getWerewolfList();
+    const werewolfSids = werewolves.map((werewolf) => werewolf.getSocket());
+
+    return werewolfSids.every((sid) => this.werewolfVotes.has(sid));
+  }
+
+  getWerewolfVoteTarget(): string | null {
+    if (!this.hasAllWerewolvesVoted()) {
+      return null;
+    }
+
+    const tallies = this.calculateWerewolfVoteTallies();
+
+    // Find player with most votes
+    let maxVotes = 0;
+    let targetName: string | null = null;
+
+    for (const [playerName, votes] of Object.entries(tallies)) {
+      if (votes > maxVotes) {
+        maxVotes = votes;
+        targetName = playerName;
+      }
+    }
+
+    return targetName;
   }
 }

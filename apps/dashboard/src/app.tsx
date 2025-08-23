@@ -10,7 +10,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-full bg-gray-100">
-      <Sidebar 
+      <Sidebar
         onAddPlayer={() => setIsAddModalOpen(true)}
         onBatchAddPlayers={() => setIsBatchAddModalOpen(true)}
       />

@@ -1,4 +1,4 @@
-export const SEGMENTS = [
+export const segments = [
   'CUPID',
   'LOVERS',
   'WEREWOLF',
@@ -7,12 +7,11 @@ export const SEGMENTS = [
   'DAY',
 ] as const;
 
-export type SegmentType = (typeof SEGMENTS)[number];
+export type SegmentType = (typeof segments)[number];
 
 export type Segment = {
   type: SegmentType;
   audioFiles: string[];
   action: () => void;
-  onFirstNightOnly?: boolean;
   skip: boolean;
 };

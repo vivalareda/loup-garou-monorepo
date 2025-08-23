@@ -9,7 +9,13 @@ export default function ModalTestScreen() {
     openModal({
       type: 'selection',
       title: 'Choose your target',
-      data: ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'],
+      data: [
+        'socket-id-1',
+        'socket-id-2',
+        'socket-id-3',
+        'socket-id-4',
+        'socket-id-5',
+      ],
       werewolfModal: true,
       onConfirm: (selection) => {
         console.log('Werewolf voted for:', selection);

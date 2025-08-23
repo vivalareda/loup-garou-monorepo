@@ -52,29 +52,34 @@ export default function GameInterface() {
       return;
     }
 
-    if (showModal && player.role === 'CUPID') {
-      openModal({
-        type: 'selection',
-        title: 'Choisissez les amoureux',
-        data: playersList.map((p) => p.name),
-        selectionCount: 2,
-        onConfirm: (selectedPlayers: string[]) => {
-          console.log('Selected lovers:', selectedPlayers);
-          const loversSid = selectedPlayers.map((name) => {
-            return getPlayerSid(name);
+    if (showModal) {
+      switch (player.role) {
+        case 'CUPID':
+          openModal({
+            type: 'selection',
+            title: 'Choisissez les amoureux',
+            data: playersList.map((p) => p.name),
+            selectionCount: 2,
+            onConfirm: (selectedPlayers: string[]) => {
+              const loversSid = selectedPlayers.map((name) => {
+                return getPlayerSid(name);
+              });
+              socket.emit('cupid:lovers-pick', loversSid);
+            },
           });
-          socket.emit('cupid:lovers-pick', loversSid);
-        },
-      });
-    }
-
-    if (showModal && player.role === 'CUPID') {
-      openModal({
-        type: 'selection',
-        title: 'Qui sera votre victime',
-        data: villagersList,
-        selectionCount: 1,
-      });
+          break;
+        case 'WEREWOLF':
+          openModal({
+            type: 'selection',
+            title: 'Choisissez votre victime',
+            data: villagersList.map((p) => p.socketId),
+            werewolfModal: true,
+            hideConfirmButton: true,
+          });
+          break;
+        default:
+          break;
+      }
     }
 
     if (showLoversAlert) {
@@ -100,8 +105,8 @@ export default function GameInterface() {
       });
     }
   }, [
-    showModal,
     villagersList,
+    showModal,
     openModal,
     playersList,
     showLoversAlert,

@@ -39,6 +39,7 @@ export class GameActions {
 
   werewolfAction() {
     for (const werewolf of this.game.getWerewolfList()) {
+      console.log(werewolf);
       this.io.to(werewolf.getSocketId()).emit('werewolf:pick-required');
     }
   }
@@ -63,10 +64,8 @@ export class GameActions {
 
     for (const werewolf of werewolves) {
       this.io
-        .to(werewolf.getSocket())
+        .to(werewolf.getSocketId())
         .emit('werewolf:current-votes', voteTallies);
     }
   }
-
-
 }

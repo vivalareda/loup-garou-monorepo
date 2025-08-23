@@ -33,14 +33,14 @@ export class SegmentsManager {
       type: 'CUPID',
       audioFiles: ['Cupidon/Cupidon-1', 'Cupidon/Cupidon-2'],
       action: () => this.gameActions.cupidAction(),
-      skip: true,
+      skip: false,
     };
 
     const loversSegment: Segment = {
       type: 'LOVERS',
       audioFiles: ['Lovers/combined_lover', 'Lovers/Lover-3'],
       action: () => this.gameActions.loversAction(),
-      skip: true,
+      skip: false,
     };
 
     const werewolfSegment: Segment = {

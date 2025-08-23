@@ -9,11 +9,11 @@ export function useWerewolfVotes() {
   const [votingResult, setVotingResult] = useState<string | null>(null);
   const mockModal = process.env.EXPO_PUBLIC_MOCK_MODAL === 'true';
   const [mockVotes, setMockVotes] = useState<WerewolvesVoteState>({
-    Alice: 1,
-    Bob: 2,
-    Charlie: 3,
-    Diana: 3,
-    Eve: 5,
+    'socket-id-1': 1,
+    'socket-id-2': 2,
+    'socket-id-3': 3,
+    'socket-id-4': 3,
+    'socket-id-5': 5,
   });
 
   useEffect(() => {
@@ -25,10 +25,8 @@ export function useWerewolfVotes() {
       setVotes(currentVotes);
     });
 
-    socket.on('werewolf:voting-complete', (targetPlayer: string | null) => {
+    socket.on('werewolf:voting-complete', () => {
       setIsVotingComplete(true);
-      setVotingResult(targetPlayer);
-      console.log('Werewolf voting complete. Target:', targetPlayer);
     });
 
     return () => {
@@ -76,20 +74,21 @@ export function useWerewolfVotes() {
   );
 
   const sendVote = useCallback(
-    (targetPlayer: string) => {
+    (targetPlayerSid: string) => {
       if (playerVote) {
-        updateVote(targetPlayer);
+        updateVote(targetPlayerSid);
         return;
       }
 
-      setPlayerVote(targetPlayer);
+      setPlayerVote(targetPlayerSid);
 
       if (mockModal) {
         const newMockVotes = { ...mockVotes };
-        newMockVotes[targetPlayer] = (newMockVotes[targetPlayer] || 0) + 1;
+        newMockVotes[targetPlayerSid] =
+          (newMockVotes[targetPlayerSid] || 0) + 1;
         setMockVotes(newMockVotes);
       } else {
-        socket.emit('werewolf:player-voted', targetPlayer);
+        socket.emit('werewolf:player-voted', targetPlayerSid);
       }
     },
     [mockModal, updateVote, playerVote, mockVotes]

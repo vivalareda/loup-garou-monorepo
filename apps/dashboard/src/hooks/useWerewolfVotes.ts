@@ -6,17 +6,14 @@ export function useWerewolfVotes() {
   const [votes, setVotes] = useState<WerewolvesVoteState>({});
   const [playerVote, setPlayerVote] = useState('');
   const [isVotingComplete, setIsVotingComplete] = useState(false);
-  const [votingResult, setVotingResult] = useState<string | null>(null);
 
   useEffect(() => {
     socket.on('werewolf:current-votes', (currentVotes: WerewolvesVoteState) => {
       setVotes(currentVotes);
     });
 
-    socket.on('werewolf:voting-complete', (targetPlayer: string | null) => {
+    socket.on('werewolf:voting-complete', () => {
       setIsVotingComplete(true);
-      setVotingResult(targetPlayer);
-      console.log('Werewolf voting complete. Target:', targetPlayer);
     });
 
     return () => {
@@ -29,7 +26,6 @@ export function useWerewolfVotes() {
     (targetPlayer: string) => {
       const oldVote = playerVote;
       setPlayerVote(targetPlayer);
-      console.log('updating vote', targetPlayer, oldVote);
       socket.emit('werewolf:player-update-vote', targetPlayer, oldVote);
     },
     [playerVote]
@@ -50,7 +46,6 @@ export function useWerewolfVotes() {
 
   const resetVoting = useCallback(() => {
     setIsVotingComplete(false);
-    setVotingResult(null);
     setPlayerVote('');
     setVotes({});
   }, []);
@@ -59,7 +54,6 @@ export function useWerewolfVotes() {
     votes,
     sendVote,
     isVotingComplete,
-    votingResult,
     resetVoting,
     playerVote,
   };

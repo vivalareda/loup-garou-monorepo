@@ -3,6 +3,7 @@ import type { Player } from '@/core/player';
 export class DeathManager {
   private readonly teamWerewolves: Player[] = [];
   private readonly teamVillagers: Player[] = [];
+  private readonly pendingDeath: Player[] = [];
 
   constructor() {
     this.teamWerewolves = [];
@@ -23,5 +24,9 @@ export class DeathManager {
 
   getTeamVillagers(): Player[] {
     return this.teamVillagers;
+  }
+
+  addPendingDeath(player: Player) {
+    this.pendingDeath.push(player);
   }
 }

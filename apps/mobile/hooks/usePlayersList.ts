@@ -6,7 +6,7 @@ import { socket } from '@/utils/sockets';
 export function usePlayersList() {
   const [playersList, setPlayersList] = useState<PlayerListItem[]>([]);
   const [roleAssigned, setRoleAssigned] = useState<Role | null>(null);
-  const [villagersList, setVillagersList] = useState<string[]>([]);
+  const [villagersList, setVillagersList] = useState<PlayerListItem[]>([]);
   const { player } = usePlayerStore();
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export function usePlayersList() {
       setRoleAssigned(role);
     });
 
-    socket.on('lobby:villagers-list', (villagers: string[]) => {
+    socket.on('lobby:villagers-list', (villagers) => {
       setVillagersList(villagers);
     });
 
@@ -44,9 +44,20 @@ export function usePlayersList() {
     };
   }, [player]);
 
+  const getPlayerNameFromSid = (socketId: string) => {
+    const foundPlayer = villagersList.find((p) => p.socketId === socketId);
+    if (!foundPlayer) {
+      throw new Error(
+        `Player with socketId ${socketId} not found in villagers list`
+      );
+    }
+    return foundPlayer.name;
+  };
+
   return {
     playersList,
     roleAssigned,
     villagersList,
+    getPlayerNameFromSid,
   };
 }

@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -14,11 +14,18 @@ import { usePlayersList } from '@/hooks/usePlayersList';
 
 export function GlobalModal() {
   const { isOpen, modalData, closeModal } = useModalStore();
-  const { villagersList, playersList } = usePlayersList();
-  const { votes, sendVote } = useWerewolfVotes();
+  const { villagersList, playersList, getPlayerNameFromSid } = usePlayersList();
+  const { votes, sendVote, isVotingComplete, resetVoting } = useWerewolfVotes();
   const [selection, setSelection] = useState<string[]>([]);
   const [isDelayActive, setIsDelayActive] = useState(false);
   const totalWerewolves = playersList.length - villagersList.length;
+
+  const handleModalClose = useCallback(() => {
+    if (modalData?.onConfirm) {
+      modalData.onConfirm(selection);
+    }
+    closeModal();
+  }, [modalData, selection, closeModal]);
 
   useEffect(() => {
     if (modalData?.buttonDelay) {
@@ -30,6 +37,18 @@ export function GlobalModal() {
       return () => clearTimeout(timer);
     }
   }, [modalData?.buttonDelay]);
+
+  useEffect(() => {
+    if (modalData?.werewolfModal && isVotingComplete) {
+      resetVoting();
+      handleModalClose();
+    }
+  }, [
+    isVotingComplete,
+    modalData?.werewolfModal,
+    resetVoting,
+    handleModalClose,
+  ]);
 
   if (!(isOpen && modalData)) {
     return null;
@@ -71,27 +90,18 @@ export function GlobalModal() {
     return false;
   };
 
-  const handleModalClose = () => {
-    if (modalData.onConfirm) {
-      modalData.onConfirm(selection);
-    }
-    closeModal();
-  };
-
   const handleSelection = (item: string) => {
     if (isSelected(item)) {
       setSelection(selection.filter((i) => i !== item));
       if (modalData.werewolfModal) {
         sendVote(item);
+      }
       return;
     }
-    if (modalData.werewolfModal) {
-      setSelection([item]);
+
     if (modalData.werewolfModal) {
       setSelection([item]);
       sendVote(item);
-    } else {
-      setSelection([...selection, item]);
     } else {
       setSelection([...selection, item]);
     }
@@ -110,7 +120,7 @@ export function GlobalModal() {
       <View className="mb-4 max-h-60">
         <FlatList
           data={modalData.data}
-          keyExtractor={(item) => `player-${item}`}
+          keyExtractor={(item) => item}
           renderItem={({ item }) => (
             <TouchableOpacity
               className={getListItemStyle(item)}
@@ -121,7 +131,7 @@ export function GlobalModal() {
                 <Text
                   className={`${isSelected(item) ? 'text-blue-800 font-medium' : 'text-gray-800'}`}
                 >
-                  {item}
+                  {getPlayerNameFromSid(item)}
                 </Text>
                 {isSelected(item) && <Text className="text-blue-600">✓</Text>}
               </View>
@@ -166,18 +176,20 @@ export function GlobalModal() {
               ? renderPlayerList()
               : renderChildren(modalData.data)}
 
-            <TouchableOpacity
-              className={clsx(
-                'mt-4 rounded-lg px-4 py-2',
-                isButtonDisabled() ? 'bg-gray-500 opacity-50' : 'bg-blue-500'
-              )}
-              disabled={isButtonDisabled()}
-              onPress={handleModalClose}
-            >
-              <Text className="py-2 text-center font-medium text-white">
-                Confirm Selection
-              </Text>
-            </TouchableOpacity>
+            {!modalData.hideConfirmButton && (
+              <TouchableOpacity
+                className={clsx(
+                  'mt-4 rounded-lg px-4 py-2',
+                  isButtonDisabled() ? 'bg-gray-500 opacity-50' : 'bg-blue-500'
+                )}
+                disabled={isButtonDisabled()}
+                onPress={handleModalClose}
+              >
+                <Text className="py-2 text-center font-medium text-white">
+                  Confirm Selection
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </TouchableWithoutFeedback>
       </View>

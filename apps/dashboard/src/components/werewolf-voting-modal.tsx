@@ -14,14 +14,8 @@ export function WerewolfVotingModal({
   playersList,
   currentPlayerName,
 }: WerewolfVotingModalProps) {
-  const {
-    votes,
-    sendVote,
-    isVotingComplete,
-    votingResult,
-    resetVoting,
-    playerVote,
-  } = useWerewolfVotes();
+  const { votes, sendVote, isVotingComplete, resetVoting, playerVote } =
+    useWerewolfVotes();
 
   if (!isOpen) {
     return null;
@@ -64,17 +58,9 @@ export function WerewolfVotingModal({
             <h3 className="mb-2 text-lg font-semibold text-green-600">
               ✅ Voting Complete!
             </h3>
-            {votingResult ? (
-              <p className="text-gray-700">
-                Target selected:{' '}
-                <span className="font-bold text-red-600">{votingResult}</span>
-              </p>
-            ) : (
-              <p className="text-gray-700">
-                <span className="font-bold text-yellow-600">Tie!</span> No
-                consensus reached.
-              </p>
-            )}
+            <p className="text-gray-700">
+              The voting has concluded. Check the server logs for results.
+            </p>
             <button
               className="mt-4 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
               onClick={handleClose}

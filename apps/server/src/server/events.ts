@@ -92,6 +92,12 @@ export class GameEvents {
       (targetPlayer: string, oldVote: string) => {
         this.game.handleWerewolfUpdateVote(socket.id, targetPlayer, oldVote);
         if (this.game.hasAllWerewolvesVoted()) {
+          this.game.alertAllWerewolvesOfVotes();
+          const victim = this.game.getWerewolfTarget();
+          if (!victim) {
+            throw new Error('The victim does not exist, this is not normal');
+          }
+          this.game.addPendingDeath(victim);
           this.segmentsManager.finishSegment();
         }
       }

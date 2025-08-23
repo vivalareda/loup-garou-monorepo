@@ -11,6 +11,8 @@ type ModalData = {
   selectionCount?: number;
   buttonDelay?: number;
   werewolfModal?: boolean;
+  autoConfirm?: boolean;
+  hideConfirmButton?: boolean;
   onConfirm?: (...args: any[]) => any;
   disableButtonCondition?: (...args: any[]) => any;
 };
@@ -23,6 +25,8 @@ type ModalStore = {
   buttonDelay?: number;
   syncSelection?: boolean;
   werewolfModal?: boolean;
+  autoConfirm?: boolean;
+  hideConfirmButton?: boolean;
   closeModal: () => void;
   openModal: (data: ModalData) => void;
   disableButtonCondition?: () => void;

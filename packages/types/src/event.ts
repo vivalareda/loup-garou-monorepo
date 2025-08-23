@@ -16,7 +16,9 @@ const serverEventSchemas = {
   'lobby:players-list': null as unknown as (
     playersList: PlayerListItem[]
   ) => void,
-  'lobby:villagers-list': null as unknown as (villagers: string[]) => void,
+  'lobby:villagers-list': null as unknown as (
+    villagers: PlayerListItem[]
+  ) => void,
 
   'player:role-assigned': null as unknown as (role: Role) => void,
   'cupid:pick-required': null as unknown as () => void,
@@ -28,9 +30,7 @@ const serverEventSchemas = {
   'werewolf:current-votes': null as unknown as (
     currentvotes: WerewolvesVoteState
   ) => void,
-  'werewolf:voting-complete': null as unknown as (
-    targetPlayer: string | null
-  ) => void,
+  'werewolf:voting-complete': null as unknown as () => void,
   'werewolf:player-update-vote': null as unknown as (
     targetPlayer: string,
     oldVote: string

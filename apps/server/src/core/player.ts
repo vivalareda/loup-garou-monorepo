@@ -63,10 +63,6 @@ export class Player implements PlayerGetters, PlayerSetters {
     this.isAlive = value;
   }
 
-  getSocket() {
-    return this.socketId;
-  }
-
   assignRole(role: Role) {
     this.role = role;
   }

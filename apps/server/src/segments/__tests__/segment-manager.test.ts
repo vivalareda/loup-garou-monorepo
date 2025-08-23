@@ -62,7 +62,7 @@ describe('SegmentsManager', () => {
     await segmentsManager.finishSegment();
 
     expect(mockSoundPlay).toHaveBeenCalledWith(
-      './assets/Werewolf/Werewolf-2.mp3'
+      './assets/Werewolves/Werewolf-2.mp3'
     );
   });
 });

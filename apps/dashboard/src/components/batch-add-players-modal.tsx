@@ -87,7 +87,7 @@ export function BatchAddPlayersModal({
               {Array.from({ length: Math.min(count, 10) }, (_, i) => (
                 <span
                   className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800"
-                  key={`key ${prefix}`}
+                  key={`${prefix}${i + 1}`}
                 >
                   {prefix}
                   {i + 1}

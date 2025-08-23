@@ -83,7 +83,6 @@ export function GlobalModal() {
       setSelection(selection.filter((i) => i !== item));
       if (modalData.werewolfModal) {
         sendVote(item);
-      }
       return;
     }
     if (modalData.werewolfModal) {

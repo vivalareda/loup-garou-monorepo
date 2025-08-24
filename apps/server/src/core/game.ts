@@ -1,5 +1,10 @@
-import type { PlayerListItem, Role, WerewolvesVoteState } from '@repo/types';
-import { DeathManager } from '@/core/death-manager';
+import type {
+  DeathInfo,
+  PlayerListItem,
+  Role,
+  WerewolvesVoteState,
+} from '@repo/types';
+import type { DeathManager } from '@/core/death-manager';
 import { Player } from '@/core/player';
 import type { SocketType } from '@/server/sockets';
 
@@ -10,13 +15,15 @@ export class Game {
   private readonly deathManager: DeathManager;
   private readonly lovers: Player[] = [];
   private readonly werewolfVotes: Map<string, string> = new Map(); // voterSid → targetSid
+  private witchHasHealPotion = true;
+  private witchHasPoisonPotion = true;
 
   private availableRoles: Role[] = [];
 
-  constructor(io: SocketType) {
+  constructor(io: SocketType, deathManager: DeathManager) {
     this.io = io;
+    this.deathManager = deathManager;
     this.players = new Map<string, Player>();
-    this.deathManager = new DeathManager();
     this.lovers = [];
   }
 
@@ -265,25 +272,104 @@ export class Game {
     return this.calculateWerewolfVoteTallies();
   }
 
-  hasAllWerewolvesVoted() {
+  hasAllWerewolvesAgreed() {
     const werewolves = this.getWerewolfList();
     const werewolfSids = werewolves.map((werewolf) => werewolf.getSocketId());
 
-    return werewolfSids.every((sid) => this.werewolfVotes.has(sid));
+    // Check if all werewolves have voted
+    const allVoted = werewolfSids.every((sid) => this.werewolfVotes.has(sid));
+    if (!allVoted) {
+      return false;
+    }
+
+    // Check if they all agree (all votes are for the same target)
+    const votes = Array.from(this.werewolfVotes.values());
+    const firstVote = votes[0];
+    return votes.every((vote) => vote === firstVote);
   }
 
-  addPendingDeath(sid: string) {
+  processPendingDeaths() {
+    const pendingDeaths = this.deathManager.getPendingDeaths();
+    const deathInfos: DeathInfo[] = [];
+
+    // Process each death (remove players, handle lover suicides, etc.)
+    for (const pendingDeath of pendingDeaths) {
+      const player = this.players.get(pendingDeath.playerId);
+      if (player) {
+        // Create DeathInfo from PendingDeath
+        const deathInfo: import('@repo/types').DeathInfo = {
+          playerId: pendingDeath.playerId,
+          playerName: player.getName(),
+          cause: pendingDeath.cause,
+          timestamp: new Date(),
+          metadata: pendingDeath.metadata,
+        };
+
+        deathInfos.push(deathInfo);
+        player.setIsAlive(false);
+        console.log(
+          `Player ${player.getName()} died from ${pendingDeath.cause}`
+        );
+
+        // Handle lover suicide if one lover dies
+        if (
+          this.isPlayerLover(player) &&
+          pendingDeath.cause !== 'LOVER_SUICIDE'
+        ) {
+          const otherLover = this.lovers.find(
+            (lover) => lover.getSocketId() !== player.getSocketId()
+          );
+          if (otherLover?.isAlive) {
+            otherLover.setIsAlive(false);
+            const loverDeathInfo: DeathInfo = {
+              playerId: otherLover.getSocketId(),
+              playerName: otherLover.getName(),
+              cause: 'LOVER_SUICIDE',
+              timestamp: new Date(),
+              metadata: { loverId: pendingDeath.playerId },
+            };
+            deathInfos.push(loverDeathInfo);
+          }
+        }
+      }
+    }
+
+    return deathInfos;
+  }
+
+  getAlivePlayers() {
+    return Array.from(this.players.values()).filter((player) => player.isAlive);
+  }
+
+  isPlayerLover(player: Player) {
+    return this.lovers.includes(player);
+  }
+
+  assignRandomRoles() {
+    this.assignRoles();
+  }
+
+  getWerewolves() {
+    return Array.from(this.players.values()).filter(
+      (player) => player.getRole() === 'WEREWOLF'
+    );
+  }
+
+  addPendingDeath(
+    sid: string,
+    cause: import('@repo/types').DeathCause = 'WEREWOLVES'
+  ) {
     const player = this.players.get(sid);
 
     if (!player) {
       throw new Error(`Player with sid ${sid} not found`);
     }
 
-    this.deathManager.addPendingDeath(player);
+    this.deathManager.addPendingDeath(player, cause);
   }
 
   getWerewolfTarget() {
-    if (!this.hasAllWerewolvesVoted()) {
+    if (!this.hasAllWerewolvesAgreed()) {
       return null;
     }
 
@@ -300,5 +386,23 @@ export class Game {
     }
 
     return targetSid;
+  }
+
+  healWerewolfVictim() {
+    this.deathManager.healWerewolvesVictim();
+    this.witchHasHealPotion = false;
+  }
+
+  witchKill(playerSid: string) {
+    this.deathManager.addWitchPoison(playerSid);
+    this.witchHasPoisonPotion = false;
+  }
+
+  canWitchHeal() {
+    return this.witchHasHealPotion;
+  }
+
+  canWitchPoison() {
+    return this.witchHasPoisonPotion;
   }
 }

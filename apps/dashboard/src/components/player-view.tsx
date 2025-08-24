@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
 import { WerewolfSimulationModal } from './werewolf-simulation-modal';
 import { WerewolfVotingModal } from './werewolf-voting-modal';
+import { WitchHealModal } from './witch-heal-modal';
+import { WitchPoisonModal } from './witch-poison-modal';
 
 function getStatusClassName(
   status: 'waiting' | 'in-game' | 'disconnected'
@@ -21,6 +23,7 @@ export function PlayerView() {
   const [isWerewolfVotingOpen, setIsWerewolfVotingOpen] = useState(false);
   const [isWerewolfSimulationOpen, setIsWerewolfSimulationOpen] =
     useState(false);
+
   const {
     players,
     activePlayerId,
@@ -30,7 +33,15 @@ export function PlayerView() {
     toggleLoverSelection,
     sendLoverSelection,
     assignWerewolfRole,
+    assignWitchRole,
     simulateAllWerewolfVotes,
+    // Witch actions from store
+    healPlayer,
+    skipHeal,
+    poisonPlayer,
+    skipPoison,
+    closeHealModal,
+    closePoisonModal,
   } = useMockPlayerStore();
 
   const activePlayer = activePlayerId ? players.get(activePlayerId) : null;
@@ -147,6 +158,16 @@ export function PlayerView() {
                           🧪 Test: Assign Werewolf Role
                         </Button>
                       )}
+                      {/* Test button for witch role */}
+                      {activePlayer.player.role !== 'WITCH' && (
+                        <Button
+                          className="ml-2 mt-2 bg-purple-600 text-xs hover:bg-purple-700"
+                          onClick={() => assignWitchRole(activePlayer.id)}
+                          size="sm"
+                        >
+                          🧪 Test: Assign Witch Role
+                        </Button>
+                      )}
                     </div>
                   )}
                 </>
@@ -247,6 +268,34 @@ export function PlayerView() {
                     </Button>
                   </div>
                 )}
+
+              {/* Witch Actions Section */}
+              {activePlayer.status === 'in-game' &&
+                activePlayer.player &&
+                isGamePlayer(activePlayer.player) &&
+                activePlayer.player.role === 'WITCH' && (
+                  <div>
+                    <h3 className="mb-3 text-lg font-semibold text-purple-800">
+                      🧙 Witch Actions
+                    </h3>
+                    <p className="mb-3 text-sm text-gray-600">
+                      Use your potions to heal or poison players during the
+                      night phase.
+                    </p>
+                    <div className="space-y-2">
+                      <div className="rounded bg-purple-50 p-3">
+                        <p className="text-sm text-purple-800">
+                          Witch modals will appear automatically when the server
+                          prompts you.
+                        </p>
+                        <p className="mt-1 text-xs text-purple-600">
+                          Heal: Save werewolf victim • Poison: Eliminate any
+                          player
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
             </div>
           </div>
 
@@ -331,6 +380,28 @@ export function PlayerView() {
         isOpen={isWerewolfSimulationOpen}
         onClose={() => setIsWerewolfSimulationOpen(false)}
         onSimulateVotes={simulateAllWerewolfVotes}
+        playersList={activePlayer.playersList}
+      />
+
+      {/* Witch Heal Modal */}
+      <WitchHealModal
+        isOpen={activePlayer.showHealModal}
+        onClose={() => closeHealModal(activePlayer.id)}
+        onHeal={() => healPlayer(activePlayer.id)}
+        onSkip={() => skipHeal(activePlayer.id)}
+        playersList={activePlayer.playersList}
+        werewolfVictimId={activePlayer.werewolfVictimId}
+      />
+
+      {/* Witch Poison Modal */}
+      <WitchPoisonModal
+        currentPlayerName={activePlayer.name}
+        isOpen={activePlayer.showPoisonModal}
+        onClose={() => closePoisonModal(activePlayer.id)}
+        onPoison={(targetPlayerId: string) =>
+          poisonPlayer(activePlayer.id, targetPlayerId)
+        }
+        onSkip={() => skipPoison(activePlayer.id)}
         playersList={activePlayer.playersList}
       />
     </div>

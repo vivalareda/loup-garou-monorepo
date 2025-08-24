@@ -18,3 +18,8 @@ export type {
   SegmentType,
   segments,
 } from './src/segment';
+export type {
+  DeathCause,
+  DeathInfo,
+  PendingDeath,
+} from './src/death';

@@ -2,7 +2,7 @@
 import type React from 'react';
 import { create } from 'zustand';
 
-type ModalType = 'confirm' | 'selection';
+type ModalType = 'confirm' | 'selection' | 'yes-no';
 
 type ModalData = {
   type: ModalType;

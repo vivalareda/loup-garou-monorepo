@@ -27,6 +27,20 @@ export function GlobalModal() {
     closeModal();
   }, [modalData, selection, closeModal]);
 
+  const handleYesClick = useCallback(() => {
+    if (modalData?.onConfirm) {
+      modalData.onConfirm('yes');
+    }
+    closeModal();
+  }, [modalData, closeModal]);
+
+  const handleNoClick = useCallback(() => {
+    if (modalData?.onConfirm) {
+      modalData.onConfirm('no');
+    }
+    closeModal();
+  }, [modalData, closeModal]);
+
   useEffect(() => {
     if (modalData?.buttonDelay) {
       setIsDelayActive(true);
@@ -150,9 +164,50 @@ export function GlobalModal() {
 
   const renderChildren = (children: React.ReactNode) => {
     return (
-      <View className="my-5 h-48 w-48 items-center justify-center">
+      <View className="my-5 w-full items-center justify-center">
         {children}
       </View>
+    );
+  };
+
+  const renderButton = () => {
+    if (modalData.hideConfirmButton) {
+      return null;
+    }
+
+    if (modalData.type === 'yes-no') {
+      return (
+        <View className="mt-4 flex-row space-x-3">
+          <TouchableOpacity
+            className="flex-1 rounded-lg bg-red-500 px-4 py-2"
+            onPress={handleNoClick}
+          >
+            <Text className="py-2 text-center font-medium text-white">No</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="flex-1 rounded-lg bg-green-500 px-4 py-2"
+            onPress={handleYesClick}
+          >
+            <Text className="py-2 text-center font-medium text-white">Yes</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        className={clsx(
+          'mt-4 rounded-lg px-4 py-2',
+          isButtonDisabled() ? 'bg-gray-500 opacity-50' : 'bg-blue-500'
+        )}
+        disabled={isButtonDisabled()}
+        onPress={handleModalClose}
+      >
+        <Text className="py-2 text-center font-medium text-white">
+          Confirm Selection
+        </Text>
+      </TouchableOpacity>
     );
   };
 
@@ -176,20 +231,7 @@ export function GlobalModal() {
               ? renderPlayerList()
               : renderChildren(modalData.data)}
 
-            {!modalData.hideConfirmButton && (
-              <TouchableOpacity
-                className={clsx(
-                  'mt-4 rounded-lg px-4 py-2',
-                  isButtonDisabled() ? 'bg-gray-500 opacity-50' : 'bg-blue-500'
-                )}
-                disabled={isButtonDisabled()}
-                onPress={handleModalClose}
-              >
-                <Text className="py-2 text-center font-medium text-white">
-                  Confirm Selection
-                </Text>
-              </TouchableOpacity>
-            )}
+            {renderButton()}
           </View>
         </TouchableWithoutFeedback>
       </View>

@@ -27,6 +27,10 @@ type MockPlayer = {
   isCupid: boolean;
   canSelectLovers: boolean;
   selectedLovers: string[];
+  // Witch state
+  showHealModal: boolean;
+  showPoisonModal: boolean;
+  werewolfVictimId: string | null;
 };
 
 type MockPlayerState = {
@@ -46,6 +50,14 @@ type MockPlayerStore = MockPlayerState & {
   sendLoverSelection: (playerId: string) => void;
   simulateAllWerewolfVotes: (targetPlayerName: string) => void;
   assignWerewolfRole: (playerId: string) => void;
+  assignWitchRole: (playerId: string) => void;
+  // Witch actions
+  healPlayer: (playerId: string) => void;
+  skipHeal: (playerId: string) => void;
+  poisonPlayer: (playerId: string, targetPlayerId: string) => void;
+  skipPoison: (playerId: string) => void;
+  closeHealModal: (playerId: string) => void;
+  closePoisonModal: (playerId: string) => void;
 };
 
 function createPlayerSocket(
@@ -77,11 +89,6 @@ function createPlayerSocket(
       status: 'disconnected',
     });
   });
-
-  // socket.on('player:joined', (playerData: Player) => {
-  //   console.log(`Player ${name} sees player joined:`, playerData);
-  //   store.getState().updatePlayerData(id, { player: playerData });
-  // });
 
   socket.on('lobby:player-data', (playerData: Player) => {
     console.log(`Player ${name} received own player data:`, playerData);
@@ -148,6 +155,27 @@ function createPlayerSocket(
     });
   });
 
+  // Witch event listeners
+  socket.on('witch:can-heal', (victimSid: string) => {
+    console.log(
+      `🧙‍♀️ [WITCH STORE] Player ${name} received witch:can-heal event`,
+      { victimSid }
+    );
+    store.getState().updatePlayerData(id, {
+      werewolfVictimId: victimSid,
+      showHealModal: true,
+    });
+  });
+
+  socket.on('witch:pick-poison-player', () => {
+    console.log(
+      `🧙‍♀️ [WITCH STORE] Player ${name} received witch:pick-poison-player event`
+    );
+    store.getState().updatePlayerData(id, {
+      showPoisonModal: true,
+    });
+  });
+
   return socket;
 }
 
@@ -174,6 +202,10 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
       isCupid: false,
       canSelectLovers: false,
       selectedLovers: [],
+      // Witch state
+      showHealModal: false,
+      showPoisonModal: false,
+      werewolfVictimId: null,
     };
 
     set((state) => ({
@@ -375,5 +407,92 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
         player: updatedPlayer as Player,
       });
     }
+  },
+
+  assignWitchRole: (playerId: string) => {
+    const player = get().players.get(playerId);
+    if (
+      player?.isConnected &&
+      player.status === 'in-game' &&
+      player.player &&
+      isGamePlayer(player.player)
+    ) {
+      const updatedPlayer = {
+        ...player.player,
+        role: 'WITCH' as Role,
+      };
+      get().updatePlayerData(playerId, {
+        player: updatedPlayer as Player,
+      });
+    }
+  },
+
+  // Witch actions
+  healPlayer: (playerId: string) => {
+    console.log(
+      '🧙‍♀️ [WITCH STORE] Healing player - emitting witch:healed-player'
+    );
+    const player = get().players.get(playerId);
+    if (player?.socket) {
+      player.socket.emit('witch:healed-player');
+      get().updatePlayerData(playerId, {
+        showHealModal: false,
+        werewolfVictimId: null,
+      });
+    }
+  },
+
+  skipHeal: (playerId: string) => {
+    console.log(
+      '🧙‍♀️ [WITCH STORE] Skipping heal - emitting witch:skipped-heal'
+    );
+    const player = get().players.get(playerId);
+    if (player?.socket) {
+      player.socket.emit('witch:skipped-heal');
+      get().updatePlayerData(playerId, {
+        showHealModal: false,
+        werewolfVictimId: null,
+      });
+    }
+  },
+
+  poisonPlayer: (playerId: string, targetPlayerId: string) => {
+    console.log(
+      '🧙‍♀️ [WITCH STORE] Poisoning player - emitting witch:poisoned-player',
+      { targetPlayerId }
+    );
+    const player = get().players.get(playerId);
+    if (player?.socket) {
+      player.socket.emit('witch:poisoned-player', targetPlayerId);
+      get().updatePlayerData(playerId, {
+        showPoisonModal: false,
+      });
+    }
+  },
+
+  skipPoison: (playerId: string) => {
+    console.log(
+      '🧙‍♀️ [WITCH STORE] Skipping poison - emitting witch:skipped-poison'
+    );
+    const player = get().players.get(playerId);
+    if (player?.socket) {
+      player.socket.emit('witch:skipped-poison');
+      get().updatePlayerData(playerId, {
+        showPoisonModal: false,
+      });
+    }
+  },
+
+  closeHealModal: (playerId: string) => {
+    get().updatePlayerData(playerId, {
+      showHealModal: false,
+      werewolfVictimId: null,
+    });
+  },
+
+  closePoisonModal: (playerId: string) => {
+    get().updatePlayerData(playerId, {
+      showPoisonModal: false,
+    });
   },
 }));

@@ -48,6 +48,7 @@ export function WerewolfVotingModal({
           <button
             className="text-xl font-bold text-gray-500 hover:text-gray-700"
             onClick={handleClose}
+            type="button"
           >
             ×
           </button>

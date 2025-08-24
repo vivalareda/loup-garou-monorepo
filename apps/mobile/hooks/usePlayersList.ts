@@ -46,12 +46,27 @@ export function usePlayersList() {
 
   const getPlayerNameFromSid = (socketId: string) => {
     const foundPlayer = villagersList.find((p) => p.socketId === socketId);
-    if (!foundPlayer) {
-      throw new Error(
-        `Player with socketId ${socketId} not found in villagers list`
-      );
+    if (foundPlayer) {
+      return foundPlayer.name;
     }
-    return foundPlayer.name;
+
+    // TODO: remove mock data
+    // Mock data for testing when no real players exist
+    const mockNames: Record<string, string> = {
+      'socket-id-1': 'Alice',
+      'socket-id-2': 'Bob',
+      'socket-id-3': 'Charlie',
+      'socket-id-4': 'Diana',
+      'socket-id-5': 'Eve',
+    };
+
+    if (mockNames[socketId]) {
+      return mockNames[socketId];
+    }
+
+    throw new Error(
+      `Player with socketId ${socketId} not found in villagers list or mock data`
+    );
   };
 
   return {

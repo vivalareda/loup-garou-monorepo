@@ -3,15 +3,17 @@ export const segments = [
   'LOVERS',
   'WEREWOLF',
   'WITCH',
-  'SEER',
+  // 'SEER',
   'DAY',
 ] as const;
 
-export type SegmentType = (typeof segments)[number];
+type WitchPhase = 'HEAL' | 'POISON';
+type BaseSegment = (typeof segments)[number];
+
+export type SegmentType = Exclude<BaseSegment, 'WITCH'> | `WITCH-${WitchPhase}`;
 
 export type Segment = {
   type: SegmentType;
-  audioFiles: string[];
   action: () => void;
   skip: boolean;
 };

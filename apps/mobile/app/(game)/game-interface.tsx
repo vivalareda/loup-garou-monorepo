@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCardFlip } from '@/hooks/use-card-flip';
-import { useGameEvents } from '@/hooks/useGameEvents';
-import { useModalStore } from '@/hooks/useModalStore';
-import { usePlayerStore } from '@/hooks/usePlayerStore';
-import { usePlayersList } from '@/hooks/usePlayersList';
+import { useGameEvents } from '@/hooks/use-game-events';
+import { useModalStore } from '@/hooks/use-modal-store';
+import { usePlayerStore } from '@/hooks/use-player-store';
+import { usePlayersList } from '@/hooks/use-players-list';
 import { socket } from '@/utils/sockets';
 
 const { width } = Dimensions.get('window');
@@ -163,6 +163,18 @@ export default function GameInterface() {
     });
   }, [openModal, playersList]);
 
+  const handleDayVoteModal = useCallback(() => {
+    openModal({
+      type: 'selection',
+      title: 'Qui voulez-vous éliminer?',
+      data: playersList.map((p) => p.name),
+      selectionCount: 1,
+      onConfirm: (selectedPlayer: string) => {
+        socket.emit('day:vote', selectedPlayer);
+      },
+    });
+  }, [openModal, playersList]);
+
   useEffect(() => {
     if (!(player && isGamePlayer(player) && modalState.open)) {
       return;
@@ -195,10 +207,15 @@ export default function GameInterface() {
         handleWitchKillModal();
         break;
 
+      case 'DAY-VOTE':
+        handleDayVoteModal();
+        break;
+
       default:
-        throw new Error(`Unknown role: ${player.role satisfies never}`);
+        throw new Error(`Unknown modal type: ${modalState satisfies never}`);
     }
   }, [
+    handleDayVoteModal,
     handleWitchKillModal,
     handleWitchHealModal,
     modalState,

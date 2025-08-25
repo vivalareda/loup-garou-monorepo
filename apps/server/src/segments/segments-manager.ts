@@ -52,13 +52,13 @@ export class SegmentsManager {
     const witchHealSegment: Segment = {
       type: 'WITCH-HEAL',
       action: () => this.gameActions.witchHealAction(),
-      skip: false,
+      skip: true,
     };
 
     const witchPoisonSegment: Segment = {
       type: 'WITCH-POISON',
       action: () => this.gameActions.witchPoisonAction(),
-      skip: false,
+      skip: true,
     };
 
     const daySegment: Segment = {

@@ -116,7 +116,11 @@ export class GameActions {
   }
 
   dayAction() {
-    this.io.emit('day:voting-phase-start');
-    this.game.processPendingDeaths();
+    setTimeout(() => {
+      this.game.processPendingDeaths();
+    }, 7000);
+    setTimeout(() => {
+      this.io.emit('day:voting-phase-start');
+    }, 15_000);
   }
 }

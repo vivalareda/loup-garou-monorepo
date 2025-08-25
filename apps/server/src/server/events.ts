@@ -53,13 +53,12 @@ export class GameEvents {
       });
 
       socket.on('admin:next-segment', () => {
-        console.log('⏭️ Admin advancing to next segment');
+        console.log('⏭ Admin advancing to next segment');
         this.segmentsManager.finishSegment();
       });
 
       socket.on('admin:simulate-werewolf-vote', (targetPlayer: string) => {
         console.log(`🐺 Admin simulating werewolf vote for: ${targetPlayer}`);
-        // Simulate all werewolves voting for the same target
         const werewolves = this.game.getWerewolves();
         for (const werewolf of werewolves) {
           this.game.handleWerewolfVote(werewolf.getSocketId(), targetPlayer);
@@ -67,12 +66,18 @@ export class GameEvents {
         this.segmentsManager.getGameActions().broadcastWerewolfVotes();
 
         if (this.game.hasAllWerewolvesAgreed()) {
+          const victim = this.game.getWerewolfTarget();
+          if (!victim) {
+            throw new Error('The victim does not exist, this is not normal');
+          }
+          console.log('add penthing deaths called');
+          this.game.addPendingDeath(victim, 'WEREWOLVES');
           this.segmentsManager.finishSegment();
         }
       });
 
       socket.on('admin:simulate-day-vote', (targetPlayer: string) => {
-        console.log(`☀️ Admin simulating day vote for: ${targetPlayer}`);
+        console.log(`☀ Admin simulating day vote for: ${targetPlayer}`);
         // For now, just log - day voting will be implemented later
       });
 
@@ -81,6 +86,7 @@ export class GameEvents {
       this.setupLoversEvents(socket);
       this.setupWerewolfEvents(socket);
       this.setupWitchEvents(socket);
+      this.setupDayVoteEvents(socket);
     });
   }
 
@@ -117,6 +123,7 @@ export class GameEvents {
     socket.on('werewolf:player-voted', (targetPlayer: string) => {
       this.game.handleWerewolfVote(socket.id, targetPlayer);
       if (this.game.hasAllWerewolvesAgreed()) {
+        this.game.handleAllWerewolvesAgree();
         this.segmentsManager.finishSegment();
       }
     });
@@ -126,12 +133,7 @@ export class GameEvents {
       (targetPlayer: string, oldVote: string) => {
         this.game.handleWerewolfUpdateVote(socket.id, targetPlayer, oldVote);
         if (this.game.hasAllWerewolvesAgreed()) {
-          this.game.alertAllWerewolvesOfVotes();
-          const victim = this.game.getWerewolfTarget();
-          if (!victim) {
-            throw new Error('The victim does not exist, this is not normal');
-          }
-          this.game.addPendingDeath(victim, 'WEREWOLVES');
+          this.game.handleAllWerewolvesAgree();
           this.segmentsManager.finishSegment();
         }
       }
@@ -150,13 +152,21 @@ export class GameEvents {
     });
 
     socket.on('witch:skipped-heal', () => {
-      console.log('🧙‍♀️ Witch skipped heal action');
+      console.log('🧙 Witch skipped heal action');
       this.segmentsManager.finishSegment();
     });
 
     socket.on('witch:skipped-poison', () => {
-      console.log('🧙‍♀️ Witch skipped poison action');
+      console.log('🧙 Witch skipped poison action');
       this.segmentsManager.finishSegment();
+    });
+  }
+
+  setupDayVoteEvents(
+    socket: Socket<ClientToServerEvents, ServerToClientEvents>
+  ) {
+    socket.on('day:vote', () => {
+      console.log('☀ Day voting not implemented yet');
     });
   }
 

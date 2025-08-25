@@ -23,7 +23,7 @@ export class AudioManager {
       case 'WITCH-POISON':
         return 'Witch/Witch-poison';
       case 'DAY':
-        return 'Wake-up-everyone';
+        return this.getDeathAnnouncementAudio();
       default:
         throw new Error(
           `No start audio defined for segment: ${segment satisfies never}`
@@ -44,7 +44,7 @@ export class AudioManager {
       case 'WITCH-POISON':
         return 'Witch/Witch-end';
       case 'DAY':
-        return;
+        throw new Error('Day segment does not have an ending audio yet');
       default:
         throw new Error(
           `No start audio defined for segment: ${segment satisfies never}`
@@ -63,16 +63,17 @@ export class AudioManager {
 
   getDeathAnnouncementAudio() {
     if (this.deathManager.getPendingDeaths().length > 0) {
-      return 'Night-end/Deaths-with-start';
+      return 'Night-end/combined_audio';
     }
     throw new Error('Not implemented yet');
   }
+
   async playSegmentAudio(segment: SegmentType, isStarting: boolean) {
     if (isStarting) {
       const startAudioFile = this.getSegmentStartAudio(segment);
 
-      // Dont wait for the audio to finish if it's the lovers segment
-      if (segment === 'LOVERS') {
+      // Dont wait for the audio to finish if it's the lovers or day segment
+      if (segment === 'LOVERS' || segment === 'DAY') {
         this.playAudio(startAudioFile);
         return;
       }
@@ -86,7 +87,7 @@ export class AudioManager {
 
     if (!lastAudioFile) {
       // This mean we would be inside the WITCH-HEAL segment and we need to skip it
-      return true;
+      return;
     }
 
     await this.playAudio(lastAudioFile);

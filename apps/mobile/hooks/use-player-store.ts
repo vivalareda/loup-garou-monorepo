@@ -5,10 +5,13 @@ type PlayerStore = {
   player: Player | null;
   setPlayer: (player: Player | null) => void;
   updateRole: (role: Role) => void;
+  isAlive: boolean;
+  playerIsDead: () => void;
 };
 
 export const usePlayerStore = create<PlayerStore>((set) => ({
   player: null,
+  isAlive: true,
   setPlayer: (player) => set({ player }),
   updateRole: (role) =>
     set((state) => {
@@ -28,4 +31,5 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
         player,
       };
     }),
+  playerIsDead: () => set({ isAlive: false }),
 }));

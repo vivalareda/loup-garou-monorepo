@@ -1,4 +1,5 @@
 import type {
+  DeathCause,
   DeathInfo,
   PlayerListItem,
   Role,
@@ -252,6 +253,16 @@ export class Game {
     );
   }
 
+  handleAllWerewolvesAgree() {
+    const victim = this.getWerewolfTarget();
+    console.log('victim is', victim);
+    if (!victim) {
+      throw new Error('The victim does not exist, this is not normal');
+    }
+    console.log('calling add pending death');
+    this.addPendingDeath(victim, 'WEREWOLVES');
+  }
+
   alertAllWerewolvesOfVotes() {
     for (const werewolf of this.getWerewolfList()) {
       this.io.to(werewolf.getSocketId()).emit('werewolf:voting-complete');
@@ -290,46 +301,50 @@ export class Game {
 
   processPendingDeaths() {
     const pendingDeaths = this.deathManager.getPendingDeaths();
+    console.log('Processing pending deaths:', pendingDeaths);
+
     const deathInfos: DeathInfo[] = [];
 
     // Process each death (remove players, handle lover suicides, etc.)
     for (const pendingDeath of pendingDeaths) {
       const player = this.players.get(pendingDeath.playerId);
-      if (player) {
-        // Create DeathInfo from PendingDeath
-        const deathInfo: import('@repo/types').DeathInfo = {
-          playerId: pendingDeath.playerId,
-          playerName: player.getName(),
-          cause: pendingDeath.cause,
-          timestamp: new Date(),
-          metadata: pendingDeath.metadata,
-        };
 
-        deathInfos.push(deathInfo);
-        player.setIsAlive(false);
-        console.log(
-          `Player ${player.getName()} died from ${pendingDeath.cause}`
+      if (!player) {
+        throw new Error('error: player not found in processPendingDeaths');
+      }
+      // Create DeathInfo from PendingDeath
+      const deathInfo: DeathInfo = {
+        playerId: pendingDeath.playerId,
+        playerName: player.getName(),
+        cause: pendingDeath.cause,
+        timestamp: new Date(),
+        metadata: pendingDeath.metadata,
+      };
+
+      deathInfos.push(deathInfo);
+      player.setIsAlive(false);
+      console.log('alerting player of death', player.getSocketId());
+      this.alertPlayerOfDeath(player.getSocketId());
+      console.log(`Player ${player.getName()} died from ${pendingDeath.cause}`);
+
+      // Handle lover suicide if one lover dies
+      if (
+        this.isPlayerLover(player) &&
+        pendingDeath.cause !== 'LOVER_SUICIDE'
+      ) {
+        const otherLover = this.lovers.find(
+          (lover) => lover.getSocketId() !== player.getSocketId()
         );
-
-        // Handle lover suicide if one lover dies
-        if (
-          this.isPlayerLover(player) &&
-          pendingDeath.cause !== 'LOVER_SUICIDE'
-        ) {
-          const otherLover = this.lovers.find(
-            (lover) => lover.getSocketId() !== player.getSocketId()
-          );
-          if (otherLover?.isAlive) {
-            otherLover.setIsAlive(false);
-            const loverDeathInfo: DeathInfo = {
-              playerId: otherLover.getSocketId(),
-              playerName: otherLover.getName(),
-              cause: 'LOVER_SUICIDE',
-              timestamp: new Date(),
-              metadata: { loverId: pendingDeath.playerId },
-            };
-            deathInfos.push(loverDeathInfo);
-          }
+        if (otherLover?.isAlive) {
+          otherLover.setIsAlive(false);
+          const loverDeathInfo: DeathInfo = {
+            playerId: otherLover.getSocketId(),
+            playerName: otherLover.getName(),
+            cause: 'LOVER_SUICIDE',
+            timestamp: new Date(),
+            metadata: { loverId: pendingDeath.playerId },
+          };
+          deathInfos.push(loverDeathInfo);
         }
       }
     }
@@ -355,10 +370,12 @@ export class Game {
     );
   }
 
-  addPendingDeath(
-    sid: string,
-    cause: import('@repo/types').DeathCause = 'WEREWOLVES'
-  ) {
+  alertPlayerOfDeath(socketId: string) {
+    this.io.to(socketId).emit('alert:player-is-dead');
+    this.io.emit('lobby:player-died', socketId);
+  }
+
+  addPendingDeath(sid: string, cause: DeathCause) {
     const player = this.players.get(sid);
 
     if (!player) {
@@ -370,7 +387,7 @@ export class Game {
 
   getWerewolfTarget() {
     if (!this.hasAllWerewolvesAgreed()) {
-      return null;
+      return;
     }
 
     const tallies = this.calculateWerewolfVoteTallies();

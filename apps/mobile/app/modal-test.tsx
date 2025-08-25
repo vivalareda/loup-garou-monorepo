@@ -2,8 +2,8 @@ import LottieView from 'lottie-react-native';
 import { useCallback } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { GlobalModal } from '@/components/global-modal';
-import { useModalStore } from '@/hooks/useModalStore';
-import { usePlayersList } from '@/hooks/usePlayersList';
+import { useModalStore } from '@/hooks/use-modal-store';
+import { usePlayersList } from '@/hooks/use-players-list';
 
 export default function ModalTestScreen() {
   const { openModal } = useModalStore();

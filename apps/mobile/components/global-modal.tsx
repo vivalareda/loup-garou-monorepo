@@ -8,9 +8,9 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { useModalStore } from '@/hooks/use-modal-store';
+import { usePlayersList } from '@/hooks/use-players-list';
 import { useWerewolfVotes } from '@/hooks/use-werewolves-votes';
-import { useModalStore } from '@/hooks/useModalStore';
-import { usePlayersList } from '@/hooks/usePlayersList';
 
 export function GlobalModal() {
   const { isOpen, modalData, closeModal } = useModalStore();
@@ -127,6 +127,7 @@ export function GlobalModal() {
 
   const renderPlayerList = () => {
     if (!(modalData.data && Array.isArray(modalData.data))) {
+      console.error('Modal data is not an array:', modalData.data);
       return null;
     }
 

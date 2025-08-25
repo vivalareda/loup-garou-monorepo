@@ -2,6 +2,15 @@
 import type React from 'react';
 import { create } from 'zustand';
 
+export type ModalState =
+  | { type: 'CUPID'; open: true }
+  | { type: 'LOVER'; open: true }
+  | { type: 'WEREWOLVES'; open: true }
+  | { type: 'WITCH-HEAL'; open: true }
+  | { type: 'WITCH-POISON'; open: true }
+  | { type: 'DAY-VOTE'; open: true }
+  | { open: false };
+
 type ModalType = 'confirm' | 'selection' | 'yes-no';
 
 type ModalData = {

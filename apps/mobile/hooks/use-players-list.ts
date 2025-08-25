@@ -1,6 +1,6 @@
 import type { PlayerListItem, Role } from '@repo/types';
 import { useEffect, useState } from 'react';
-import { usePlayerStore } from '@/hooks/usePlayerStore';
+import { usePlayerStore } from '@/hooks/use-player-store';
 import { socket } from '@/utils/sockets';
 
 export function usePlayersList() {
@@ -22,21 +22,29 @@ export function usePlayersList() {
     });
 
     // update when new player joins
-    socket.on('lobby:update-players-list', (newPlayer: PlayerListItem) => {
+    socket.on('lobby:update-players-list', (newPlayer) => {
       setPlayersList((prevList) => [...prevList, newPlayer]);
     });
 
     // assign role
-    socket.once('player:role-assigned', (role: Role) => {
+    socket.once('player:role-assigned', (role) => {
       setRoleAssigned(role);
     });
 
     socket.on('lobby:villagers-list', (villagers) => {
+      console.log('setting villagers list', villagers);
       setVillagersList(villagers);
+    });
+
+    socket.on('lobby:player-died', (playerSid) => {
+      setPlayersList((prevList) =>
+        prevList.filter((p) => p.socketId !== playerSid)
+      );
     });
 
     return () => {
       socket.off('lobby:update-players-list');
+      socket.off('lobby:player-died');
       socket.off('lobby:players-list');
       socket.off('lobby:villagers-list');
       socket.off('lobby:update-players-list');

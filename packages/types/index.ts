@@ -1,4 +1,9 @@
 export type {
+  DeathCause,
+  DeathInfo,
+  PendingDeath,
+} from './src/death';
+export type {
   ClientToServerEvents,
   ServerToClientEvents,
   WerewolvesVoteState,

@@ -12,6 +12,7 @@ import {
 } from 'vitest';
 import type { Game } from '@/core/game';
 import { SegmentsManager } from '@/segments/segments-manager';
+import type { AudioManager } from '@/segments/audio-manager';
 import type { SocketType } from '@/server/sockets';
 
 vi.mock('sound-play');
@@ -23,6 +24,7 @@ describe('SegmentsManager', () => {
   let mockSoundPlay: ReturnType<typeof vi.mocked>;
   let mockFs: MockedFunction<typeof vi.mocked>;
   let mockGame: Game;
+  let mockAudioManager: AudioManager;
 
   beforeEach(() => {
     mockGame = {
@@ -43,7 +45,11 @@ describe('SegmentsManager', () => {
       emit: vi.fn(),
     } as unknown as SocketType;
 
-    segmentsManager = new SegmentsManager(mockGame, mockIo);
+    mockAudioManager = {
+      playSegmentAudio: vi.fn(),
+    } as unknown as AudioManager;
+
+    segmentsManager = new SegmentsManager(mockGame, mockIo, mockAudioManager);
   });
 
   afterEach(() => {

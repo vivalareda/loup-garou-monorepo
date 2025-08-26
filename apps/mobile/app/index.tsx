@@ -11,7 +11,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { usePlayerStore } from '@/hooks/usePlayerStore';
+import { usePlayerStore } from '@/hooks/use-player-store';
 import { socket } from '@/utils/sockets';
 
 export default function Home() {
@@ -32,13 +32,14 @@ export default function Home() {
   return (
     <ImageBackground
       className="flex-1"
+      resizeMethod="resize"
       source={require('@/assets/join-screen-background.png')}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView className="flex-1 items-center justify-center pb-24">
           <View className="items-center justify-between gap-20">
             <View className="mt-32 pb-12">
-              <Text className="text-7xl font-bold text-white">Loup-Garou</Text>
+              <Text className="text-7xl font-bold text-white"> </Text>
             </View>
             <View className="mt-56 items-center self-stretch">
               <Text className="text-center text-4xl font-bold text-white">

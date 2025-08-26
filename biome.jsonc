@@ -11,8 +11,10 @@
       "!app/**/dist/",
       "!apps/**/lib/android-navigation-bar.tsx",
       "!apps/mobile/global.css",
+      "!apps/mobile/app/+not-found.tsx",
       "!apps/mobile/metro.config.js",
-      "!apps/mobile/babel.config.js"
+      "!apps/mobile/babel.config.js",
+      "!apps/dashboard/src/index.css"
     ]
   },
   "linter": {

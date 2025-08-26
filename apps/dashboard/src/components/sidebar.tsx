@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
+import { socket } from '@/utils/socket';
 
 type SidebarProps = {
   onAddPlayer: () => void;
@@ -28,6 +29,26 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
     return 'bg-gray-100 text-gray-600';
   };
 
+  // Admin controls for testing
+  const handleStartGame = () => {
+    console.log('🎮 Starting game...');
+    socket.emit('admin:start-game');
+  };
+
+  const handleNextSegment = () => {
+    console.log('⏭️ Advancing to next segment...');
+    socket.emit('admin:next-segment');
+  };
+
+  const handleSimulateWerewolfVote = () => {
+    const alivePlayers = playersArray.filter((p) => p.isConnected);
+    if (alivePlayers.length > 0) {
+      const target = alivePlayers[0].name; // Just pick first player
+      console.log(`🐺 Simulating werewolf vote for ${target}`);
+      socket.emit('admin:simulate-werewolf-vote', target);
+    }
+  };
+
   return (
     <div className="flex w-64 flex-col border-r border-gray-200 bg-gray-100">
       <div className="border-b border-gray-200 p-4">
@@ -37,9 +58,42 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
         <Button className="w-full" onClick={onAddPlayer} size="sm">
           + Add Player
         </Button>
-        <Button className="mt-4 w-full" onClick={onBatchAddPlayers} size="sm">
+        <Button className="mt-2 w-full" onClick={onBatchAddPlayers} size="sm">
           Batch Add Players
         </Button>
+      </div>
+
+      {/* Admin Controls */}
+      <div className="border-b border-gray-200 p-4">
+        <h3 className="mb-3 text-sm font-semibold text-gray-600">
+          🎮 Game Controls
+        </h3>
+        <div className="space-y-2">
+          <Button
+            className="w-full text-xs"
+            onClick={handleStartGame}
+            size="sm"
+            variant="outline"
+          >
+            🚀 Start Game
+          </Button>
+          <Button
+            className="w-full text-xs"
+            onClick={handleNextSegment}
+            size="sm"
+            variant="outline"
+          >
+            ⏭️ Next Segment
+          </Button>
+          <Button
+            className="w-full text-xs"
+            onClick={handleSimulateWerewolfVote}
+            size="sm"
+            variant="outline"
+          >
+            🐺 Simulate Wolf Vote
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">

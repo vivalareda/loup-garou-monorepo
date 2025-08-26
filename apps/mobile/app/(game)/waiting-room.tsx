@@ -1,20 +1,24 @@
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { SafeAreaView, Text, View } from 'react-native';
-import { usePlayerStore } from '@/hooks/usePlayerStore';
-import { usePlayersList } from '@/hooks/usePlayersList';
+import { useGameStore } from '@/hooks/use-game-store';
+import { usePlayerStore } from '@/hooks/use-player-store';
 
 export default function WaitingRoom() {
-  const { playersList, roleAssigned } = usePlayersList();
-  const { player, updateRole } = usePlayerStore();
+  const { playersList, roleAssigned, initializeSocketListeners } =
+    useGameStore();
+  const { player } = usePlayerStore();
   const router = useRouter();
 
   useEffect(() => {
+    initializeSocketListeners();
+  }, [initializeSocketListeners]);
+
+  useEffect(() => {
     if (roleAssigned) {
-      updateRole(roleAssigned);
       router.push('/(game)/game-interface');
     }
-  }, [updateRole, router, roleAssigned]);
+  }, [router, roleAssigned]);
 
   if (!player) {
     throw new Error('Player not found in waiting room');

@@ -3,6 +3,7 @@ export const segments = [
   'LOVERS',
   'WEREWOLF',
   'WITCH',
+  'HUNTER',
   // 'SEER',
   'DAY',
 ] as const;

@@ -305,6 +305,12 @@ export class Game {
     }
   }
 
+  checkIfHunter(player: Player) {
+    if (player.getRole() !== 'HUNTER') {
+      return;
+    }
+  }
+
   hasAllWerewolvesAgreed() {
     const werewolves = this.getWerewolfList();
     const werewolfSids = werewolves.map((werewolf) => werewolf.getSocketId());
@@ -352,6 +358,8 @@ export class Game {
         this.witchHasPoisonPotion = false;
       }
 
+      this.checkIfHunter(player);
+
       // Handle lover suicide if one lover dies
       if (
         this.isPlayerLover(player) &&
@@ -362,6 +370,7 @@ export class Game {
         );
         if (otherLover?.isAlive) {
           otherLover.setIsAlive(false);
+          this.alertPlayerOfDeath(player.getSocketId());
           const loverDeathInfo: DeathInfo = {
             playerId: otherLover.getSocketId(),
             playerName: otherLover.getName(),

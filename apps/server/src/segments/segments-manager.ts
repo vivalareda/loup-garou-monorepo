@@ -76,12 +76,19 @@ export class SegmentsManager {
       skip: false,
     };
 
+    const hunterSegment: Segment = {
+      type: 'HUNTER',
+      action: () => console.log(),
+      skip: true,
+    };
+
     this.initializeSegment(cupidSegment);
     this.initializeSegment(loversSegment);
     this.initializeSegment(werewolfSegment);
     this.initializeSegment(witchHealSegment);
     this.initializeSegment(witchPoisonSegment);
     this.initializeSegment(daySegment);
+    this.initializeSegment(hunterSegment);
   }
 
   startGame() {
@@ -161,14 +168,9 @@ export class SegmentsManager {
 
     this.markFirstNightSegment(segment);
 
-    // if (segment.type === 'DAY') {
-    //   this.isGameOver();
-    // }
-
     this.currentSegment++;
     this.findValidSegment();
 
-    console.log('Playing next segment:', this.currentSegment);
     this.playSegment();
   }
 }

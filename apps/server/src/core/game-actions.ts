@@ -82,7 +82,6 @@ export class GameActions {
 
   handleWerewolfVote(socketId: string, targetPlayer: string) {
     this.game.handleWerewolfVote(socketId, targetPlayer);
-    this.broadcastWerewolfVotes();
   }
 
   handleWerewolfUpdateVote(
@@ -91,7 +90,6 @@ export class GameActions {
     oldVote: string
   ) {
     this.game.handleWerewolfUpdateVote(socketId, targetPlayer, oldVote);
-    this.broadcastWerewolfVotes();
   }
 
   broadcastWerewolfVotes() {
@@ -118,6 +116,12 @@ export class GameActions {
   dayAction() {
     setTimeout(() => {
       this.game.processPendingDeaths();
+      const winner = this.game.checkIfWinner();
+      if (winner) {
+        this.game.alertWinner(winner);
+        return;
+      }
+      console.log('no winner yet, continuing to day voting phase');
     }, 7000);
     setTimeout(() => {
       this.io.emit('day:voting-phase-start');

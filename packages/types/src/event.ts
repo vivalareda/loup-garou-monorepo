@@ -36,6 +36,8 @@ const serverEventSchemas = {
   'alert:player-is-lover': null as unknown as (loverName: string) => void,
   'alert:lovers-can-close-alert': null as unknown as () => void,
   'alert:player-is-dead': null as unknown as () => void,
+  'alert:player-won': null as unknown as () => void,
+  'alert:player-lost': null as unknown as () => void,
 
   'werewolf:pick-required': null as unknown as () => void,
   'werewolf:current-votes': null as unknown as (
@@ -82,7 +84,7 @@ const clientEventSchemas = {
   'witch:skipped-heal': null as unknown as () => void,
   'witch:skipped-poison': null as unknown as () => void,
 
-  'day:vote': null as unknown as (targetPlayer: string) => void,
+  'day:player-voted': null as unknown as (targetPlayer: string) => void,
 
   //TODO: REMOVE THIS ONLY FOR TESTING
   'werewolf:current-votes': null as unknown as (

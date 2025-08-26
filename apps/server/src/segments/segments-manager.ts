@@ -17,7 +17,6 @@ export class SegmentsManager {
     this.game = game;
     this.gameActions = new GameActions(game, io);
     this.audioManager = audioManager;
-    // TODO: change this back to 0
     this.currentSegment = 2;
     this.initializeSegments();
   }
@@ -28,6 +27,16 @@ export class SegmentsManager {
 
   getGameActions() {
     return this.gameActions;
+  }
+
+  witchDied() {
+    const healSegment = this.segments.find((s) => s.type === 'WITCH-HEAL');
+    const poisonSegment = this.segments.find((s) => s.type === 'WITCH-POISON');
+    if (!(healSegment && poisonSegment)) {
+      throw new Error('Witch heal or poison segment not found');
+    }
+    healSegment.skip = true;
+    poisonSegment.skip = true;
   }
 
   initializeSegments() {
@@ -58,7 +67,7 @@ export class SegmentsManager {
     const witchPoisonSegment: Segment = {
       type: 'WITCH-POISON',
       action: () => this.gameActions.witchPoisonAction(),
-      skip: true,
+      skip: false,
     };
 
     const daySegment: Segment = {
@@ -102,6 +111,8 @@ export class SegmentsManager {
   }
 
   isFirstNightSegment(type: string) {
+    console.log('Checking if segment is first night segment:', type);
+    console.log(type === 'CUPID' || type === 'LOVERS');
     return type === 'CUPID' || type === 'LOVERS';
   }
 
@@ -112,61 +123,36 @@ export class SegmentsManager {
     segment.skip = true;
   }
 
-  // async handleNightEnd() {
-  //   await this.playAudio('Wake-up-everyone');
-  //
-  //   // Process night deaths and play appropriate audio
-  //   const deaths = this.game.processPendingDeaths();
-  //
-  //   if (deaths.length === 0) {
-  //     await this.playAudio('Night-end/No-deaths');
-  //     return;
-  //   }
-  //
-  //   // Check for special death scenarios
-  //   const hasLoverDeath = deaths.some(
-  //     (d: DeathInfo) => d.cause === 'LOVER_SUICIDE'
-  //   );
-  //   const hasHunterDeath = deaths.some((d: DeathInfo) => d.metadata?.hunterId);
-  //
-  //   if (hasLoverDeath) {
-  //     await this.playAudio('Special-death/Lover-Death');
-  //   } else if (hasHunterDeath) {
-  //     await this.playAudio('Day-vote/Hunter');
-  //   } else {
-  //     await this.playAudio('Night-end/Deaths');
-  //   }
-  //
-  //   // Announce deaths to players
-  //   this.gameActions.announceNightDeaths(deaths);
-  // }
+  getCurrentSegmentType() {
+    const segment = this.segments[this.currentSegment];
+
+    return segment.type;
+  }
 
   async playSegment() {
     const segment = this.segments[this.currentSegment];
     console.log(`[SEGMENT] Playing segment: ${segment.type}`);
 
-    // if (segment.type === 'WITCH-HEAL') {
-    //   if (!this.game.canWitchHeal()) {
-    //     console.log('[SEGMENT] Skipping WITCH-HEAL - potion not available');
-    //     return;
-    //   }
-    //   await this.audioManager.playSegmentAudio(segment.type, true);
-    //   segment.action();
-    //   return;
-    // }
-    //
-    // if (segment.type === 'WITCH-POISON') {
-    //   if (!this.game.canWitchPoison()) {
-    //     console.log('[SEGMENT] Skipping WITCH-POISON - potion not available');
-    //     return;
-    //   }
-    //   await this.audioManager.playSegmentAudio(segment.type, true);
-    //   segment.action();
-    //   return;
-    // }
-
     await this.audioManager.playSegmentAudio(segment.type, true);
     segment.action();
+  }
+
+  isGameOver() {
+    const winner = this.game.checkIfWinner();
+
+    if (winner === 'villagers') {
+      this.audioManager.playVillagersWonAudio();
+      this.game.alertWinner(winner);
+      return true;
+    }
+
+    if (winner === 'werewolves') {
+      this.audioManager.playWerewolvesWonAudio();
+      this.game.alertWinner(winner);
+      return true;
+    }
+
+    return false;
   }
 
   async finishSegment() {
@@ -174,6 +160,11 @@ export class SegmentsManager {
     await this.audioManager.playSegmentAudio(segment.type, false);
 
     this.markFirstNightSegment(segment);
+
+    // if (segment.type === 'DAY') {
+    //   this.isGameOver();
+    // }
+
     this.currentSegment++;
     this.findValidSegment();
 

@@ -1,4 +1,9 @@
 export type {
+  DeathCause,
+  DeathInfo,
+  PendingDeath,
+} from './src/death';
+export type {
   ClientToServerEvents,
   ServerToClientEvents,
   WerewolvesVoteState,
@@ -18,8 +23,3 @@ export type {
   SegmentType,
   segments,
 } from './src/segment';
-export type {
-  DeathCause,
-  DeathInfo,
-  PendingDeath,
-} from './src/death';

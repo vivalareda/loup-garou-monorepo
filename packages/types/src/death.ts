@@ -25,4 +25,3 @@ export type PendingDeath = {
   cause: DeathCause;
   metadata?: DeathInfo['metadata'];
 };
-

@@ -70,7 +70,6 @@ export class GameEvents {
           if (!victim) {
             throw new Error('The victim does not exist, this is not normal');
           }
-          console.log('add penthing deaths called');
           this.game.addPendingDeath(victim, 'WEREWOLVES');
           this.segmentsManager.finishSegment();
         }
@@ -165,8 +164,26 @@ export class GameEvents {
   setupDayVoteEvents(
     socket: Socket<ClientToServerEvents, ServerToClientEvents>
   ) {
-    socket.on('day:vote', () => {
-      console.log('☀ Day voting not implemented yet');
+    socket.on('day:player-voted', (targetPlayer: string) => {
+      try {
+        this.game.handleDayVote(socket.id, targetPlayer);
+
+        // Check if voting is complete
+        if (this.game.hasAllPlayersVoted()) {
+          const player = this.game.getDayVoteTarget();
+          this.game.handleDayVotePlayer(player);
+
+          if (player.getRole() === 'WITCH') {
+            this.segmentsManager.witchDied();
+          }
+
+          if (!this.segmentsManager.isGameOver()) {
+            this.segmentsManager.finishSegment();
+          }
+        }
+      } catch (error) {
+        console.error('Day vote error:', error);
+      }
     });
   }
 

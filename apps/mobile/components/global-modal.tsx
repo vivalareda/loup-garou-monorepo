@@ -8,17 +8,27 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { useGameStore } from '@/hooks/use-game-store';
 import { useModalStore } from '@/hooks/use-modal-store';
-import { usePlayersList } from '@/hooks/use-players-list';
-import { useWerewolfVotes } from '@/hooks/use-werewolves-votes';
 
 export function GlobalModal() {
   const { isOpen, modalData, closeModal } = useModalStore();
-  const { villagersList, playersList, getPlayerNameFromSid } = usePlayersList();
-  const { votes, sendVote, isVotingComplete, resetVoting } = useWerewolfVotes();
+  const {
+    villagersList,
+    playersList,
+    getPlayerNameFromSid,
+    werewolfVotes: votes,
+    sendVote,
+    isVotingComplete,
+    resetVoting,
+  } = useGameStore();
   const [selection, setSelection] = useState<string[]>([]);
   const [isDelayActive, setIsDelayActive] = useState(false);
   const totalWerewolves = playersList.length - villagersList.length;
+
+  if (modalData?.data) {
+    console.log(`Modal data is ${modalData.data}`);
+  }
 
   const handleModalClose = useCallback(() => {
     if (modalData?.onConfirm) {

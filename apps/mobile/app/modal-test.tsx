@@ -2,12 +2,12 @@ import LottieView from 'lottie-react-native';
 import { useCallback } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { GlobalModal } from '@/components/global-modal';
+import { useGameStore } from '@/hooks/use-game-store';
 import { useModalStore } from '@/hooks/use-modal-store';
-import { usePlayersList } from '@/hooks/use-players-list';
 
 export default function ModalTestScreen() {
   const { openModal } = useModalStore();
-  const { playersList, villagersList } = usePlayersList();
+  const { playersList, villagersList } = useGameStore();
 
   const testWerewolfModal = () => {
     openModal({

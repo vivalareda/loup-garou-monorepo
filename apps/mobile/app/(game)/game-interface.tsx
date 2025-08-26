@@ -1,4 +1,5 @@
 import { getRoleDescription, isGamePlayer } from '@repo/types';
+
 import { ImpactFeedbackStyle, impactAsync } from 'expo-haptics';
 import LottieView from 'lottie-react-native';
 import { useCallback, useEffect } from 'react';
@@ -12,9 +13,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCardFlip } from '@/hooks/use-card-flip';
 import { useGameEvents } from '@/hooks/use-game-events';
+import { useGameStore } from '@/hooks/use-game-store';
 import { useModalStore } from '@/hooks/use-modal-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
-import { usePlayersList } from '@/hooks/use-players-list';
 import { socket } from '@/utils/sockets';
 
 const { width } = Dimensions.get('window');
@@ -23,10 +24,22 @@ const CARD_HEIGHT = CARD_WIDTH * 1.4;
 
 export default function GameInterface() {
   const { player } = usePlayerStore();
-  const { playersList, villagersList } = usePlayersList();
+  const {
+    playersList,
+    villagersList,
+    initializeSocketListeners,
+    cleanupSocketListeners,
+  } = useGameStore();
   const { modalState, werewolvesVictim } = useGameEvents();
   const { openModal } = useModalStore();
   const { isRevealed, flipCard, animations } = useCardFlip();
+
+  // Initialize socket listeners when component mounts
+  useEffect(() => {
+    socket.emit('lobby:get-players-list');
+    initializeSocketListeners();
+    return cleanupSocketListeners;
+  }, [initializeSocketListeners, cleanupSocketListeners]);
 
   const getPlayerSid = useCallback(
     (name: string) => {
@@ -87,95 +100,95 @@ export default function GameInterface() {
     );
   }, []);
 
-  const loverHapticAlert = useCallback(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log('promised resolved, sending haptics');
-    try {
-      await impactAsync(ImpactFeedbackStyle.Heavy);
-      console.log('Haptic feedback triggered');
-    } catch (error) {
-      console.error('Error triggering haptic feedback', error);
-    }
-  }, []);
-
-  const handleLoverModal = useCallback(async () => {
-    await loverHapticAlert();
-    openModal({
-      type: 'confirm',
-      title: 'Vous êtes amoureux !',
-      data: getLoverModalData(),
-      buttonDelay: 5000,
-      onConfirm: () => {
-        socket.emit('alert:lover-closed-alert');
-      },
-    });
-  }, [loverHapticAlert, openModal, getLoverModalData]);
-
-  const handleCupidModal = useCallback(() => {
-    openModal({
-      type: 'selection',
-      title: 'Choisissez les amoureux',
-      data: playersList.map((p) => p.name),
-      selectionCount: 2,
-      onConfirm: (selectedPlayers: string[]) => {
-        const loversSid = selectedPlayers.map((name) => {
-          return getPlayerSid(name);
-        });
-        socket.emit('cupid:lovers-pick', loversSid);
-      },
-    });
-  }, [openModal, getPlayerSid, playersList]);
-
-  const handleWitchHealModal = useCallback(() => {
-    openModal({
-      type: 'yes-no',
-      title: 'Voulez-vous sauver la victime?',
-      data: getWitchModalData(),
-      onConfirm: (choice: string[]) => {
-        if (choice[0] === 'yes') {
-          socket.emit('witch:healed-player');
-        } else {
-          socket.emit('witch:skipped-heal');
-        }
-      },
-    });
-  }, [openModal, getWitchModalData]);
-
-  const handleWerewolfModal = useCallback(() => {
-    openModal({
-      type: 'selection',
-      title: 'Choisissez votre victime',
-      data: villagersList.map((p) => p.socketId),
-      werewolfModal: true,
-      hideConfirmButton: true,
-    });
-  }, [openModal, villagersList]);
-
-  const handleWitchKillModal = useCallback(() => {
-    openModal({
-      type: 'selection',
-      title: 'Choisissez une victime',
-      data: playersList.map((p) => p.name),
-      selectionCount: 1,
-      onConfirm: (selectedPlayer: string) => {
-        socket.emit('witch:poisoned-player', selectedPlayer);
-      },
-    });
-  }, [openModal, playersList]);
-
-  const handleDayVoteModal = useCallback(() => {
-    openModal({
-      type: 'selection',
-      title: 'Qui voulez-vous éliminer?',
-      data: playersList.map((p) => p.name),
-      selectionCount: 1,
-      onConfirm: (selectedPlayer: string) => {
-        socket.emit('day:vote', selectedPlayer);
-      },
-    });
-  }, [openModal, playersList]);
-
   useEffect(() => {
+    const loverHapticAlert = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log('promised resolved, sending haptics');
+      try {
+        await impactAsync(ImpactFeedbackStyle.Heavy);
+        console.log('Haptic feedback triggered');
+      } catch (error) {
+        console.error('Error triggering haptic feedback', error);
+      }
+    };
+
+    const handleLoverModal = async () => {
+      await loverHapticAlert();
+      openModal({
+        type: 'confirm',
+        title: 'Vous êtes amoureux !',
+        data: getLoverModalData(),
+        buttonDelay: 5000,
+        onConfirm: () => {
+          socket.emit('alert:lover-closed-alert');
+        },
+      });
+    };
+
+    const handleCupidModal = () => {
+      openModal({
+        type: 'selection',
+        title: 'Choisissez les amoureux',
+        data: playersList.map((p) => p.name),
+        selectionCount: 2,
+        onConfirm: (selectedPlayers: string[]) => {
+          const loversSid = selectedPlayers.map((name) => {
+            return getPlayerSid(name);
+          });
+          socket.emit('cupid:lovers-pick', loversSid);
+        },
+      });
+    };
+
+    const handleWitchHealModal = () => {
+      openModal({
+        type: 'yes-no',
+        title: 'Voulez-vous sauver la victime?',
+        data: getWitchModalData(),
+        onConfirm: (choice: string[]) => {
+          if (choice[0] === 'yes') {
+            socket.emit('witch:healed-player');
+          } else {
+            socket.emit('witch:skipped-heal');
+          }
+        },
+      });
+    };
+
+    const handleWerewolfModal = () => {
+      openModal({
+        type: 'selection',
+        title: 'Choisissez votre victime',
+        data: villagersList.map((p) => p.socketId),
+        werewolfModal: true,
+        hideConfirmButton: true,
+      });
+    };
+
+    const handleWitchKillModal = () => {
+      openModal({
+        type: 'selection',
+        title: 'Choisissez une victime',
+        data: playersList.map((p) => p.name),
+        selectionCount: 1,
+        onConfirm: (selectedPlayer: string) => {
+          socket.emit('witch:poisoned-player', selectedPlayer);
+        },
+      });
+    };
+
+    const handleDayVoteModal = () => {
+      openModal({
+        type: 'selection',
+        title: 'Qui voulez-vous éliminer?',
+        data: playersList.map((p) => p.name),
+        selectionCount: 1,
+        onConfirm: (selectedPlayer: string) => {
+          socket.emit('day:player-voted', selectedPlayer);
+        },
+      });
+    };
+
     if (!(player && isGamePlayer(player) && modalState.open)) {
       return;
     }
@@ -215,14 +228,14 @@ export default function GameInterface() {
         throw new Error(`Unknown modal type: ${modalState satisfies never}`);
     }
   }, [
-    handleDayVoteModal,
-    handleWitchKillModal,
-    handleWitchHealModal,
     modalState,
     player,
-    handleLoverModal,
-    handleCupidModal,
-    handleWerewolfModal,
+    playersList,
+    villagersList,
+    openModal,
+    getPlayerSid,
+    getLoverModalData,
+    getWitchModalData,
   ]);
 
   if (!player) {

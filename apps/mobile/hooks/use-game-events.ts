@@ -33,8 +33,20 @@ export function useGameEvents() {
       router.replace('/death-screen');
     });
 
+    socket.on('alert:player-won', () => {
+      console.log('Player won the game!');
+      router.replace('/winner-screen');
+    });
+
+    socket.on('alert:player-lost', () => {
+      console.log('Player lost the game!');
+      router.replace('/loser-screen');
+    });
+
     return () => {
       socket.off('werewolf:pick-required');
+      socket.off('alert:player-won');
+      socket.off('alert:player-lost');
     };
   }, [playerIsDead, router]);
 

@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+
 import type { SegmentType } from '@repo/types';
 import sound from 'sound-play';
 import type { DeathManager } from '@/core/death-manager';
@@ -44,7 +45,7 @@ export class AudioManager {
       case 'WITCH-POISON':
         return 'Witch/Witch-end';
       case 'DAY':
-        throw new Error('Day segment does not have an ending audio yet');
+        return 'Day-vote/Vote-Death';
       default:
         throw new Error(
           `No start audio defined for segment: ${segment satisfies never}`
@@ -65,7 +66,16 @@ export class AudioManager {
     if (this.deathManager.getPendingDeaths().length > 0) {
       return 'Night-end/combined_audio';
     }
-    throw new Error('Not implemented yet');
+
+    return 'Night-end/No-deaths-with-start';
+  }
+
+  async playVillagersWonAudio() {
+    await this.playAudio('End-game/Villagers-won');
+  }
+
+  async playWerewolvesWonAudio() {
+    await this.playAudio('End-game/Werewolves-won');
   }
 
   async playSegmentAudio(segment: SegmentType, isStarting: boolean) {

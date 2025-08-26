@@ -31,6 +31,10 @@ type MockPlayer = {
   showHealModal: boolean;
   showPoisonModal: boolean;
   werewolfVictimId: string | null;
+  // Day vote state
+  showDayVoteModal: boolean;
+  dayVoteTarget: string | null;
+  canVote: boolean;
 };
 
 type MockPlayerState = {
@@ -58,6 +62,10 @@ type MockPlayerStore = MockPlayerState & {
   skipPoison: (playerId: string) => void;
   closeHealModal: (playerId: string) => void;
   closePoisonModal: (playerId: string) => void;
+  // Day vote actions
+  voteDayPlayer: (playerId: string, targetPlayerId: string) => void;
+  closeDayVoteModal: (playerId: string) => void;
+  simulateAllDayVotes: (targetPlayerName: string) => void;
 };
 
 function createPlayerSocket(
@@ -161,19 +169,81 @@ function createPlayerSocket(
       `🧙‍♀️ [WITCH STORE] Player ${name} received witch:can-heal event`,
       { victimSid }
     );
-    store.getState().updatePlayerData(id, {
-      werewolfVictimId: victimSid,
-      showHealModal: true,
-    });
+    const currentPlayer = store.getState().players.get(id);
+    if (
+      currentPlayer?.player &&
+      isGamePlayer(currentPlayer.player) &&
+      currentPlayer.player.isAlive
+    ) {
+      store.getState().updatePlayerData(id, {
+        werewolfVictimId: victimSid,
+        showHealModal: true,
+      });
+    } else {
+      console.log(
+        `🧙‍♀️ [WITCH STORE] Skipping heal modal for dead player ${name}`
+      );
+    }
   });
 
   socket.on('witch:pick-poison-player', () => {
     console.log(
       `🧙‍♀️ [WITCH STORE] Player ${name} received witch:pick-poison-player event`
     );
-    store.getState().updatePlayerData(id, {
-      showPoisonModal: true,
-    });
+    const currentPlayer = store.getState().players.get(id);
+    if (
+      currentPlayer?.player &&
+      isGamePlayer(currentPlayer.player) &&
+      currentPlayer.player.isAlive
+    ) {
+      store.getState().updatePlayerData(id, {
+        showPoisonModal: true,
+      });
+    } else {
+      console.log(
+        `🧙‍♀️ [WITCH STORE] Skipping poison modal for dead player ${name}`
+      );
+    }
+  });
+
+  // Day vote event listeners
+  socket.on('day:voting-phase-start', () => {
+    console.log(
+      `☀️ [DAY VOTE] Player ${name} received day:voting-phase-start event`
+    );
+    const currentPlayer = store.getState().players.get(id);
+    if (
+      currentPlayer?.player &&
+      isGamePlayer(currentPlayer.player) &&
+      currentPlayer.player.isAlive
+    ) {
+      store.getState().updatePlayerData(id, {
+        showDayVoteModal: true,
+        canVote: true,
+      });
+    } else {
+      console.log(
+        `☀️ [DAY VOTE] Skipping day vote modal for dead player ${name}`
+      );
+    }
+  });
+
+  socket.on('alert:player-is-dead', () => {
+    console.log(
+      `💀 [DEATH] Player ${name} received alert:player-is-dead event`
+    );
+    // Handle player death notification - update player status
+    const currentPlayer = store.getState().players.get(id);
+    if (currentPlayer?.player && isGamePlayer(currentPlayer.player)) {
+      const deadPlayer = {
+        ...currentPlayer.player,
+        isAlive: false,
+      };
+      store.getState().updatePlayerData(id, {
+        player: deadPlayer,
+        showDayVoteModal: false, // Close voting if this player died
+      });
+    }
   });
 
   return socket;
@@ -206,6 +276,10 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
       showHealModal: false,
       showPoisonModal: false,
       werewolfVictimId: null,
+      // Day vote state
+      showDayVoteModal: false,
+      dayVoteTarget: null,
+      canVote: false,
     };
 
     set((state) => ({
@@ -493,6 +567,81 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
   closePoisonModal: (playerId: string) => {
     get().updatePlayerData(playerId, {
       showPoisonModal: false,
+    });
+  },
+
+  // Day vote actions
+  voteDayPlayer: (playerId: string, targetPlayerId: string) => {
+    console.log(`☀️ [DAY VOTE] Player ${playerId} voting for ${targetPlayerId}`);
+    const player = get().players.get(playerId);
+    if (player?.socket) {
+      player.socket.emit('day:player-voted', targetPlayerId);
+      get().updatePlayerData(playerId, {
+        showDayVoteModal: false,
+        dayVoteTarget: targetPlayerId,
+      });
+    }
+  },
+
+  closeDayVoteModal: (playerId: string) => {
+    get().updatePlayerData(playerId, {
+      showDayVoteModal: false,
+    });
+  },
+
+  simulateAllDayVotes: (targetPlayerName: string) => {
+    const { players } = get();
+
+    // Find the target player's socket ID
+    let targetSocketId: string | null = null;
+    for (const player of players.values()) {
+      const playerInList = player.playersList.find(
+        (p) => p.name === targetPlayerName
+      );
+      if (playerInList) {
+        targetSocketId = playerInList.socketId;
+        break;
+      }
+    }
+
+    if (!targetSocketId) {
+      console.error(
+        `Target player ${targetPlayerName} not found in any player list`
+      );
+      return;
+    }
+
+    // Find all alive players and send votes from each
+    const alivePlayers = Array.from(players.values()).filter(
+      (player) =>
+        player.isConnected &&
+        player.status === 'in-game' &&
+        player.player &&
+        isGamePlayer(player.player) &&
+        player.player.isAlive
+    );
+
+    if (alivePlayers.length === 0) {
+      console.error('No alive players found to simulate votes from');
+      return;
+    }
+
+    console.log(
+      `Simulating day votes from ${alivePlayers.length} alive players targeting ${targetPlayerName} (${targetSocketId})`
+    );
+
+    // Send vote from each alive player
+    alivePlayers.forEach((player, index) => {
+      setTimeout(() => {
+        player.socket.emit('day:player-voted', targetSocketId);
+        get().updatePlayerData(player.id, {
+          dayVoteTarget: targetPlayerName,
+          showDayVoteModal: false,
+        });
+        console.log(
+          `Player ${player.name} voted to eliminate ${targetPlayerName}`
+        );
+      }, index * 100); // Stagger the votes slightly to simulate real voting
     });
   },
 }));

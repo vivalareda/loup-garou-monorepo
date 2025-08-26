@@ -16,6 +16,7 @@ export class Game {
   private readonly deathManager: DeathManager;
   private readonly lovers: Player[] = [];
   private readonly werewolfVotes: Map<string, string> = new Map(); // voterSid → targetSid
+  private readonly dayVotes: Map<string, string> = new Map(); // voterSid → targetSid
   private witchHasHealPotion = true;
   private witchHasPoisonPotion = true;
 
@@ -115,15 +116,13 @@ export class Game {
 
     // TODO: remove this for testing only
     for (const player of this.players.values()) {
-      // if (player.getName() === 'reda') {
-      //   const role = 'CUPID';
-      //   player.assignRole(role);
-      //   shuffledRoles.splice(shuffledRoles.indexOf(role), 1);
-      //   this.setPlayerTeams(role, player);
-      // } else {
-      //   player.assignRole('VILLAGER');
-      //   this.setPlayerTeams('VILLAGER', player);
-      // }
+      if (player.getName() === 'Reda') {
+        const role: Role = 'WEREWOLF';
+        player.assignRole(role);
+        shuffledRoles.splice(shuffledRoles.indexOf(role), 1);
+        this.setPlayerTeams(role, player);
+        return;
+      }
       const role = shuffledRoles.pop();
       if (!role) {
         throw new Error('No roles available to assign, this shouldnt happen');
@@ -217,6 +216,15 @@ export class Game {
     // Store vote (overwrites previous vote if any)
     this.werewolfVotes.set(voterSid, targetSid);
     console.log(`Werewolf ${voterSid} voted for ${targetSid}`);
+
+    // Broadcast updated votes to all werewolves
+    this.broadcastWerewolfVotes();
+  }
+
+  handleDayVote(voterSid: string, targetSid: string) {
+    // Store vote (overwrites previous vote if any)
+    this.dayVotes.set(voterSid, targetSid);
+    console.log(`Player ${voterSid} voted to eliminate ${targetSid}`);
   }
 
   handleWerewolfUpdateVote(
@@ -251,6 +259,9 @@ export class Game {
     console.log(
       `Werewolf ${voterSid} changed vote from ${oldTargetSid} to ${newTargetSid}`
     );
+
+    // Broadcast updated votes to all werewolves
+    this.broadcastWerewolfVotes();
   }
 
   handleAllWerewolvesAgree() {
@@ -281,6 +292,17 @@ export class Game {
 
   getWerewolfVoteTallies(): WerewolvesVoteState {
     return this.calculateWerewolfVoteTallies();
+  }
+
+  broadcastWerewolfVotes() {
+    const voteTallies = this.getWerewolfVoteTallies();
+    const werewolves = this.getWerewolfList();
+
+    for (const werewolf of werewolves) {
+      this.io
+        .to(werewolf.getSocketId())
+        .emit('werewolf:current-votes', voteTallies);
+    }
   }
 
   hasAllWerewolvesAgreed() {
@@ -323,9 +345,12 @@ export class Game {
 
       deathInfos.push(deathInfo);
       player.setIsAlive(false);
-      console.log('alerting player of death', player.getSocketId());
       this.alertPlayerOfDeath(player.getSocketId());
-      console.log(`Player ${player.getName()} died from ${pendingDeath.cause}`);
+
+      if (player.getRole() === 'WITCH') {
+        this.witchHasHealPotion = false;
+        this.witchHasPoisonPotion = false;
+      }
 
       // Handle lover suicide if one lover dies
       if (
@@ -421,5 +446,138 @@ export class Game {
 
   canWitchPoison() {
     return this.witchHasPoisonPotion;
+  }
+
+  calculateDayVoteTallies() {
+    const tallies: Record<string, number> = {};
+
+    for (const targetSid of this.dayVotes.values()) {
+      tallies[targetSid] = (tallies[targetSid] || 0) + 1;
+    }
+
+    return tallies;
+  }
+
+  hasAllPlayersVoted() {
+    // For simplicity, we can determine this by checking expected number of votes
+    // The frontend will send votes from all eligible players
+    const expectedVoters = Array.from(this.players.keys()).filter(
+      (playerId) => {
+        const player = this.players.get(playerId);
+        return player?.isAlive;
+      }
+    );
+
+    return this.dayVotes.size === expectedVoters.length;
+  }
+
+  getDayVoteTarget() {
+    const tallies = this.calculateDayVoteTallies();
+    console.log('day vote tallies', tallies);
+
+    let maxVotes = 0;
+    let targetSid: string | null = null;
+    let tieCount = 0;
+
+    // Find player(s) with most votes
+    for (const [playerSid, votes] of Object.entries(tallies)) {
+      if (votes > maxVotes) {
+        maxVotes = votes;
+        targetSid = playerSid;
+        tieCount = 1;
+      } else if (votes === maxVotes && maxVotes > 0) {
+        tieCount++;
+      }
+    }
+
+    // Handle tie case (throw error for now as requested)
+    if (tieCount > 1) {
+      throw new Error('Tie in day vote - will be implemented later');
+    }
+
+    if (!targetSid) {
+      throw new Error('No valid target found in day vote');
+    }
+
+    const player = this.players.get(targetSid);
+
+    if (!player) {
+      throw new Error(`Player with sid ${targetSid} not found`);
+    }
+
+    return player;
+  }
+
+  handleDayVotePlayer(votedPlayer: Player) {
+    if (!votedPlayer) {
+      throw new Error(`Player with sid ${votedPlayer} not found`);
+    }
+
+    votedPlayer.setIsAlive(false);
+
+    // Kill player immediately (not pending death)
+    this.alertPlayerOfDeath(votedPlayer.getSocketId());
+
+    // Clear votes for next round
+    this.dayVotes.clear();
+  }
+
+  alertWinner(winner: 'villagers' | 'werewolves') {
+    if (winner === 'villagers') {
+      for (const player of this.deathManager.getTeamVillagers()) {
+        this.io.to(player.getSocketId()).emit('alert:player-won');
+      }
+      this.alertLosers('werewolves');
+    }
+
+    if (winner === 'werewolves') {
+      for (const player of this.deathManager.getTeamWerewolves()) {
+        this.io.to(player.getSocketId()).emit('alert:player-won');
+      }
+      this.alertLosers('werewolves');
+    }
+  }
+
+  alertLosers(loser: 'villagers' | 'werewolves') {
+    if (loser === 'villagers') {
+      for (const player of this.deathManager.getTeamVillagers()) {
+        this.io.to(player.getSocketId()).emit('alert:player-lost');
+      }
+    }
+
+    if (loser === 'werewolves') {
+      for (const player of this.deathManager.getTeamWerewolves()) {
+        this.io.to(player.getSocketId()).emit('alert:player-lost');
+      }
+    }
+  }
+
+  checkIfWinner() {
+    const villagers = this.deathManager
+      .getTeamVillagers()
+      .filter((p) => p.isAlive);
+    const werewolves = this.deathManager
+      .getTeamWerewolves()
+      .filter((p) => p.isAlive);
+
+    console.log('villagers alive', villagers.length);
+    console.log('werewolves alive', werewolves.length);
+
+    if (werewolves.length === 0) {
+      return 'villagers';
+    }
+
+    if (werewolves.length === 1 && villagers.length === 1) {
+      const lastVillager = villagers[0];
+      if (
+        lastVillager.getRole() === 'WITCH' &&
+        (this.witchHasHealPotion || this.witchHasPoisonPotion)
+      ) {
+        return null; // Game continues
+      }
+      return 'werewolves';
+    }
+
+    return null; // Game continues
   }
 }

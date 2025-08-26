@@ -4,7 +4,7 @@ import { create } from 'zustand';
 type PlayerStore = {
   player: Player | null;
   setPlayer: (player: Player | null) => void;
-  updateRole: (role: Role) => void;
+  setRole: (role: Role) => void;
   isAlive: boolean;
   playerIsDead: () => void;
 };
@@ -13,7 +13,7 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
   player: null,
   isAlive: true,
   setPlayer: (player) => set({ player }),
-  updateRole: (role) =>
+  setRole: (role) =>
     set((state) => {
       if (!state.player) {
         return state;

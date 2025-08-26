@@ -2,6 +2,7 @@ import { isGamePlayer } from '@repo/types';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
+import { DayVoteModal } from './day-vote-modal';
 import { WerewolfSimulationModal } from './werewolf-simulation-modal';
 import { WerewolfVotingModal } from './werewolf-voting-modal';
 import { WitchHealModal } from './witch-heal-modal';
@@ -42,6 +43,8 @@ export function PlayerView() {
     skipPoison,
     closeHealModal,
     closePoisonModal,
+    // Day vote actions from store
+    simulateAllDayVotes,
   } = useMockPlayerStore();
 
   const activePlayer = activePlayerId ? players.get(activePlayerId) : null;
@@ -92,6 +95,13 @@ export function PlayerView() {
                     💘 Cupid
                   </span>
                 )}
+                {activePlayer.player &&
+                  isGamePlayer(activePlayer.player) &&
+                  !activePlayer.player.isAlive && (
+                    <span className="rounded bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800">
+                      💀 Dead
+                    </span>
+                  )}
               </div>
             </div>
             <div className="flex gap-2">
@@ -147,6 +157,32 @@ export function PlayerView() {
                       </div>
                       <div className="text-lg font-bold text-blue-600">
                         {activePlayer.player.role}
+                      </div>
+
+                      {/* Death status indicator */}
+                      <div className="mt-2">
+                        <div className="text-sm font-medium text-gray-600">
+                          Status
+                        </div>
+                        <div
+                          className={`text-lg font-bold ${
+                            activePlayer.player.isAlive
+                              ? 'text-green-600'
+                              : 'text-red-600'
+                          }`}
+                        >
+                          {activePlayer.player.isAlive ? (
+                            <>
+                              <span className="mr-2">💚</span>
+                              Alive
+                            </>
+                          ) : (
+                            <>
+                              <span className="mr-2">💀</span>
+                              Dead
+                            </>
+                          )}
+                        </div>
                       </div>
                       {/* Test button for werewolf role */}
                       {activePlayer.player.role !== 'WEREWOLF' && (
@@ -260,12 +296,20 @@ export function PlayerView() {
                     <p className="mb-3 text-sm text-gray-600">
                       Vote to eliminate a villager during the night phase.
                     </p>
-                    <Button
-                      className="bg-red-600 hover:bg-red-700"
-                      onClick={() => setIsWerewolfVotingOpen(true)}
-                    >
-                      Open Werewolf Voting
-                    </Button>
+                    {activePlayer.player.isAlive ? (
+                      <Button
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={() => setIsWerewolfVotingOpen(true)}
+                      >
+                        Open Werewolf Voting
+                      </Button>
+                    ) : (
+                      <div className="rounded bg-gray-100 p-3">
+                        <p className="text-sm text-gray-600">
+                          💀 Dead players cannot participate in werewolf voting
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -282,18 +326,26 @@ export function PlayerView() {
                       Use your potions to heal or poison players during the
                       night phase.
                     </p>
-                    <div className="space-y-2">
-                      <div className="rounded bg-purple-50 p-3">
-                        <p className="text-sm text-purple-800">
-                          Witch modals will appear automatically when the server
-                          prompts you.
-                        </p>
-                        <p className="mt-1 text-xs text-purple-600">
-                          Heal: Save werewolf victim • Poison: Eliminate any
-                          player
+                    {activePlayer.player.isAlive ? (
+                      <div className="space-y-2">
+                        <div className="rounded bg-purple-50 p-3">
+                          <p className="text-sm text-purple-800">
+                            Witch modals will appear automatically when the
+                            server prompts you.
+                          </p>
+                          <p className="mt-1 text-xs text-purple-600">
+                            Heal: Save werewolf victim • Poison: Eliminate any
+                            player
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded bg-gray-100 p-3">
+                        <p className="text-sm text-gray-600">
+                          💀 Dead players cannot use witch potions
                         </p>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
             </div>
@@ -302,7 +354,9 @@ export function PlayerView() {
           {/* Players List */}
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-lg font-semibold text-gray-800">
-              Players in Waiting Room ({activePlayer.playersList.length})
+              {activePlayer.status === 'in-game'
+                ? `Players in Game (${activePlayer.playersList.length})`
+                : `Players in Waiting Room (${activePlayer.playersList.length})`}
             </h2>
             {activePlayer.playersList.length === 0 ? (
               <div className="py-4 text-center text-gray-500">
@@ -310,20 +364,75 @@ export function PlayerView() {
               </div>
             ) : (
               <div className="space-y-2">
-                {activePlayer.playersList.map((player) => (
-                  <div
-                    className="flex items-center gap-2 rounded bg-gray-50 p-2"
-                    key={player.socketId}
-                  >
-                    <span className="text-gray-600">👤</span>
-                    <span className="text-gray-800">{player.name}</span>
-                    {player.name === activePlayer.name && (
-                      <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
-                        You
+                {activePlayer.playersList.map((player) => {
+                  // Find the mock player to get role information
+                  const mockPlayerWithRole = Array.from(players.values()).find(
+                    (mockPlayer) => mockPlayer.name === player.name
+                  );
+                  const playerRole =
+                    mockPlayerWithRole?.player &&
+                    isGamePlayer(mockPlayerWithRole.player)
+                      ? mockPlayerWithRole.player.role
+                      : null;
+                  const isPlayerAlive =
+                    mockPlayerWithRole?.player &&
+                    isGamePlayer(mockPlayerWithRole.player)
+                      ? mockPlayerWithRole.player.isAlive
+                      : true;
+
+                  return (
+                    <div
+                      className={`flex items-center gap-2 rounded p-2 ${
+                        isPlayerAlive ? 'bg-gray-50' : 'bg-red-50 opacity-75'
+                      }`}
+                      key={player.socketId}
+                    >
+                      <span className="text-gray-600">
+                        {isPlayerAlive ? '👤' : '💀'}
                       </span>
-                    )}
-                  </div>
-                ))}
+                      <span
+                        className={`${isPlayerAlive ? 'text-gray-800' : 'text-gray-500 line-through'}`}
+                      >
+                        {player.name}
+                      </span>
+
+                      {/* Role badge */}
+                      {activePlayer.status === 'in-game' && playerRole && (
+                        <span
+                          className={`rounded px-2 py-1 text-xs font-medium ${
+                            playerRole === 'WEREWOLF'
+                              ? 'bg-red-100 text-red-800'
+                              : playerRole === 'WITCH'
+                                ? 'bg-purple-100 text-purple-800'
+                                : playerRole === 'SEER'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : playerRole === 'HUNTER'
+                                    ? 'bg-orange-100 text-orange-800'
+                                    : playerRole === 'CUPID'
+                                      ? 'bg-pink-100 text-pink-800'
+                                      : 'bg-green-100 text-green-800'
+                          }`}
+                        >
+                          {playerRole}
+                        </span>
+                      )}
+
+                      {/* You badge */}
+                      {player.name === activePlayer.name && (
+                        <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
+                          You
+                        </span>
+                      )}
+
+                      {/* Death status */}
+                      {!isPlayerAlive && (
+                        <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                          Dead
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -351,6 +460,40 @@ export function PlayerView() {
               >
                 🐺 Simulate All Werewolf Votes
               </Button>
+            </div>
+
+            <div>
+              <h3 className="mb-2 text-sm font-medium text-gray-700">
+                Day Vote Simulation
+              </h3>
+              <p className="mb-3 text-xs text-gray-600">
+                Simulate all alive players voting for a single target player
+                during the day phase.
+              </p>
+              {activePlayer.playersList.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {activePlayer.playersList.map((player) => (
+                    <Button
+                      className="bg-orange-600 hover:bg-orange-700"
+                      key={player.socketId}
+                      onClick={() => simulateAllDayVotes(player.name)}
+                      size="sm"
+                    >
+                      ☀️ Vote {player.name}
+                    </Button>
+                  ))}
+                </div>
+              )}
+              {activePlayer.player &&
+                isGamePlayer(activePlayer.player) &&
+                !activePlayer.player.isAlive && (
+                  <div className="rounded bg-gray-100 p-3">
+                    <p className="text-sm text-gray-600">
+                      💀 Dead players cannot participate in day voting
+                      simulation
+                    </p>
+                  </div>
+                )}
             </div>
           </div>
         </div>
@@ -385,7 +528,12 @@ export function PlayerView() {
 
       {/* Witch Heal Modal */}
       <WitchHealModal
-        isOpen={activePlayer.showHealModal}
+        isOpen={Boolean(
+          activePlayer.showHealModal &&
+            activePlayer.player &&
+            isGamePlayer(activePlayer.player) &&
+            activePlayer.player.isAlive
+        )}
         onClose={() => closeHealModal(activePlayer.id)}
         onHeal={() => healPlayer(activePlayer.id)}
         onSkip={() => skipHeal(activePlayer.id)}
@@ -396,7 +544,12 @@ export function PlayerView() {
       {/* Witch Poison Modal */}
       <WitchPoisonModal
         currentPlayerName={activePlayer.name}
-        isOpen={activePlayer.showPoisonModal}
+        isOpen={Boolean(
+          activePlayer.showPoisonModal &&
+            activePlayer.player &&
+            isGamePlayer(activePlayer.player) &&
+            activePlayer.player.isAlive
+        )}
         onClose={() => closePoisonModal(activePlayer.id)}
         onPoison={(targetPlayerId: string) =>
           poisonPlayer(activePlayer.id, targetPlayerId)
@@ -404,6 +557,13 @@ export function PlayerView() {
         onSkip={() => skipPoison(activePlayer.id)}
         playersList={activePlayer.playersList}
       />
+
+      {/* Day Vote Modal - Only show if player is alive */}
+      {activePlayer.player &&
+        isGamePlayer(activePlayer.player) &&
+        activePlayer.player.isAlive && (
+          <DayVoteModal playerId={activePlayer.id} />
+        )}
     </div>
   );
 }

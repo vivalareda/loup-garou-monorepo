@@ -1,47 +1,87 @@
 import LottieView from 'lottie-react-native';
-import { useCallback } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { GlobalModal } from '@/components/global-modal';
 import { useGameStore } from '@/hooks/use-game-store';
 import { useModalStore } from '@/hooks/use-modal-store';
 
 export default function ModalTestScreen() {
   const { openModal } = useModalStore();
-  const { playersList, villagersList } = useGameStore();
+  const { setPlayersList, getPlayerNameFromSid } = useGameStore();
+  const [lastSelection, setLastSelection] = useState<string>('');
+  const [selectionHistory, setSelectionHistory] = useState<
+    Array<{ timestamp: string; selection: string; playerName: string }>
+  >([]);
+
+  // Mock players data - self contained for testing using realistic Socket.io ID format
+  const mockPlayers = [
+    { name: 'Alice', socketId: 'ZjQxMjRmN2UtNmY2Ni00' },
+    { name: 'Bob', socketId: 'OGI3YWJkYzEtNzIyOC00' },
+    { name: 'Charlie', socketId: 'NWU4ZGZhNzItMzk5MS00' },
+    { name: 'Diana', socketId: 'MjA3YjQ5YjQtZGY5Mi00' },
+    { name: 'Eve', socketId: 'YTFiY2RlZjAtMjM4OS00' },
+  ];
+
+  // Populate game store with mock data so GlobalModal can resolve socket IDs
+  useEffect(() => {
+    setPlayersList(mockPlayers);
+  }, [setPlayersList]); // setPlayersList is stable from Zustand
+
+  // Helper function to log selection with socket ID verification
+  const logSelectionWithVerification = useCallback(
+    (selection: string, action: string) => {
+      try {
+        const playerName = getPlayerNameFromSid(selection);
+        const logEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          selection,
+          playerName,
+        };
+
+        setLastSelection(
+          `${action}: ${playerName} (${selection.slice(-6)}...)`
+        );
+        setSelectionHistory((prev) => [logEntry, ...prev.slice(0, 4)]); // Keep last 5 entries
+
+        console.log(
+          `✅ ${action} - Socket ID: ${selection}, Player: ${playerName}`
+        );
+      } catch (error) {
+        console.log(`❌ ${action} - Invalid Socket ID: ${selection}`, error);
+        setLastSelection(
+          `${action}: Invalid Socket ID (${selection.slice(-6)}...)`
+        );
+      }
+    },
+    [getPlayerNameFromSid]
+  );
+
+  // Get mock socket IDs for modal data
+  const getMockSocketIds = () => mockPlayers.map((p) => p.socketId);
 
   const testWerewolfModal = () => {
+    const availableTargets = getMockSocketIds();
+
+    console.log('🐺 Testing Werewolf Modal with socket IDs:', availableTargets);
+
     openModal({
       type: 'selection',
       title: 'Choose your target',
-      data:
-        villagersList.length > 0
-          ? villagersList.map((p) => p.socketId)
-          : [
-              'socket-id-1',
-              'socket-id-2',
-              'socket-id-3',
-              'socket-id-4',
-              'socket-id-5',
-            ],
+      data: availableTargets,
       werewolfModal: true,
       onConfirm: (selection) => {
-        console.log('Werewolf voted for:', selection);
+        logSelectionWithVerification(selection, 'Werewolf Vote');
       },
     });
   };
 
   const testWitchKillModal = () => {
-    // Use real player data if available, otherwise mock data
-    const availablePlayers =
-      playersList.length > 0
-        ? playersList.map((p) => p.socketId)
-        : [
-            'socket-id-1',
-            'socket-id-2',
-            'socket-id-3',
-            'socket-id-4',
-            'socket-id-5',
-          ];
+    const availablePlayers = getMockSocketIds();
+
+    console.log(
+      '🧙 Testing Witch Poison Modal with socket IDs:',
+      availablePlayers
+    );
 
     openModal({
       type: 'selection',
@@ -49,7 +89,7 @@ export default function ModalTestScreen() {
       selectionCount: 1,
       data: availablePlayers,
       onConfirm: (selection) => {
-        console.log(`🧙 Witch poisoned: ${selection}`);
+        logSelectionWithVerification(selection, 'Witch Poison');
       },
     });
   };
@@ -113,6 +153,7 @@ export default function ModalTestScreen() {
       buttonDelay: 8000,
       onConfirm: () => {
         console.log('💕 Lover acknowledged they are in love');
+        setLastSelection('Lover Alert: Acknowledged');
       },
     });
   };
@@ -129,62 +170,154 @@ export default function ModalTestScreen() {
         } else {
           console.log('🧙 Witch chose not to heal.');
         }
+        setLastSelection(`Witch Heal Decision: ${result}`);
+      },
+    });
+  };
+
+  const testCupidModal = () => {
+    const availablePlayers = getMockSocketIds();
+
+    console.log('💘 Testing Cupid Modal with socket IDs:', availablePlayers);
+
+    openModal({
+      type: 'selection',
+      title: 'Cupidon - Choisissez les amoureux',
+      selectionCount: 2,
+      data: availablePlayers,
+      onConfirm: (selections) => {
+        try {
+          const lovers = Array.isArray(selections) ? selections : [selections];
+          const loverNames = lovers.map((socketId) => {
+            try {
+              return getPlayerNameFromSid(socketId);
+            } catch {
+              return `Unknown (${socketId})`;
+            }
+          });
+
+          const logEntry = {
+            timestamp: new Date().toLocaleTimeString(),
+            selection: lovers.join(', '),
+            playerName: loverNames.join(' & '),
+          };
+
+          setLastSelection(`Cupid Selection: ${loverNames.join(' & ')}`);
+          setSelectionHistory((prev) => [logEntry, ...prev.slice(0, 4)]);
+
+          console.log('💘 Cupid selected lovers:', loverNames, lovers);
+        } catch (error) {
+          console.log('❌ Cupid selection error:', error);
+          setLastSelection('Cupid Selection: Error processing selection');
+        }
       },
     });
   };
 
   return (
-    <View className="flex-1 items-center justify-center bg-gray-50 p-6">
-      <Text className="mb-8 text-2xl font-bold text-gray-800">
-        Modal Testing
-      </Text>
+    <ScrollView className="flex-1 bg-gray-50">
+      <View className="flex-1 items-center justify-center p-6">
+        <Text className="mb-8 text-2xl font-bold text-gray-800">
+          Modal Testing with Socket ID Verification
+        </Text>
 
-      <View className="w-full max-w-sm space-y-4">
-        <TouchableOpacity
-          className="rounded-lg bg-red-600 p-4"
-          onPress={testWerewolfModal}
-        >
-          <Text className="text-center text-lg font-semibold text-white">
-            🐺 Test Werewolf Modal
-          </Text>
-        </TouchableOpacity>
+        {/* Socket ID Verification Display */}
+        <View className="mb-6 w-full max-w-sm">
+          <View className="mb-4 rounded-lg bg-blue-100 p-4">
+            <Text className="mb-2 text-sm font-semibold text-blue-800">
+              Mock Players ({mockPlayers.length})
+            </Text>
+            {mockPlayers.map((player) => (
+              <Text className="text-xs text-blue-600" key={player.socketId}>
+                {player.name}: {player.socketId}
+              </Text>
+            ))}
+          </View>
 
-        <TouchableOpacity
-          className="rounded-lg bg-green-600 p-4"
-          onPress={testWitchHealModal}
-        >
-          <Text className="text-center text-lg font-semibold text-white">
-            🧙 Test Witch Heal Modal
-          </Text>
-        </TouchableOpacity>
+          {lastSelection ? (
+            <View className="mb-4 rounded-lg bg-green-100 p-3">
+              <Text className="mb-1 text-sm font-semibold text-green-800">
+                Last Selection:
+              </Text>
+              <Text className="text-xs text-green-700">{lastSelection}</Text>
+            </View>
+          ) : null}
 
-        <TouchableOpacity
-          className="rounded-lg bg-purple-600 p-4"
-          onPress={testWitchKillModal}
-        >
-          <Text className="text-center text-lg font-semibold text-white">
-            🧙 Test Witch Poison Modal
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          className="rounded-lg bg-pink-600 p-4"
-          onPress={testLoverModal}
-        >
-          <Text className="text-center text-lg font-semibold text-white">
-            💕 Test Lover Alert Modal
-          </Text>
-        </TouchableOpacity>
-
-        {/* Future modals can be added here */}
-        <View className="mt-8 rounded-lg bg-yellow-100 p-4">
-          <Text className="text-center text-sm text-yellow-800">
-            More modal tests will be added here for Cupid, Seer, etc.
-          </Text>
+          {selectionHistory.length > 0 && (
+            <View className="mb-4 rounded-lg bg-gray-100 p-3">
+              <Text className="mb-2 text-sm font-semibold text-gray-800">
+                Selection History:
+              </Text>
+              {selectionHistory.map((entry) => (
+                <Text
+                  className="mb-1 text-xs text-gray-600"
+                  key={`${entry.timestamp}-${entry.selection}`}
+                >
+                  {entry.timestamp}: {entry.playerName} (
+                  {entry.selection.slice(-6)}...)
+                </Text>
+              ))}
+            </View>
+          )}
         </View>
-      </View>
 
-      <GlobalModal />
-    </View>
+        <View className="w-full max-w-sm space-y-4">
+          <TouchableOpacity
+            className="rounded-lg bg-red-600 p-4"
+            onPress={testWerewolfModal}
+          >
+            <Text className="text-center text-lg font-semibold text-white">
+              🐺 Test Werewolf Modal
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="rounded-lg bg-green-600 p-4"
+            onPress={testWitchHealModal}
+          >
+            <Text className="text-center text-lg font-semibold text-white">
+              🧙 Test Witch Heal Modal
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="rounded-lg bg-purple-600 p-4"
+            onPress={testWitchKillModal}
+          >
+            <Text className="text-center text-lg font-semibold text-white">
+              🧙 Test Witch Poison Modal
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="rounded-lg bg-pink-600 p-4"
+            onPress={testLoverModal}
+          >
+            <Text className="text-center text-lg font-semibold text-white">
+              💕 Test Lover Alert Modal
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="rounded-lg bg-orange-600 p-4"
+            onPress={testCupidModal}
+          >
+            <Text className="text-center text-lg font-semibold text-white">
+              💘 Test Cupid Selection Modal
+            </Text>
+          </TouchableOpacity>
+
+          {/* Future modals can be added here */}
+          <View className="mt-8 rounded-lg bg-yellow-100 p-4">
+            <Text className="text-center text-sm text-yellow-800">
+              Test modals verify socket IDs work correctly by showing player
+              names
+            </Text>
+          </View>
+        </View>
+
+        <GlobalModal />
+      </View>
+    </ScrollView>
   );
 }

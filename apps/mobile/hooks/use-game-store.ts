@@ -108,7 +108,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   initializeSocketListeners: () => {
     // Existing socket listeners
     socket.on('lobby:players-list', (players: PlayerListItem[]) => {
-      set({ playersList: players });
+      set(() => {
+        const { player } = usePlayerStore.getState();
+        return {
+          playersList: players.filter((p) => p.socketId !== player?.socketId),
+        };
+      });
     });
 
     socket.on('lobby:update-players-list', (newPlayer) => {
@@ -153,8 +158,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   getPlayerNameFromSid: (socketId: string) => {
-    const { villagersList } = get();
-    const foundPlayer = villagersList.find((p) => p.socketId === socketId);
+    const { playersList } = get();
+    const foundPlayer = playersList.find((p) => p.socketId === socketId);
     if (!foundPlayer) {
       throw new Error(`player with socketId ${socketId} not found`);
     }

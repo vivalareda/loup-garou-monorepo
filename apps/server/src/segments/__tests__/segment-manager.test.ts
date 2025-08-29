@@ -9,6 +9,7 @@ import {
   vi,
 } from 'vitest';
 import type { Game } from '@/core/game';
+import type { DeathManager } from '@/core/death-manager';
 import type { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
 import type { SocketType } from '@/server/sockets';
@@ -22,6 +23,7 @@ describe('SegmentsManager', () => {
   let mockFs: MockedFunction<typeof vi.mocked>;
   let mockGame: Game;
   let mockAudioManager: AudioManager;
+  let mockDeathManager: DeathManager;
 
   beforeEach(() => {
     mockGame = {
@@ -47,10 +49,9 @@ describe('SegmentsManager', () => {
       playSegmentAudio: vi.fn(),
     } as unknown as AudioManager;
 
-    mockDeathManager  = {
-
-      processPendingDeaths(): 
-    }
+    mockDeathManager = {
+      processPendingDeaths: vi.fn(),
+    } as unknown as DeathManager;
 
     segmentsManager = new SegmentsManager(mockGame, mockIo, mockAudioManager);
   });

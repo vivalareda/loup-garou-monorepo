@@ -96,7 +96,7 @@ export class Game {
     return villagers;
   }
 
-  getSpecialRolePlayers(role: Role) {
+  getSpecialRolePlayer(role: Role) {
     return this.specialRolePlayers.get(role);
   }
 
@@ -117,10 +117,11 @@ export class Game {
     // TODO: remove this for testing only
     for (const player of this.players.values()) {
       if (player.getName() === 'Reda') {
-        const role: Role = 'WEREWOLF';
+        const role: Role = 'HUNTER';
         player.assignRole(role);
         shuffledRoles.splice(shuffledRoles.indexOf(role), 1);
-        this.setPlayerTeams(role, player);
+        this.setPlayerTeams(player);
+        this.setSpecialRolePlayer(player);
         return;
       }
       const role = shuffledRoles.pop();
@@ -129,8 +130,19 @@ export class Game {
       }
 
       player.assignRole(role);
-      this.setPlayerTeams(role, player);
+      this.setSpecialRolePlayer(player);
+      this.setPlayerTeams(player);
     }
+  }
+
+  setSpecialRolePlayer(player: Player) {
+    const role = player.getRole();
+
+    if (role === 'WEREWOLF' || role === 'VILLAGER') {
+      return;
+    }
+
+    this.specialRolePlayers.set(role, player);
   }
 
   alertPlayersOfRoles() {
@@ -148,33 +160,31 @@ export class Game {
     return this.deathManager.getTeamWerewolves();
   }
 
-  setPlayerTeams(roleName: Role, player: Player) {
-    switch (roleName) {
-      case 'VILLAGER':
-        this.deathManager.addTeamVillager(player);
-        return;
-      case 'WEREWOLF':
-        this.deathManager.addTeamWerewolf(player);
-        break;
-      case 'SEER':
-        this.specialRolePlayers.set('SEER', player);
-        this.deathManager.addTeamVillager(player);
-        break;
-      case 'HUNTER':
-        this.specialRolePlayers.set('HUNTER', player);
-        this.deathManager.addTeamVillager(player);
-        break;
-      case 'CUPID':
-        this.specialRolePlayers.set('CUPID', player);
-        this.deathManager.addTeamVillager(player);
-        break;
-      case 'WITCH':
-        this.specialRolePlayers.set('WITCH', player);
-        this.deathManager.addTeamVillager(player);
-        break;
-      default:
-        throw new Error(`Unknown role: ${roleName satisfies never}`);
+  setPlayerTeams(player: Player) {
+    if (player.getRole() === 'WEREWOLF') {
+      this.deathManager.addTeamWerewolf(player);
+      return;
     }
+
+    this.deathManager.addTeamVillager(player);
+  }
+
+  isOneOfLoversInDeathQueue() {
+    for (const lover of this.lovers) {
+      if (this.deathManager.isInDeathQueue(lover.getSocketId())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  isOneOfLoversHunter() {
+    for (const lover of this.lovers) {
+      if (lover.getRole() === 'HUNTER') {
+        return true;
+      }
+    }
+    return false;
   }
 
   setLovers(selectedPlayers: string[]) {
@@ -272,6 +282,7 @@ export class Game {
     }
     console.log('calling add pending death');
     this.addPendingDeath(victim, 'WEREWOLVES');
+    this.alertAllWerewolvesOfVotes();
   }
 
   alertAllWerewolvesOfVotes() {
@@ -305,10 +316,11 @@ export class Game {
     }
   }
 
-  checkIfHunter(player: Player) {
+  isPlayerHunter(player: Player) {
     if (player.getRole() !== 'HUNTER') {
-      return;
+      return true;
     }
+    return false;
   }
 
   hasAllWerewolvesAgreed() {
@@ -325,6 +337,21 @@ export class Game {
     const votes = Array.from(this.werewolfVotes.values());
     const firstVote = votes[0];
     return votes.every((vote) => vote === firstVote);
+  }
+
+  updateHunterPlayerList() {
+    for (const player of this.deathManager.getPendingDeaths()) {
+      this.io.emit('lobby:player-died', player.playerId);
+    }
+  }
+
+  hunterIsInDeathQueue() {
+    const hunterSid = this.getSpecialRolePlayer('HUNTER')?.getSocketId();
+    if (!hunterSid) {
+      return false;
+    }
+
+    return this.deathManager.isInDeathQueue(hunterSid);
   }
 
   processPendingDeaths() {
@@ -351,14 +378,13 @@ export class Game {
 
       deathInfos.push(deathInfo);
       player.setIsAlive(false);
+
       this.alertPlayerOfDeath(player.getSocketId());
 
       if (player.getRole() === 'WITCH') {
         this.witchHasHealPotion = false;
         this.witchHasPoisonPotion = false;
       }
-
-      this.checkIfHunter(player);
 
       // Handle lover suicide if one lover dies
       if (
@@ -379,6 +405,7 @@ export class Game {
             metadata: { loverId: pendingDeath.playerId },
           };
           deathInfos.push(loverDeathInfo);
+          this.alertPlayerOfDeath(otherLover.getSocketId());
         }
       }
     }
@@ -406,14 +433,35 @@ export class Game {
 
   alertPlayerOfDeath(socketId: string) {
     this.io.to(socketId).emit('alert:player-is-dead');
+    console.log('alerted player of death');
     this.io.emit('lobby:player-died', socketId);
+  }
+
+  killHunterRevenge(sid: string) {
+    const player = this.players.get(sid);
+    const hunterSid = this.getSpecialRolePlayer('HUNTER')?.getSocketId();
+
+    if (!player) {
+      throw new Error(`Player with sid ${sid} not found, can't be killed`);
+    }
+
+    if (!hunterSid) {
+      throw new Error(
+        'Tried to kill hunter targer but hunter player not found'
+      );
+    }
+
+    this.deathManager.addHunterRevenge(sid, hunterSid);
+    this.alertPlayerOfDeath(sid);
   }
 
   addPendingDeath(sid: string, cause: DeathCause) {
     const player = this.players.get(sid);
 
     if (!player) {
-      throw new Error(`Player with sid ${sid} not found`);
+      throw new Error(
+        `Player with sid ${sid} not found, can't add to pending deaths`
+      );
     }
 
     this.deathManager.addPendingDeath(player, cause);
@@ -531,7 +579,7 @@ export class Game {
     this.dayVotes.clear();
   }
 
-  alertWinner(winner: 'villagers' | 'werewolves') {
+  alertWinnersAndLosers(winner: 'villagers' | 'werewolves') {
     if (winner === 'villagers') {
       for (const player of this.deathManager.getTeamVillagers()) {
         this.io.to(player.getSocketId()).emit('alert:player-won');

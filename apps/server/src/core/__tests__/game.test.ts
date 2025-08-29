@@ -32,7 +32,7 @@ describe('GameActions', () => {
     const deathInfos = game.processPendingDeaths();
 
     expect(deathInfos).toHaveLength(2);
-    expect(deathInfos[0].cause).toBe('WEREWOLVES');
-    expect(deathInfos[1].cause).toBe('LOVER_SUICIDE');
+    expect(deathInfos?.[0]?.cause).toBe('WEREWOLVES');
+    expect(deathInfos?.[1]?.cause).toBe('LOVER_SUICIDE');
   });
 });

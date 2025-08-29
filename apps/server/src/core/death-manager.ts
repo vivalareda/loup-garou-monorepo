@@ -28,6 +28,13 @@ export class DeathManager {
     return this.teamVillagers;
   }
 
+  isInDeathQueue(playerSid: string) {
+    console.log(
+      `checking if sid ${playerSid} in in map ${JSON.stringify(Array.from(this.pendingDeaths))}`
+    );
+    return this.pendingDeaths.has(playerSid);
+  }
+
   addPendingDeath(player: Player, cause: DeathCause = 'WEREWOLVES') {
     const pendingDeath: PendingDeath = {
       playerId: player.getSocketId(),

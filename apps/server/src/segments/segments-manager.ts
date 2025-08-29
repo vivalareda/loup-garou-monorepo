@@ -15,9 +15,9 @@ export class SegmentsManager {
   constructor(game: Game, io: SocketType, audioManager: AudioManager) {
     this.io = io;
     this.game = game;
-    this.gameActions = new GameActions(game, io);
     this.audioManager = audioManager;
-    this.currentSegment = 2;
+    this.gameActions = new GameActions(game, io, audioManager);
+    this.currentSegment = 0;
     this.initializeSegments();
   }
 
@@ -43,13 +43,13 @@ export class SegmentsManager {
     const cupidSegment: Segment = {
       type: 'CUPID',
       action: () => this.gameActions.cupidAction(),
-      skip: true,
+      skip: false,
     };
 
     const loversSegment: Segment = {
       type: 'LOVERS',
       action: () => this.gameActions.loversAction(),
-      skip: true,
+      skip: false,
     };
 
     const werewolfSegment: Segment = {
@@ -67,7 +67,7 @@ export class SegmentsManager {
     const witchPoisonSegment: Segment = {
       type: 'WITCH-POISON',
       action: () => this.gameActions.witchPoisonAction(),
-      skip: false,
+      skip: true,
     };
 
     const daySegment: Segment = {
@@ -78,7 +78,7 @@ export class SegmentsManager {
 
     const hunterSegment: Segment = {
       type: 'HUNTER',
-      action: () => console.log(),
+      action: () => this.gameActions.hunterAction(),
       skip: true,
     };
 
@@ -136,11 +136,63 @@ export class SegmentsManager {
     return segment.type;
   }
 
+  runHunterSegment() {
+    this.audioManager.playHunterAudio();
+    const hunterSegment = this.segments.find(
+      (segment) => segment.type === 'HUNTER'
+    );
+
+    if (!hunterSegment) {
+      throw new Error('hunter segment not inialized');
+    }
+
+    this.game.updateHunterPlayerList();
+
+    hunterSegment.action();
+  }
+
+  isHunterInDeathQueue() {
+    return this.game.hunterIsInDeathQueue();
+  }
+
+  isOneOfLoversInDeathQueue() {
+    return this.game.isOneOfLoversInDeathQueue();
+  }
+
+  async runLoverSegment() {
+    const segment = this.segments[this.currentSegment];
+    await this.audioManager.playLoverAudio();
+    if (!this.isGameOver()) {
+      segment.action();
+    }
+  }
+
   async playSegment() {
     const segment = this.segments[this.currentSegment];
     console.log(`[SEGMENT] Playing segment: ${segment.type}`);
 
+    if (segment.type === 'DAY') {
+      if (this.isHunterInDeathQueue()) {
+        this.runHunterSegment();
+        return;
+      }
+
+      if (this.isOneOfLoversInDeathQueue()) {
+        this.runLoverSegment();
+        return;
+      }
+    }
+
     await this.audioManager.playSegmentAudio(segment.type, true);
+    segment.action();
+  }
+
+  continueDayAction() {
+    if (this.isGameOver()) {
+      return;
+    }
+    this.audioManager.playPostHunterAudio();
+    const segment = this.segments[this.currentSegment];
     segment.action();
   }
 
@@ -149,13 +201,13 @@ export class SegmentsManager {
 
     if (winner === 'villagers') {
       this.audioManager.playVillagersWonAudio();
-      this.game.alertWinner(winner);
+      this.game.alertWinnersAndLosers(winner);
       return true;
     }
 
     if (winner === 'werewolves') {
       this.audioManager.playWerewolvesWonAudio();
-      this.game.alertWinner(winner);
+      this.game.alertWinnersAndLosers(winner);
       return true;
     }
 

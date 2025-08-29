@@ -1,18 +1,21 @@
 import type { DeathInfo } from '@repo/types';
+import type { AudioManager } from '@/segments/audio-manager';
 import type { SocketType } from '@/server/sockets';
 import type { Game } from './game';
 
 export class GameActions {
   private readonly game: Game;
   private readonly io: SocketType;
+  private readonly audioManager: AudioManager;
 
-  constructor(game: Game, io: SocketType) {
+  constructor(game: Game, io: SocketType, audioManager: AudioManager) {
     this.game = game;
     this.io = io;
+    this.audioManager = audioManager;
   }
 
   cupidAction() {
-    const cupid = this.game.getSpecialRolePlayers('CUPID');
+    const cupid = this.game.getSpecialRolePlayer('CUPID');
     const socket = cupid?.getSocketId();
     if (!socket) {
       throw new Error('Cupid player not found');
@@ -47,7 +50,7 @@ export class GameActions {
   }
 
   witchHealAction() {
-    const witch = this.game.getSpecialRolePlayers('WITCH');
+    const witch = this.game.getSpecialRolePlayer('WITCH');
     const werewolfVictimSid = this.game.getWerewolfTarget();
 
     if (!witch) {
@@ -65,7 +68,7 @@ export class GameActions {
   }
 
   witchPoisonAction() {
-    const witch = this.game.getSpecialRolePlayers('WITCH');
+    const witch = this.game.getSpecialRolePlayer('WITCH');
 
     console.log(`[WITCH-POISON] Witch found: ${witch === undefined}`);
 
@@ -113,18 +116,23 @@ export class GameActions {
     }
   }
 
-  dayAction() {
-    setTimeout(() => {
-      this.game.processPendingDeaths();
-      const winner = this.game.checkIfWinner();
-      if (winner) {
-        this.game.alertWinner(winner);
-        return;
-      }
-      console.log('no winner yet, continuing to day voting phase');
-    }, 7000);
+  async dayAction() {
+    this.game.processPendingDeaths();
+    const winner = this.game.checkIfWinner();
+    if (winner) {
+      await this.audioManager.playWinnerAudio(winner);
+      this.game.alertWinnersAndLosers(winner);
+      return;
+    }
+
     setTimeout(() => {
       this.io.emit('day:voting-phase-start');
-    }, 15_000);
+    }, 7000);
+  }
+
+  hunterAction() {
+    setTimeout(() => {
+      this.io.emit('hunter:pick-required');
+    }, 18_000);
   }
 }

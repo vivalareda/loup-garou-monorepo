@@ -86,6 +86,7 @@ export class GameEvents {
       this.setupWerewolfEvents(socket);
       this.setupWitchEvents(socket);
       this.setupDayVoteEvents(socket);
+      this.setupHunterEvents(socket);
     });
   }
 
@@ -110,6 +111,7 @@ export class GameEvents {
   ) {
     socket.on('alert:lover-closed-alert', () => {
       this.loversAlertClosed++;
+      console.log('alert received, current count ', this.loversAlertClosed);
       if (this.loversAlertClosed === 2) {
         this.segmentsManager.finishSegment();
       }
@@ -184,6 +186,16 @@ export class GameEvents {
       } catch (error) {
         console.error('Day vote error:', error);
       }
+    });
+  }
+
+  setupHunterEvents(
+    socket: Socket<ClientToServerEvents, ServerToClientEvents>
+  ) {
+    socket.on('hunter:killed-player', (playerSid: string) => {
+      this.game.addPendingDeath(playerSid, 'HUNTER_REVENGE');
+      this.game.killHunterRevenge(playerSid);
+      this.segmentsManager.continueDayAction();
     });
   }
 

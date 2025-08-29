@@ -57,6 +57,8 @@ const serverEventSchemas = {
 
   // Day phase events
   'day:voting-phase-start': null as unknown as () => void,
+
+  'hunter:pick-required': null as unknown as () => void,
 } satisfies Record<EventName, (...args: any[]) => void>;
 
 export type ServerToClientEvents = typeof serverEventSchemas;
@@ -85,6 +87,8 @@ const clientEventSchemas = {
   'witch:skipped-poison': null as unknown as () => void,
 
   'day:player-voted': null as unknown as (targetPlayer: string) => void,
+  'alert:hunter-died': null as unknown as () => void,
+  'hunter:killed-player': null as unknown as (selectedPlayer: string) => void,
 
   //TODO: REMOVE THIS ONLY FOR TESTING
   'werewolf:current-votes': null as unknown as (

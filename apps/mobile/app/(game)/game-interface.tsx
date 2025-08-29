@@ -1,6 +1,6 @@
 import { getRoleDescription, isGamePlayer } from '@repo/types';
-
 import { ImpactFeedbackStyle, impactAsync } from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import LottieView from 'lottie-react-native';
 import { useCallback, useEffect } from 'react';
 import {
@@ -30,9 +30,11 @@ export default function GameInterface() {
     initializeSocketListeners,
     cleanupSocketListeners,
   } = useGameStore();
-  const { modalState, werewolvesVictim } = useGameEvents();
-  const { openModal } = useModalStore();
+  const { werewolvesVictim, pendingRedirect, setPendingRedirect } =
+    useGameEvents();
+  const { openModal, modalState } = useModalStore();
   const { isRevealed, flipCard, animations } = useCardFlip();
+  const router = useRouter();
 
   // Initialize socket listeners when component mounts
   useEffect(() => {
@@ -41,16 +43,12 @@ export default function GameInterface() {
     return cleanupSocketListeners;
   }, [initializeSocketListeners, cleanupSocketListeners]);
 
-  const getPlayerSid = useCallback(
-    (name: string) => {
-      const foundPlayer = playersList.find((p) => p.name === name);
-      if (!foundPlayer) {
-        throw new Error(`Player with name ${name} not found in players list`);
-      }
-      return foundPlayer.socketId;
-    },
-    [playersList]
-  );
+  useEffect(() => {
+    if (!modalState.open && pendingRedirect) {
+      router.replace('/death-screen');
+      setPendingRedirect(false);
+    }
+  }, [router, pendingRedirect, modalState.open, setPendingRedirect]);
 
   const getWitchModalData = useCallback(() => {
     return (
@@ -118,9 +116,24 @@ export default function GameInterface() {
         type: 'confirm',
         title: 'Vous êtes amoureux !',
         data: getLoverModalData(),
-        buttonDelay: 5000,
+        buttonDelay: 7000,
         onConfirm: () => {
           socket.emit('alert:lover-closed-alert');
+        },
+      });
+    };
+
+    const handleHunterModal = () => {
+      openModal({
+        type: 'selection',
+        title: 'Choisissez votre victime',
+        data: playersList
+          .filter((p) => p.socketId !== player?.socketId) // Exclude the current player (Hunter)
+          .map((p) => p.socketId),
+        selectionCount: 1,
+        onConfirm: (selectedPlayerSid: string[]) => {
+          console.log('selected data is', selectedPlayerSid);
+          socket.emit('hunter:killed-player', selectedPlayerSid[0]);
         },
       });
     };
@@ -129,13 +142,12 @@ export default function GameInterface() {
       openModal({
         type: 'selection',
         title: 'Choisissez les amoureux',
-        data: playersList.map((p) => p.name),
+        data: playersList
+          .filter((p) => p.socketId !== player?.socketId) // Exclude Cupid from lover selection
+          .map((p) => p.socketId),
         selectionCount: 2,
         onConfirm: (selectedPlayers: string[]) => {
-          const loversSid = selectedPlayers.map((name) => {
-            return getPlayerSid(name);
-          });
-          socket.emit('cupid:lovers-pick', loversSid);
+          socket.emit('cupid:lovers-pick', selectedPlayers);
         },
       });
     };
@@ -169,7 +181,9 @@ export default function GameInterface() {
       openModal({
         type: 'selection',
         title: 'Choisissez une victime',
-        data: playersList.map((p) => p.name),
+        data: playersList
+          .filter((p) => p.socketId !== player?.socketId) // Exclude the current player (Witch)
+          .map((p) => p.socketId),
         selectionCount: 1,
         onConfirm: (selectedPlayer: string) => {
           socket.emit('witch:poisoned-player', selectedPlayer);
@@ -181,7 +195,9 @@ export default function GameInterface() {
       openModal({
         type: 'selection',
         title: 'Qui voulez-vous éliminer?',
-        data: playersList.map((p) => p.name),
+        data: playersList
+          .filter((p) => p.socketId !== player?.socketId) // Exclude the current player
+          .map((p) => p.socketId),
         selectionCount: 1,
         onConfirm: (selectedPlayer: string) => {
           socket.emit('day:player-voted', selectedPlayer);
@@ -220,6 +236,10 @@ export default function GameInterface() {
         handleWitchKillModal();
         break;
 
+      case 'HUNTER':
+        handleHunterModal();
+        break;
+
       case 'DAY-VOTE':
         handleDayVoteModal();
         break;
@@ -233,7 +253,6 @@ export default function GameInterface() {
     playersList,
     villagersList,
     openModal,
-    getPlayerSid,
     getLoverModalData,
     getWitchModalData,
   ]);

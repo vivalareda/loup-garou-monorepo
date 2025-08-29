@@ -24,7 +24,7 @@ export function GlobalModal() {
   } = useGameStore();
   const [selection, setSelection] = useState<string[]>([]);
   const [isDelayActive, setIsDelayActive] = useState(false);
-  const totalWerewolves = playersList.length - villagersList.length;
+  const totalWerewolves = playersList.length - villagersList.length + 1;
 
   if (modalData?.data) {
     console.log(`Modal data is ${modalData.data}`);
@@ -32,10 +32,21 @@ export function GlobalModal() {
 
   const handleModalClose = useCallback(() => {
     if (modalData?.onConfirm) {
-      modalData.onConfirm(selection);
+      if (modalData?.selectionCount === 1) {
+        modalData.onConfirm(selection);
+        closeModal();
+        return;
+      }
+      modalData.onConfirm();
+      closeModal();
+      return;
+    }
+
+    if (isVotingComplete) {
+      closeModal();
     }
     closeModal();
-  }, [modalData, selection, closeModal]);
+  }, [modalData, selection, closeModal, isVotingComplete]);
 
   const handleYesClick = useCallback(() => {
     if (modalData?.onConfirm) {

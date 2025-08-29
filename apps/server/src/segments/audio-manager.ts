@@ -23,6 +23,8 @@ export class AudioManager {
         return 'Witch/Witch-wake-up';
       case 'WITCH-POISON':
         return 'Witch/Witch-poison';
+      case 'HUNTER':
+        return 'not implemented yet';
       case 'DAY':
         return this.getDeathAnnouncementAudio();
       default:
@@ -32,7 +34,7 @@ export class AudioManager {
     }
   }
 
-  getSegmentEndAudio(segment: SegmentType) {
+  getSegmentEndAudio(segment: Exclude<SegmentType, 'HUNTER'>) {
     switch (segment) {
       case 'CUPID':
         return 'Cupidon/Cupidon-2';
@@ -41,7 +43,7 @@ export class AudioManager {
       case 'WEREWOLF':
         return 'Werewolves/Werewolves-2';
       case 'WITCH-HEAL':
-        return;
+        return 'not implemented yet';
       case 'WITCH-POISON':
         return 'Witch/Witch-end';
       case 'DAY':
@@ -64,7 +66,7 @@ export class AudioManager {
 
   getDeathAnnouncementAudio() {
     if (this.deathManager.getPendingDeaths().length > 0) {
-      return 'Night-end/combined_audio';
+      return 'Night-end/Deaths';
     }
 
     return 'Night-end/No-deaths-with-start';
@@ -83,13 +85,23 @@ export class AudioManager {
       const startAudioFile = this.getSegmentStartAudio(segment);
 
       // Dont wait for the audio to finish if it's the lovers or day segment
-      if (segment === 'LOVERS' || segment === 'DAY') {
+      if (segment === 'LOVERS') {
+        this.playAudio(startAudioFile);
+        return;
+      }
+
+      if (segment === 'DAY') {
+        await this.playAudio('Night-end/Wake-up-everyone');
         this.playAudio(startAudioFile);
         return;
       }
 
       await this.playAudio(startAudioFile);
 
+      return;
+    }
+
+    if (segment === 'HUNTER') {
       return;
     }
 
@@ -101,6 +113,30 @@ export class AudioManager {
     }
 
     await this.playAudio(lastAudioFile);
+  }
+
+  async playHunterAudio() {
+    await this.playAudio('Night-end/Wake-up-everyone');
+    await this.playAudio('Night-end/Deaths');
+    await this.playAudio('Hunter/Hunter');
+  }
+
+  async playPostHunterAudio() {
+    await this.playAudio('Hunter/Hunter-start-vote');
+  }
+
+  async playLoverAudio() {
+    await this.playAudio('Night-end/Wake-up-everyone');
+    await this.playAudio('Special-death/pre-day-vote-lover-2');
+  }
+
+  async playWinnerAudio(winner: 'werewolves' | 'villagers') {
+    if (winner === 'werewolves') {
+      await this.playWerewolvesWonAudio();
+      return;
+    }
+
+    this.playWerewolvesWonAudio();
   }
 
   private async playAudio(file: string) {

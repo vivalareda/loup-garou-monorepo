@@ -1,18 +1,21 @@
 import type { GamePlayer, Player, Role } from '@repo/types';
+import { isGamePlayer } from '@repo/types';
 import { create } from 'zustand';
 
 type PlayerStore = {
   player: Player | null;
+  isAlive: boolean;
   setPlayer: (player: Player | null) => void;
   setRole: (role: Role) => void;
-  isAlive: boolean;
   playerIsDead: () => void;
+  getPlayerRole: () => Role;
 };
 
-export const usePlayerStore = create<PlayerStore>((set) => ({
+export const usePlayerStore = create<PlayerStore>((set, get) => ({
   player: null,
   isAlive: true,
   setPlayer: (player) => set({ player }),
+  playerIsDead: () => set({ isAlive: false }),
   setRole: (role) =>
     set((state) => {
       if (!state.player) {
@@ -31,5 +34,12 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
         player,
       };
     }),
-  playerIsDead: () => set({ isAlive: false }),
+
+  getPlayerRole: () => {
+    const { player } = get();
+    if (!(player && isGamePlayer(player))) {
+      throw new Error('player does not have a role yet');
+    }
+    return player.role;
+  },
 }));

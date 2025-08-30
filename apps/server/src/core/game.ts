@@ -109,6 +109,10 @@ export class Game {
     return shuffled;
   }
 
+  getDeathQueue() {
+    return this.deathManager.getPendingDeaths();
+  }
+
   assignRoles() {
     this.initRolesList();
     const shuffledRoles = this.shuffleArray(this.availableRoles);
@@ -167,6 +171,15 @@ export class Game {
     }
 
     this.deathManager.addTeamVillager(player);
+  }
+
+  isAnyOfLoverHunter() {
+    for (const lover of this.lovers) {
+      if (lover.getRole() === 'HUNTER') {
+        return true;
+      }
+    }
+    return false;
   }
 
   isOneOfLoversInDeathQueue() {
@@ -352,6 +365,14 @@ export class Game {
     }
 
     return this.deathManager.isInDeathQueue(hunterSid);
+  }
+
+  isLoverHunter() {
+    const pendingDeaths = this.deathManager.getPendingDeaths();
+
+    return this.lovers.some((lover) =>
+      pendingDeaths.some((death) => death.playerId === lover.getSocketId())
+    );
   }
 
   processPendingDeaths() {

@@ -33,20 +33,13 @@ export function GlobalModal() {
   const handleModalClose = useCallback(() => {
     if (modalData?.onConfirm) {
       if (modalData?.selectionCount === 1) {
-        modalData.onConfirm(selection);
-        closeModal();
-        return;
+        modalData.onConfirm(selection[0]); // Pass single item for single selection
+      } else {
+        modalData.onConfirm(selection); // Pass full array for multi-selection
       }
-      modalData.onConfirm();
-      closeModal();
-      return;
-    }
-
-    if (isVotingComplete) {
-      closeModal();
     }
     closeModal();
-  }, [modalData, selection, closeModal, isVotingComplete]);
+  }, [modalData, selection, closeModal]);
 
   const handleYesClick = useCallback(() => {
     if (modalData?.onConfirm) {

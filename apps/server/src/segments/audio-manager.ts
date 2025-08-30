@@ -121,6 +121,10 @@ export class AudioManager {
     await this.playAudio('Hunter/Hunter');
   }
 
+  async playSecondLoverIsHunterAudio() {
+    await this.playAudio('Pre-day-vote/Second-lover-hunter');
+  }
+
   async playPostHunterAudio() {
     await this.playAudio('Hunter/Hunter-start-vote');
   }

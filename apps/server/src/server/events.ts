@@ -1,6 +1,7 @@
 import type { ClientToServerEvents, ServerToClientEvents } from '@repo/types';
 import type { Socket } from 'socket.io';
 import type { Game } from '@/core/game';
+import { MockScenario } from '@/segments/mock-scenario';
 import type { SegmentsManager } from '@/segments/segments-manager';
 import type { SocketType } from '@/server/sockets';
 
@@ -87,6 +88,7 @@ export class GameEvents {
       this.setupWitchEvents(socket);
       this.setupDayVoteEvents(socket);
       this.setupHunterEvents(socket);
+      this.setupMockEvents(socket);
     });
   }
 
@@ -196,6 +198,48 @@ export class GameEvents {
       this.game.addPendingDeath(playerSid, 'HUNTER_REVENGE');
       this.game.killHunterRevenge(playerSid);
       this.segmentsManager.continueDayAction();
+    });
+  }
+
+  setupMockEvents(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
+    socket.on('admin:mock-hunter-event', () => {
+      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      mockScenario.runWerewolfKillHunter();
+    });
+
+    socket.on('admin:mock-lover-event', () => {
+      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      mockScenario.runWerewolfKillLover();
+    });
+
+    socket.on('admin:mock-lover-second-hunter-event', () => {
+      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      mockScenario.runWerewolfKillLoverSecondIsHunter();
+    });
+
+    socket.on('admin:mock-lover-is-hunter-event', () => {
+      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      mockScenario.runWerewolfKillLoverWhoIsHunter();
+    });
+
+    socket.on('admin:mock-day-vote-hunter-event', () => {
+      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      mockScenario.runDayVoteKillHunter();
+    });
+
+    socket.on('admin:mock-day-vote-lover-event', () => {
+      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      mockScenario.runDayVoteKillLover();
+    });
+
+    socket.on('admin:mock-day-vote-lover-is-hunter-event', () => {
+      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      mockScenario.runDayVoteKillLoverWhoIsHunter();
+    });
+
+    socket.on('admin:mock-day-vote-lover-second-hunter-event', () => {
+      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      mockScenario.runDayVoteKillLoverSecondIsHunter();
     });
   }
 

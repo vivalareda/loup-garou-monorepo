@@ -1,6 +1,7 @@
 import type { Segment } from '@repo/types';
 import type { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
+import { SpecialScenarios } from '@/core/special-scenarios';
 import type { AudioManager } from '@/segments/audio-manager';
 import type { SocketType } from '@/server/sockets';
 
@@ -11,12 +12,14 @@ export class SegmentsManager {
   audioManager: AudioManager;
   currentSegment: number;
   segments: Segment[] = [];
+  specialScenarios: SpecialScenarios;
 
   constructor(game: Game, io: SocketType, audioManager: AudioManager) {
     this.io = io;
     this.game = game;
     this.audioManager = audioManager;
     this.gameActions = new GameActions(game, io, audioManager);
+    this.specialScenarios = new SpecialScenarios(game, audioManager);
     this.currentSegment = 0;
     this.initializeSegments();
   }
@@ -160,6 +163,7 @@ export class SegmentsManager {
   }
 
   async runLoverSegment() {
+    console.log('hunter death queue', this.isHunterInDeathQueue());
     const segment = this.segments[this.currentSegment];
     await this.audioManager.playLoverAudio();
     if (!this.isGameOver()) {
@@ -178,6 +182,10 @@ export class SegmentsManager {
       }
 
       if (this.isOneOfLoversInDeathQueue()) {
+        if (this.game.isLoverHunter()) {
+          this.specialScenarios.secondLoverIsHunter();
+          return;
+        }
         this.runLoverSegment();
         return;
       }

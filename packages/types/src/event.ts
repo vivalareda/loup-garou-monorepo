@@ -59,6 +59,9 @@ const serverEventSchemas = {
   'day:voting-phase-start': null as unknown as () => void,
 
   'hunter:pick-required': null as unknown as () => void,
+
+  // TODO: remove this, temporary for testing
+  'hunter:killed-player': null as unknown as (selectedPlayer: string) => void,
 } satisfies Record<EventName, (...args: any[]) => void>;
 
 export type ServerToClientEvents = typeof serverEventSchemas;

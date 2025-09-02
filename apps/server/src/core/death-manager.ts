@@ -63,13 +63,13 @@ export class DeathManager {
     }
   }
 
-  addLoverSuicide(loverId: string, deadLoverId: string) {
+  addPartnerSuicide(partnerId: string, deadLoverId: string) {
     const pendingDeath: PendingDeath = {
-      playerId: loverId,
-      cause: 'LOVER_SUICIDE',
+      playerId: partnerId,
+      cause: 'PARTNER_SUICIDE',
       metadata: { loverId: deadLoverId },
     };
-    this.pendingDeaths.set(loverId, pendingDeath);
+    this.pendingDeaths.set(partnerId, pendingDeath);
   }
 
   addHunterRevenge(victimId: string, hunterId: string) {

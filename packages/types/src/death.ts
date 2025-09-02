@@ -6,7 +6,7 @@ export type DeathCause =
   | 'WITCH_POISON' // Poisoned by witch during night phase
   | 'DAY_VOTE' // Eliminated by village vote during day phase
   | 'HUNTER_REVENGE' // Shot by hunter when hunter dies
-  | 'LOVER_SUICIDE'; // Dies when their lover dies
+  | 'PARTNER_SUICIDE'; // Partner dies when their lover dies
 
 export type DeathInfo = {
   playerId: string;

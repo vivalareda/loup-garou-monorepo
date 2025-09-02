@@ -1,7 +1,7 @@
 import type { Segment } from '@repo/types';
 import type { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
-import { SpecialScenarios } from '@/core/special-scenarios';
+import type { SpecialScenarios } from '@/core/special-scenarios';
 import type { AudioManager } from '@/segments/audio-manager';
 import type { SocketType } from '@/server/sockets';
 
@@ -14,12 +14,17 @@ export class SegmentsManager {
   segments: Segment[] = [];
   specialScenarios: SpecialScenarios;
 
-  constructor(game: Game, io: SocketType, audioManager: AudioManager) {
+  constructor(
+    game: Game,
+    io: SocketType,
+    audioManager: AudioManager,
+    specialScenarios: SpecialScenarios
+  ) {
     this.io = io;
     this.game = game;
     this.audioManager = audioManager;
     this.gameActions = new GameActions(game, io, audioManager);
-    this.specialScenarios = new SpecialScenarios(game, audioManager);
+    this.specialScenarios = specialScenarios;
     this.currentSegment = 0;
     this.initializeSegments();
   }
@@ -139,8 +144,25 @@ export class SegmentsManager {
     return segment.type;
   }
 
-  runHunterSegment() {
-    this.audioManager.playHunterAudio();
+  async runHunterSegment() {
+    const hunter = this.game.getSpecialRolePlayer('HUNTER');
+    if (!hunter) {
+      throw new Error(
+        'tried to play hunter segment but hunter player not found'
+      );
+    }
+    const isLover = this.game.isPlayerLover(hunter);
+
+    if (isLover) {
+      const partner = this.game.getPartner(hunter);
+      if (!partner) {
+        throw new Error('lover could not be found');
+      }
+      this.game.addPartnerSuicide(hunter.getSocketId(), partner.getSocketId());
+      await this.specialScenarios.hunterIsLover();
+    } else {
+      this.audioManager.playHunterAudio();
+    }
     const hunterSegment = this.segments.find(
       (segment) => segment.type === 'HUNTER'
     );
@@ -151,7 +173,9 @@ export class SegmentsManager {
 
     this.game.updateHunterPlayerList();
 
-    hunterSegment.action();
+    setTimeout(() => {
+      hunterSegment.action();
+    }, 18_000);
   }
 
   isHunterInDeathQueue() {
@@ -163,12 +187,32 @@ export class SegmentsManager {
   }
 
   async runLoverSegment() {
-    console.log('hunter death queue', this.isHunterInDeathQueue());
     const segment = this.segments[this.currentSegment];
     await this.audioManager.playLoverAudio();
     if (!this.isGameOver()) {
       segment.action();
     }
+  }
+
+  checkPostDayVoteScenarios(): boolean {
+    if (this.isHunterInDeathQueue()) {
+      console.log('[CONSOLE AUDIO] Would play Hunter audio files');
+      this.runHunterSegment();
+      return true;
+    }
+
+    if (this.isOneOfLoversInDeathQueue()) {
+      if (this.game.isPartnerHunter()) {
+        console.log('[CONSOLE AUDIO] Would play lover-hunter special scenario audio');
+        this.specialScenarios.partnerIsHunter();
+        return true;
+      }
+      console.log('[CONSOLE AUDIO] Would play lover death audio');
+      this.runLoverSegment();
+      return true;
+    }
+
+    return false;
   }
 
   async playSegment() {
@@ -182,8 +226,15 @@ export class SegmentsManager {
       }
 
       if (this.isOneOfLoversInDeathQueue()) {
-        if (this.game.isLoverHunter()) {
-          this.specialScenarios.secondLoverIsHunter();
+        if (this.game.isPartnerHunter()) {
+          const hunterSegment = this.segments.find((s) => s.type === 'HUNTER');
+          if (!hunterSegment) {
+            throw new Error('hunter segment not inialized');
+          }
+
+          this.specialScenarios.partnerIsHunter();
+          this.game.updateHunterPlayerList();
+          hunterSegment.action();
           return;
         }
         this.runLoverSegment();
@@ -199,7 +250,13 @@ export class SegmentsManager {
     if (this.isGameOver()) {
       return;
     }
-    this.audioManager.playPostHunterAudio();
+    if (this.specialScenarios.hunterDiedFirst) {
+      this.audioManager.playPostHunterAudio();
+      this.specialScenarios.hunterDiedFirst = false;
+    } else {
+      this.audioManager.playDayVoteAudio();
+    }
+
     const segment = this.segments[this.currentSegment];
     segment.action();
   }

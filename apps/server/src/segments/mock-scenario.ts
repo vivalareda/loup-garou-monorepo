@@ -2,14 +2,25 @@ import type { Role } from '@repo/types';
 import type { Game } from '@/core/game';
 import { Player } from '@/core/player';
 import type { SegmentsManager } from '@/segments/segments-manager';
+import type { EventsActions } from '@/server/events-actions';
+import type { SocketType } from '@/server/sockets';
 
 export class MockScenario {
   game: Game;
   segmentsManager: SegmentsManager;
+  io: SocketType;
+  eventsActions: EventsActions;
 
-  constructor(game: Game, segmentsManager: SegmentsManager) {
+  constructor(
+    game: Game,
+    segmentsManager: SegmentsManager,
+    io: SocketType,
+    eventsActions: EventsActions
+  ) {
     this.game = game;
     this.segmentsManager = segmentsManager;
+    this.io = io;
+    this.eventsActions = eventsActions;
   }
 
   runWerewolfKillHunter() {
@@ -55,9 +66,22 @@ export class MockScenario {
   runWerewolfKillLoverSecondIsHunter() {
     const player1 = this.game.addPlayer('Player1', 'mock-id-1');
     const player2 = this.game.addPlayer('Player2', 'mock-id-2');
+    const player3 = this.game.addPlayer('Player3', 'mock-id-3');
+    const player4 = this.game.addPlayer('Player4', 'mock-id-4');
+    const player5 = this.game.addPlayer('Player5', 'mock-id-5');
 
     player1.setRole('VILLAGER');
     player2.setRole('HUNTER');
+    player3.setRole('VILLAGER');
+    player4.setRole('WEREWOLF');
+    player5.setRole('VILLAGER');
+
+    this.game.setPlayerTeams(player1);
+    this.game.setPlayerTeams(player2);
+    this.game.setPlayerTeams(player3);
+    this.game.setPlayerTeams(player4);
+    this.game.setPlayerTeams(player5);
+
     this.game.setSpecialRolePlayer(player2);
 
     this.game.setLovers(['mock-id-1', 'mock-id-2']);
@@ -69,18 +93,41 @@ export class MockScenario {
     );
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();
+    setTimeout(() => {
+      this.eventsActions.handleHunterPlayerPick('mock-id-3');
+      console.log(
+        'After handleHunterPlayerPick, death queue:',
+        this.game.getDeathQueue()
+      );
+    }, 35_000);
   }
 
   // First lover dies and is the hunter
   runWerewolfKillLoverWhoIsHunter() {
+    console.log('🚀 Starting runWerewolfKillLoverWhoIsHunter scenario');
     const player1 = this.game.addPlayer('Player1', 'mock-id-1');
     const player2 = this.game.addPlayer('Player2', 'mock-id-2');
+    const player3 = this.game.addPlayer('Player3', 'mock-id-3');
+    const player4 = this.game.addPlayer('Player4', 'mock-id-4');
 
     player1.setRole('HUNTER');
     this.game.setSpecialRolePlayer(player1);
     player2.setRole('VILLAGER');
+    player3.setRole('VILLAGER');
+    player4.setRole('WEREWOLF');
+
+    this.game.setPlayerTeams(player1);
+    this.game.setPlayerTeams(player2);
+    this.game.setPlayerTeams(player3);
+    this.game.setPlayerTeams(player4);
 
     this.game.setLovers(['mock-id-1', 'mock-id-2']);
+    console.log(
+      'Players:',
+      Array.from(this.game.getPlayerList().values()).map(
+        (p) => `${p.getName()}:${p.isAlive}`
+      )
+    );
 
     this.game.addPendingDeath('mock-id-1', 'WEREWOLVES');
 
@@ -89,6 +136,13 @@ export class MockScenario {
     );
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();
+    setTimeout(() => {
+      this.eventsActions.handleHunterPlayerPick('mock-id-3');
+      console.log(
+        'After handleHunterPlayerPick, death queue:',
+        this.game.getDeathQueue()
+      );
+    }, 20_000);
   }
 
   // Village killed hunter (post day vote)
@@ -170,10 +224,4 @@ export class MockScenario {
     player.setRole(role);
     return player;
   }
-
-  // private setupMockPlayers() {
-  //   const player1 = this.createPlayer('Player1', 'mock-id-1', 'HUNTER');
-  //   const player2 = this.createPlayer('Player2', 'mock-id-2', 'VILLAGER');
-  //   const player3 = this.createPlayer('Player3', 'mock-id-3', 'VILLAGER');
-  // }
 }

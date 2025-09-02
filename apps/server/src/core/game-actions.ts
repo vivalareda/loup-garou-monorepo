@@ -131,8 +131,6 @@ export class GameActions {
   }
 
   hunterAction() {
-    setTimeout(() => {
-      this.io.emit('hunter:pick-required');
-    }, 18_000);
+    this.io.emit('hunter:pick-required');
   }
 }

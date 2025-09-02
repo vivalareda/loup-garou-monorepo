@@ -25,7 +25,9 @@ export function WerewolfVotingModal({
   const socket = activePlayer?.socket;
 
   useEffect(() => {
-    if (!socket || !isOpen) return;
+    if (!(socket && isOpen)) {
+      return;
+    }
 
     const handleVotesUpdate = (currentVotes: WerewolvesVoteState) => {
       setVotes(currentVotes);
@@ -46,7 +48,9 @@ export function WerewolfVotingModal({
 
   const updateVote = useCallback(
     (targetPlayerSocketId: string) => {
-      if (!socket) return;
+      if (!socket) {
+        return;
+      }
 
       const oldVote = playerVote;
       setPlayerVote(targetPlayerSocketId);
@@ -57,7 +61,9 @@ export function WerewolfVotingModal({
 
   const sendVote = useCallback(
     (targetPlayerSocketId: string) => {
-      if (!socket) return;
+      if (!socket) {
+        return;
+      }
 
       if (playerVote) {
         updateVote(targetPlayerSocketId);
@@ -80,7 +86,7 @@ export function WerewolfVotingModal({
     return null;
   }
 
-  if (!activePlayer || !socket) {
+  if (!(activePlayer && socket)) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6">

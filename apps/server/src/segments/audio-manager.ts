@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs';
-
 import type { SegmentType } from '@repo/types';
-import sound from 'sound-play';
+import sound from 'sound-play'; // Commented out for console logging only
 import type { DeathManager } from '@/core/death-manager';
 
 export class AudioManager {
@@ -9,6 +8,11 @@ export class AudioManager {
 
   constructor(deathManager: DeathManager) {
     this.deathManager = deathManager;
+  }
+
+  async playDayVoteHunterHasPartner() {
+    await this.playDayEndAudio();
+    await this.playAudio('Day-vote/Hunter');
   }
 
   getSegmentStartAudio(segment: SegmentType) {
@@ -55,6 +59,10 @@ export class AudioManager {
     }
   }
 
+  async playDayEndAudio() {
+    await this.playAudio('Day-vote/Vote-Death');
+  }
+
   // isConditionnalEndingAudioSegment(segment: SegmentType) {
   //   if (segment === 'WITCH-HEAL') {
   //     // This segment doesn't have a specific ending audio
@@ -70,6 +78,17 @@ export class AudioManager {
     }
 
     return 'Night-end/No-deaths-with-start';
+  }
+
+  async playSpecialScenarioAudio(scenario: string) {
+    switch (scenario) {
+      case 'hunter died and has lover':
+        console.log('player hunter died and has lover audio');
+        await this.playAudio('Special-death/pre-day-vote-hunter-has-lover');
+        break;
+      default:
+        throw new Error('special scenario audio doest exist');
+    }
   }
 
   async playVillagersWonAudio() {
@@ -122,15 +141,32 @@ export class AudioManager {
   }
 
   async playSecondLoverIsHunterAudio() {
+    console.log('playing Pre-day-vote/Second-lover-hunter');
     await this.playAudio('Pre-day-vote/Second-lover-hunter');
+  }
+
+  async playDayVoteAudio() {
+    await this.playAudio('day-vote-start-universal');
+  }
+
+  async playDayVoteLoversDeath() {
+    await this.playDayEndAudio();
+    await this.playAudio('Day-vote/Lover');
   }
 
   async playPostHunterAudio() {
     await this.playAudio('Hunter/Hunter-start-vote');
   }
 
-  async playLoverAudio() {
+  async nightHasEndedAudio() {
     await this.playAudio('Night-end/Wake-up-everyone');
+  }
+
+  async playHunterIsLoverAudio() {
+    await this.playAudio('Special-scenarios/hunter-is-lover');
+  }
+
+  async playLoverAudio() {
     await this.playAudio('Special-death/pre-day-vote-lover-2');
   }
 
@@ -146,10 +182,8 @@ export class AudioManager {
   private async playAudio(file: string) {
     try {
       if (!existsSync(`./assets/${file}.mp3`)) {
-        console.error(`Audio file not found: ./assets/${file}.mp3`);
         return;
       }
-      console.log(`Playing audio: ./assets/${file}.mp3`);
       await sound.play(`./assets/${file}.mp3`);
     } catch (error) {
       console.error('Error playing audio:', error);

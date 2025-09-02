@@ -2,9 +2,11 @@ import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
-import { GameEvents } from '@/server/events';
+import { EventsActions } from '@/server/events-actions';
 import { startServer } from '@/server/http-server';
+import { GameEvents } from '@/server/server-events';
 import { io } from '@/server/sockets';
+import { SpecialScenarios } from './core/special-scenarios';
 
 process.stdin.setRawMode(true);
 process.stdin.resume();
@@ -17,13 +19,22 @@ let audioManager: AudioManager;
 let segmentsManager: SegmentsManager;
 let events: GameEvents;
 let deathManager: DeathManager;
+let eventsActions: EventsActions;
+let specialScenarios: SpecialScenarios;
 
 const initGame = () => {
   deathManager = new DeathManager();
   game = new Game(io, deathManager);
   audioManager = new AudioManager(deathManager);
-  segmentsManager = new SegmentsManager(game, io, audioManager);
-  events = new GameEvents(game, segmentsManager, io);
+  specialScenarios = new SpecialScenarios(game, audioManager);
+  segmentsManager = new SegmentsManager(
+    game,
+    io,
+    audioManager,
+    specialScenarios
+  );
+  eventsActions = new EventsActions(game, segmentsManager, io);
+  events = new GameEvents(game, segmentsManager, io, eventsActions);
   events.setupSocketHandlers();
 };
 

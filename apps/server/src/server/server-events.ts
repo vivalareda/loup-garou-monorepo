@@ -3,6 +3,7 @@ import type { Socket } from 'socket.io';
 import type { Game } from '@/core/game';
 import { MockScenario } from '@/segments/mock-scenario';
 import type { SegmentsManager } from '@/segments/segments-manager';
+import type { EventsActions } from '@/server/events-actions';
 import type { SocketType } from '@/server/sockets';
 
 const MAX_PLAYERCOUNT = 6;
@@ -10,11 +11,18 @@ const MAX_PLAYERCOUNT = 6;
 export class GameEvents {
   private readonly io: SocketType;
   private readonly game: Game;
+  private readonly eventsActions: EventsActions;
   private readonly segmentsManager: SegmentsManager;
   private loversAlertClosed = 0;
 
-  constructor(game: Game, segmentsManager: SegmentsManager, io: SocketType) {
+  constructor(
+    game: Game,
+    segmentsManager: SegmentsManager,
+    io: SocketType,
+    eventActions: EventsActions
+  ) {
     this.io = io;
+    this.eventsActions = eventActions;
     this.game = game;
     this.segmentsManager = segmentsManager;
   }
@@ -124,11 +132,7 @@ export class GameEvents {
     socket: Socket<ClientToServerEvents, ServerToClientEvents>
   ) {
     socket.on('werewolf:player-voted', (targetPlayer: string) => {
-      this.game.handleWerewolfVote(socket.id, targetPlayer);
-      if (this.game.hasAllWerewolvesAgreed()) {
-        this.game.handleAllWerewolvesAgree();
-        this.segmentsManager.finishSegment();
-      }
+      this.eventsActions.handleWerewolfVote(socket.id, targetPlayer);
     });
 
     socket.on(
@@ -169,76 +173,96 @@ export class GameEvents {
     socket: Socket<ClientToServerEvents, ServerToClientEvents>
   ) {
     socket.on('day:player-voted', (targetPlayer: string) => {
-      try {
-        this.game.handleDayVote(socket.id, targetPlayer);
-
-        // Check if voting is complete
-        if (this.game.hasAllPlayersVoted()) {
-          const player = this.game.getDayVoteTarget();
-          this.game.handleDayVotePlayer(player);
-
-          if (player.getRole() === 'WITCH') {
-            this.segmentsManager.witchDied();
-          }
-
-          if (!this.segmentsManager.isGameOver()) {
-            this.segmentsManager.finishSegment();
-          }
-        }
-      } catch (error) {
-        console.error('Day vote error:', error);
-      }
+      this.eventsActions.handleDayVote(socket.id, targetPlayer);
     });
   }
 
   setupHunterEvents(
     socket: Socket<ClientToServerEvents, ServerToClientEvents>
   ) {
-    socket.on('hunter:killed-player', (playerSid: string) => {
-      this.game.addPendingDeath(playerSid, 'HUNTER_REVENGE');
-      this.game.killHunterRevenge(playerSid);
-      this.segmentsManager.continueDayAction();
+    socket.on('hunter:killed-player', (targetSid: string) => {
+      this.eventsActions.handleHunterPlayerPick(targetSid);
     });
   }
 
   setupMockEvents(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
     socket.on('admin:mock-hunter-event', () => {
-      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      const mockScenario = new MockScenario(
+        this.game,
+        this.segmentsManager,
+        this.io,
+        this.eventsActions
+      );
       mockScenario.runWerewolfKillHunter();
     });
 
     socket.on('admin:mock-lover-event', () => {
-      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      const mockScenario = new MockScenario(
+        this.game,
+        this.segmentsManager,
+        this.io,
+        this.eventsActions
+      );
       mockScenario.runWerewolfKillLover();
     });
 
     socket.on('admin:mock-lover-second-hunter-event', () => {
-      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      const mockScenario = new MockScenario(
+        this.game,
+        this.segmentsManager,
+        this.io,
+        this.eventsActions
+      );
       mockScenario.runWerewolfKillLoverSecondIsHunter();
     });
 
     socket.on('admin:mock-lover-is-hunter-event', () => {
-      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      const mockScenario = new MockScenario(
+        this.game,
+        this.segmentsManager,
+        this.io,
+        this.eventsActions
+      );
       mockScenario.runWerewolfKillLoverWhoIsHunter();
     });
 
     socket.on('admin:mock-day-vote-hunter-event', () => {
-      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      const mockScenario = new MockScenario(
+        this.game,
+        this.segmentsManager,
+        this.io,
+        this.eventsActions
+      );
       mockScenario.runDayVoteKillHunter();
     });
 
     socket.on('admin:mock-day-vote-lover-event', () => {
-      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      const mockScenario = new MockScenario(
+        this.game,
+        this.segmentsManager,
+        this.io,
+        this.eventsActions
+      );
       mockScenario.runDayVoteKillLover();
     });
 
     socket.on('admin:mock-day-vote-lover-is-hunter-event', () => {
-      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      const mockScenario = new MockScenario(
+        this.game,
+        this.segmentsManager,
+        this.io,
+        this.eventsActions
+      );
       mockScenario.runDayVoteKillLoverWhoIsHunter();
     });
 
     socket.on('admin:mock-day-vote-lover-second-hunter-event', () => {
-      const mockScenario = new MockScenario(this.game, this.segmentsManager);
+      const mockScenario = new MockScenario(
+        this.game,
+        this.segmentsManager,
+        this.io,
+        this.eventsActions
+      );
       mockScenario.runDayVoteKillLoverSecondIsHunter();
     });
   }

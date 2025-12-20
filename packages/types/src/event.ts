@@ -87,6 +87,7 @@ const clientEventSchemas = {
   'admin:mock-day-vote-lover-is-hunter-event': null as unknown as () => void,
   'admin:mock-day-vote-lover-second-hunter-event':
     null as unknown as () => void,
+  'admin:mock-hunter-revenge-kills-lover': null as unknown as () => void,
 
   'cupid:lovers-pick': null as unknown as (selectedPlayers: string[]) => void,
   'alert:lover-closed-alert': null as unknown as () => void,

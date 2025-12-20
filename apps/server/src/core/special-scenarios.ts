@@ -15,7 +15,8 @@ export class SpecialScenarios {
   async partnerIsHunter() {
     this.hunterDiedFirst = true;
     await this.audioManager.nightHasEndedAudio();
-    await this.audioManager.playLoverAudio();
+    // Don't call playLoverAudio() here as it includes wake-up audio
+    await this.audioManager.playAudio('Special-death/pre-day-vote-lover-2');
     await this.audioManager.playSecondLoverIsHunterAudio();
   }
 

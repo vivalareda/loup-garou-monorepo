@@ -155,6 +155,7 @@ export class GameEvents {
 
     socket.on('witch:poisoned-player', (playerSid: string) => {
       this.game.witchKill(playerSid);
+      this.segmentsManager;
       this.segmentsManager.finishSegment();
     });
 
@@ -264,6 +265,16 @@ export class GameEvents {
         this.eventsActions
       );
       mockScenario.runDayVoteKillLoverSecondIsHunter();
+    });
+
+    socket.on('admin:mock-hunter-revenge-kills-lover', () => {
+      const mockScenario = new MockScenario(
+        this.game,
+        this.segmentsManager,
+        this.io,
+        this.eventsActions
+      );
+      mockScenario.runHunterRevengeKillsLover();
     });
   }
 

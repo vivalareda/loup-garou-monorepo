@@ -219,6 +219,74 @@ export class MockScenario {
     this.segmentsManager.playSegment();
   }
 
+  // Hunter dies, then picks a lover as revenge target
+  runHunterRevengeKillsLover() {
+    console.log('🚀 Starting runHunterRevengeKillsLover scenario');
+
+    // Create 5 players
+    const hunter = this.game.addPlayer('Hunter', 'mock-hunter');
+    const lover1 = this.game.addPlayer('Lover1', 'mock-lover-1');
+    const lover2 = this.game.addPlayer('Lover2', 'mock-lover-2');
+    const villager1 = this.game.addPlayer('Villager-1', 'mock-villager-1');
+    const villager2 = this.game.addPlayer('Villager-2', 'mock-villager-2');
+    const werewolf = this.game.addPlayer('Werewolf', 'mock-werewolf');
+
+    // Assign roles
+    hunter.setRole('HUNTER');
+    lover1.setRole('VILLAGER');
+    lover2.setRole('VILLAGER');
+    villager1.setRole('VILLAGER');
+    villager2.setRole('VILLAGER');
+    werewolf.setRole('WEREWOLF');
+
+    // Set teams
+    this.game.setPlayerTeams(hunter);
+    this.game.setPlayerTeams(lover1);
+    this.game.setPlayerTeams(lover2);
+    this.game.setPlayerTeams(villager1);
+    this.game.setPlayerTeams(villager2);
+    this.game.setPlayerTeams(werewolf);
+
+    // Register special roles
+    this.game.setSpecialRolePlayer(hunter);
+
+    // Set up lovers (NOT including hunter)
+    this.game.setLovers(['mock-lover-1', 'mock-lover-2']);
+
+    console.log(
+      '💕 Lovers set:',
+      this.game.getLovers().map((l) => l.getName())
+    );
+    console.log(
+      'Players:',
+      Array.from(this.game.getPlayerList().values()).map(
+        (p) => `${p.getName()}:${p.isAlive}`
+      )
+    );
+
+    // Hunter dies from werewolves
+    this.game.addPendingDeath('mock-hunter', 'WEREWOLVES');
+    console.log('💀 Added hunter to pending deaths');
+
+    // Jump to DAY segment to trigger hunter revenge flow
+    const daySegmentIndex = this.segmentsManager.segments.findIndex(
+      (s) => s.type === 'DAY'
+    );
+    this.segmentsManager.currentSegment = daySegmentIndex;
+    this.segmentsManager.playSegment();
+
+    // After audio plays, auto-pick Lover1 as revenge target
+    setTimeout(() => {
+      console.log('🎯💕 Hunter picking Lover1 as revenge target...');
+      console.log(
+        'Before hunter pick, death queue:',
+        this.game.getDeathQueue()
+      );
+      this.eventsActions.handleHunterPlayerPick('mock-lover-1');
+      console.log('After hunter pick, death queue:', this.game.getDeathQueue());
+    }, 20_000); // Adjust timing based on audio length
+  }
+
   private createPlayer(name: string, sid: string, role: Role) {
     const player = new Player(name, sid);
     player.setRole(role);

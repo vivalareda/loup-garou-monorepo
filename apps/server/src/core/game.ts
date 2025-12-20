@@ -20,7 +20,7 @@ export class Game {
   private witchHasHealPotion = true;
   private witchHasPoisonPotion = true;
 
-  private availableRoles: Role[] = [];
+  availableRoles: Role[] = [];
 
   constructor(io: SocketType, deathManager: DeathManager) {
     this.io = io;
@@ -30,7 +30,7 @@ export class Game {
   }
 
   addPlayer(name: string, sid: string) {
-    const player = new Player(name, sid);
+    const player = new Player(name, sid, this.io);
     this.players.set(sid, player);
     console.log(
       `new players list: ${JSON.stringify(Array.from(this.players.keys()))}`
@@ -58,15 +58,8 @@ export class Game {
 
       // this.availableRoles.push('SEER');
       this.availableRoles.push('CUPID');
-
-      if (playerCount >= 6) {
-        this.availableRoles.push('WITCH');
-      }
-
-      if (playerCount >= 8) {
-        this.availableRoles.push('HUNTER');
-        this.availableRoles.push('CUPID');
-      }
+      this.availableRoles.push('WITCH');
+      // this.availableRoles.push('HUNTER');
 
       const remainingSlots = playerCount - this.availableRoles.length;
       for (let i = 0; i < remainingSlots; i++) {
@@ -374,6 +367,16 @@ export class Game {
     return lover;
   }
 
+  isHunterVictimInLove(sid: string) {
+    const player = this.getPlayerBySocketId(sid);
+
+    if (!player) {
+      throw new Error(`${sid} didn't match any player`);
+    }
+
+    return this.isPlayerLover(player);
+  }
+
   isHunterInLove() {
     const hunter = this.getSpecialRolePlayer('HUNTER');
     if (!hunter) {
@@ -454,14 +457,9 @@ export class Game {
       };
 
       deathInfos.push(deathInfo);
-      player.setIsAlive(false);
 
-      this.alertPlayerOfDeath(player.getSocketId());
-
-      if (player.getRole() === 'WITCH') {
-        this.witchHasHealPotion = false;
-        this.witchHasPoisonPotion = false;
-      }
+      // Use new unified death handling
+      this.handlePlayerDeath(player);
 
       // Remove the death from the queue as it's been processed
       this.deathManager.removePendingDeath(pendingDeath.playerId);
@@ -494,10 +492,23 @@ export class Game {
     );
   }
 
+  /**
+   * @deprecated Use handlePlayerDeath() instead which calls player.kill()
+   * This method is kept for backward compatibility but should not be used in new code
+   */
   alertPlayerOfDeath(socketId: string) {
     this.io.to(socketId).emit('alert:player-is-dead');
     console.log('alerted player of death');
     this.io.emit('lobby:player-died', socketId);
+  }
+
+  handlePlayerDeath(player: Player) {
+    player.kill();
+
+    if (player.getRole() === 'WITCH') {
+      this.witchHasHealPotion = false;
+      this.witchHasPoisonPotion = false;
+    }
   }
 
   killHunterRevenge(sid: string) {
@@ -510,12 +521,15 @@ export class Game {
 
     if (!hunterSid) {
       throw new Error(
-        'Tried to kill hunter targer but hunter player not found'
+        'Tried to kill hunter target but hunter player not found'
       );
     }
 
+    // Track hunter revenge for death cause
     this.deathManager.addHunterRevenge(sid, hunterSid);
-    this.alertPlayerOfDeath(sid);
+
+    // Kill player immediately (not pending death)
+    this.handlePlayerDeath(player);
   }
 
   addPendingDeath(sid: string, cause: DeathCause) {
@@ -562,6 +576,7 @@ export class Game {
   witchKill(playerSid: string) {
     this.deathManager.addWitchPoison(playerSid);
     this.witchHasPoisonPotion = false;
+    console.log('the witch doesnt have any poisong left');
   }
 
   canWitchHeal() {
@@ -637,10 +652,8 @@ export class Game {
       throw new Error(`Player with sid ${votedPlayer} not found`);
     }
 
-    votedPlayer.setIsAlive(false);
-
-    // Kill player immediately (not pending death)
-    this.alertPlayerOfDeath(votedPlayer.getSocketId());
+    // Use new unified death handling
+    this.handlePlayerDeath(votedPlayer);
 
     // Clear votes for next round
     this.dayVotes.clear();

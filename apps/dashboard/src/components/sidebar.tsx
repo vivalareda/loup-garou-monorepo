@@ -89,23 +89,30 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
     socket.emit('admin:mock-day-vote-lover-second-hunter-event');
   };
 
+  const handleMockHunterRevengeKillsLover = () => {
+    console.log('🎯💕 Testing Hunter revenge kills Lover...');
+    socket.emit('admin:mock-hunter-revenge-kills-lover');
+  };
+
   return (
-    <div className="flex w-64 flex-col border-r border-gray-200 bg-gray-100">
-      <div className="border-b border-gray-200 p-4">
+    <div className="flex h-screen w-80 flex-col border-r border-gray-200 bg-gray-100">
+      <div className="border-b border-gray-200 bg-white p-4">
         <h2 className="mb-3 text-lg font-semibold text-gray-800">
           Mock Players
         </h2>
-        <Button className="w-full" onClick={onAddPlayer} size="sm">
-          + Add Player
-        </Button>
-        <Button className="mt-2 w-full" onClick={onBatchAddPlayers} size="sm">
-          Batch Add Players
-        </Button>
+        <div className="space-y-2">
+          <Button className="w-full" onClick={onAddPlayer} size="sm">
+            + Add Player
+          </Button>
+          <Button className="w-full" onClick={onBatchAddPlayers} size="sm">
+            Batch Add Players
+          </Button>
+        </div>
       </div>
 
       {/* Admin Controls */}
-      <div className="border-b border-gray-200 p-4">
-        <h3 className="mb-3 text-sm font-semibold text-gray-600">
+      <div className="border-b border-gray-200 bg-white p-4">
+        <h3 className="mb-3 text-sm font-semibold text-gray-700">
           🎮 Game Controls
         </h3>
         <div className="space-y-2">
@@ -136,12 +143,12 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
         </div>
       </div>
 
-      {/* Audio Testing Controls */}
-      <div className="border-b border-gray-200 p-4">
-        <h3 className="mb-3 text-sm font-semibold text-gray-600">
+      {/* Audio Testing Controls - Collapsible */}
+      <details className="border-b border-gray-200 bg-white">
+        <summary className="cursor-pointer p-4 text-sm font-semibold text-gray-700 hover:bg-gray-50">
           🔊 Audio Testing
-        </h3>
-        <div className="space-y-2">
+        </summary>
+        <div className="px-4 pb-4 space-y-2">
           <h4 className="text-xs font-medium text-gray-500">Pre Day Vote</h4>
           <Button
             className="w-full text-xs"
@@ -174,6 +181,14 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
             variant="outline"
           >
             💕🎯 Lover IS Hunter dies
+          </Button>
+          <Button
+            className="w-full text-xs"
+            onClick={handleMockHunterRevengeKillsLover}
+            size="sm"
+            variant="outline"
+          >
+            🎯💕 Hunter Revenge → Lover
           </Button>
 
           <h4 className="text-xs font-medium text-gray-500 mt-3">
@@ -212,22 +227,22 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
             🗳️💕🎯 Village kills Lover, 2nd Hunter
           </Button>
         </div>
-      </div>
+      </details>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-gray-100">
         {playersArray.length === 0 ? (
           <div className="p-4 text-center text-gray-500">
             No players yet. Add one to get started!
           </div>
         ) : (
-          <div className="space-y-1 p-2">
+          <div className="space-y-2 p-3">
             {playersArray.map((player) => (
               // biome-ignore lint/a11y/useSemanticElements: <>
               <div
-                className={`cursor-pointer rounded-lg border p-3 transition-colors${
+                className={`cursor-pointer rounded-lg border p-3 transition-all${
                   activePlayerId === player.id
-                    ? 'bg-blue-50 border-blue-200'
-                    : 'bg-white border-gray-200 hover:bg-gray-50'
+                    ? 'bg-blue-50 border-blue-300 shadow-sm'
+                    : 'bg-white border-gray-200 hover:bg-gray-50 hover:shadow-sm'
                 }`}
                 key={player.id}
                 onClick={() => setActivePlayer(player.id)}
@@ -241,14 +256,14 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
               >
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-600">👤</span>
-                    <span className="font-medium text-gray-800">
+                    <span className="text-lg">👤</span>
+                    <span className="font-medium text-gray-800 text-sm">
                       {player.name}
                     </span>
                   </div>
                   <div className="flex gap-1">
                     <button
-                      className={`rounded p-1 text-xs${
+                      className={`rounded p-1.5 text-sm transition-colors${
                         player.isConnected
                           ? 'text-green-600 hover:bg-green-50'
                           : 'text-gray-400 hover:bg-gray-50'
@@ -267,7 +282,7 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
                       {player.isConnected ? '📶' : '📵'}
                     </button>
                     <button
-                      className="rounded p-1 text-xs text-red-500 hover:bg-red-50"
+                      className="rounded p-1.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         removePlayer(player.id);
@@ -280,15 +295,15 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
                   </div>
                 </div>
 
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1">
                   <div
-                    className={`rounded px-2 py-1${getStatusClassName(player.status)}`}
+                    className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${getStatusClassName(player.status)}`}
                   >
                     {player.status}
                   </div>
                   {player.playersList.length > 0 && (
-                    <div className="text-gray-500">
-                      Players: {player.playersList.length}
+                    <div className="text-xs text-gray-500">
+                      {player.playersList.length} player{player.playersList.length !== 1 ? 's' : ''} in room
                     </div>
                   )}
                 </div>

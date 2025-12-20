@@ -14,23 +14,51 @@ export class EventsActions {
     this.io = io;
   }
 
-  handleHunterPlayerPick(targetSid: string) {
-    if (this.hunterKilledDuringDayVote) {
-      this.handleDayVoteHunterPlayerPick(targetSid);
-      return;
+  async handleHunterPlayerPick(targetSid: string) {
+    // Step 1: Kill the hunter's revenge target
+    this.game.killHunterRevenge(targetSid);
+
+    // Step 2: Check if the victim is a lover → trigger partner suicide
+    if (this.game.isHunterVictimInLove(targetSid)) {
+      console.log(`🎯💕 [HUNTER] Hunter killed a lover: ${targetSid}`);
+
+      const lover = this.game.getPlayerBySocketId(targetSid);
+      if (!lover) {
+        throw new Error(`Target ${targetSid} not found`);
+      }
+
+      const partner = this.game.getPartner(lover);
+      if (!partner) {
+        throw new Error(`Partner not found for ${targetSid}`);
+      }
+
+      console.log(
+        `🎯💕 [HUNTER] Partner ${partner.getSocketId()} will also die`
+      );
+
+      // Add partner to death queue
+      this.game.addPendingDeath(partner.getSocketId(), 'PARTNER_SUICIDE');
+
+      // Play special audio for hunter killing lover
+      await this.segmentsManager.audioManager.playHunterKilledLover();
     }
 
-    this.game.addPendingDeath(targetSid, 'HUNTER_REVENGE');
+    // Step 3: Check if the HUNTER had a lover → trigger partner suicide
     this.game.isHunterInLove();
-    this.game.killHunterRevenge(targetSid);
-    this.segmentsManager.continueDayAction();
-  }
 
-  handleDayVoteHunterPlayerPick(targetSid: string) {
-    this.game.killHunterRevenge(targetSid);
-    this.game.isHunterInLove();
-    this.game.killHunterRevenge(targetSid);
-    this.segmentsManager.audioManager.playDayVoteAudio();
+    // Step 4: Continue based on context
+    if (this.hunterKilledDuringDayVote) {
+      console.log(
+        '🎯 [HUNTER] Hunter was killed during day vote - playing day vote audio'
+      );
+      await this.segmentsManager.audioManager.playDayVoteAudio();
+      this.hunterKilledDuringDayVote = false; // Reset flag
+    } else {
+      console.log(
+        '🎯 [HUNTER] Hunter was killed during night - continuing to day action'
+      );
+      this.segmentsManager.continueDayAction();
+    }
   }
 
   handleWerewolfVote(werewolfSid: string, targetSid: string) {
@@ -60,6 +88,9 @@ export class EventsActions {
       if (player.getRole() === 'WITCH') {
         this.segmentsManager.witchDied();
       }
+
+      // Kill the player and clear votes
+      this.game.handleDayVotePlayer(player);
 
       if (!this.segmentsManager.isGameOver()) {
         this.segmentsManager.finishSegment();

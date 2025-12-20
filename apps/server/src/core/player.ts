@@ -5,18 +5,21 @@ import type {
   Role,
   WaitingRoomPlayer,
 } from '@repo/types';
+import type { SocketType } from '@/server/sockets';
 
 export class Player implements PlayerGetters, PlayerSetters {
   readonly name: string;
   readonly socketId: string;
+  readonly io: SocketType;
   role: Role | null;
   isAlive: boolean;
 
-  constructor(name: string, sid: string) {
+  constructor(name: string, sid: string, io: SocketType) {
     this.name = name;
     this.role = null;
     this.isAlive = true;
     this.socketId = sid;
+    this.io = io;
   }
 
   getPlayerForClient() {
@@ -57,6 +60,12 @@ export class Player implements PlayerGetters, PlayerSetters {
 
   kill() {
     this.isAlive = false;
+
+    this.io.to(this.socketId).emit('alert:player-is-dead');
+
+    this.io.emit('lobby:player-died', this.socketId);
+
+    console.log(`💀 Player ${this.name} (${this.socketId}) has been killed`);
   }
 
   setIsAlive(value: boolean) {

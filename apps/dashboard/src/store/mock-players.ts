@@ -35,6 +35,8 @@ type MockPlayer = {
   showDayVoteModal: boolean;
   dayVoteTarget: string | null;
   canVote: boolean;
+  // Hunter state
+  showHunterModal: boolean;
 };
 
 type MockPlayerState = {
@@ -66,6 +68,9 @@ type MockPlayerStore = MockPlayerState & {
   voteDayPlayer: (playerId: string, targetPlayerId: string) => void;
   closeDayVoteModal: (playerId: string) => void;
   simulateAllDayVotes: (targetPlayerName: string) => void;
+  // Hunter actions
+  killPlayerAsHunter: (playerId: string, targetPlayerId: string) => void;
+  closeHunterModal: (playerId: string) => void;
 };
 
 function createPlayerSocket(
@@ -246,6 +251,27 @@ function createPlayerSocket(
     }
   });
 
+  // Hunter event listeners
+  socket.on('hunter:pick-required', () => {
+    console.log(
+      `🎯 [HUNTER] Player ${name} received hunter:pick-required event`
+    );
+    const currentPlayer = store.getState().players.get(id);
+    if (
+      currentPlayer?.player &&
+      isGamePlayer(currentPlayer.player) &&
+      currentPlayer.player.role === 'HUNTER'
+    ) {
+      store.getState().updatePlayerData(id, {
+        showHunterModal: true,
+      });
+    } else {
+      console.log(
+        `🎯 [HUNTER] Skipping hunter modal - player is not a hunter or not found`
+      );
+    }
+  });
+
   return socket;
 }
 
@@ -280,6 +306,8 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
       showDayVoteModal: false,
       dayVoteTarget: null,
       canVote: false,
+      // Hunter state
+      showHunterModal: false,
     };
 
     set((state) => ({
@@ -642,6 +670,26 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
           `Player ${player.name} voted to eliminate ${targetPlayerName}`
         );
       }, index * 100); // Stagger the votes slightly to simulate real voting
+    });
+  },
+
+  // Hunter actions
+  killPlayerAsHunter: (playerId: string, targetPlayerId: string) => {
+    console.log(
+      `🎯 [HUNTER] Player ${playerId} killing player ${targetPlayerId} as revenge`
+    );
+    const player = get().players.get(playerId);
+    if (player?.socket) {
+      player.socket.emit('hunter:killed-player', targetPlayerId);
+      get().updatePlayerData(playerId, {
+        showHunterModal: false,
+      });
+    }
+  },
+
+  closeHunterModal: (playerId: string) => {
+    get().updatePlayerData(playerId, {
+      showHunterModal: false,
     });
   },
 }));

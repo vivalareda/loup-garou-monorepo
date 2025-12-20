@@ -14,6 +14,14 @@ export class SegmentsManager {
   segments: Segment[] = [];
   specialScenarios: SpecialScenarios;
 
+  private cupidSegment!: Segment;
+  private loversSegment!: Segment;
+  private werewolfSegment!: Segment;
+  private witchHealSegment!: Segment;
+  private witchPoisonSegment!: Segment;
+  private daySegment!: Segment;
+  private hunterSegment!: Segment;
+
   constructor(
     game: Game,
     io: SocketType,
@@ -25,7 +33,7 @@ export class SegmentsManager {
     this.audioManager = audioManager;
     this.gameActions = new GameActions(game, io, audioManager);
     this.specialScenarios = specialScenarios;
-    this.currentSegment = 0;
+    this.currentSegment = 2;
     this.initializeSegments();
   }
 
@@ -38,65 +46,60 @@ export class SegmentsManager {
   }
 
   witchDied() {
-    const healSegment = this.segments.find((s) => s.type === 'WITCH-HEAL');
-    const poisonSegment = this.segments.find((s) => s.type === 'WITCH-POISON');
-    if (!(healSegment && poisonSegment)) {
-      throw new Error('Witch heal or poison segment not found');
-    }
-    healSegment.skip = true;
-    poisonSegment.skip = true;
+    this.witchHealSegment.skip = true;
+    this.witchPoisonSegment.skip = true;
   }
 
   initializeSegments() {
-    const cupidSegment: Segment = {
+    this.cupidSegment = {
       type: 'CUPID',
       action: () => this.gameActions.cupidAction(),
-      skip: false,
+      skip: true,
     };
 
-    const loversSegment: Segment = {
+    this.loversSegment = {
       type: 'LOVERS',
       action: () => this.gameActions.loversAction(),
-      skip: false,
+      skip: true,
     };
 
-    const werewolfSegment: Segment = {
+    this.werewolfSegment = {
       type: 'WEREWOLF',
       action: () => this.gameActions.werewolfAction(),
       skip: false,
     };
 
-    const witchHealSegment: Segment = {
+    this.witchHealSegment = {
       type: 'WITCH-HEAL',
       action: () => this.gameActions.witchHealAction(),
-      skip: true,
+      skip: false,
     };
 
-    const witchPoisonSegment: Segment = {
+    this.witchPoisonSegment = {
       type: 'WITCH-POISON',
       action: () => this.gameActions.witchPoisonAction(),
-      skip: true,
+      skip: false,
     };
 
-    const daySegment: Segment = {
+    this.daySegment = {
       type: 'DAY',
       action: () => this.gameActions.dayAction(),
       skip: false,
     };
 
-    const hunterSegment: Segment = {
+    this.hunterSegment = {
       type: 'HUNTER',
       action: () => this.gameActions.hunterAction(),
       skip: true,
     };
 
-    this.initializeSegment(cupidSegment);
-    this.initializeSegment(loversSegment);
-    this.initializeSegment(werewolfSegment);
-    this.initializeSegment(witchHealSegment);
-    this.initializeSegment(witchPoisonSegment);
-    this.initializeSegment(daySegment);
-    this.initializeSegment(hunterSegment);
+    this.initializeSegment(this.cupidSegment);
+    this.initializeSegment(this.loversSegment);
+    this.initializeSegment(this.werewolfSegment);
+    this.initializeSegment(this.witchHealSegment);
+    this.initializeSegment(this.witchPoisonSegment);
+    this.initializeSegment(this.daySegment);
+    this.initializeSegment(this.hunterSegment);
   }
 
   startGame() {
@@ -145,6 +148,7 @@ export class SegmentsManager {
   }
 
   async runHunterSegment() {
+    console.log('running hunter segment');
     const hunter = this.game.getSpecialRolePlayer('HUNTER');
     if (!hunter) {
       throw new Error(
@@ -161,25 +165,24 @@ export class SegmentsManager {
       this.game.addPartnerSuicide(hunter.getSocketId(), partner.getSocketId());
       await this.specialScenarios.hunterIsLover();
     } else {
-      this.audioManager.playHunterAudio();
-    }
-    const hunterSegment = this.segments.find(
-      (segment) => segment.type === 'HUNTER'
-    );
-
-    if (!hunterSegment) {
-      throw new Error('hunter segment not inialized');
+      await this.audioManager.playHunterAudio();
     }
 
+    // Mark that hunter died first so the correct audio plays after hunter's revenge
+    this.specialScenarios.hunterDiedFirst = true;
+
+    // Direct property access - no need to find()
     this.game.updateHunterPlayerList();
-
-    setTimeout(() => {
-      hunterSegment.action();
-    }, 18_000);
+    this.hunterSegment.action();
   }
 
   isHunterInDeathQueue() {
     return this.game.hunterIsInDeathQueue();
+  }
+
+  markWitchPoisonAsSkipped() {
+    // Direct property access - no need to find()
+    this.witchPoisonSegment.skip = true;
   }
 
   isOneOfLoversInDeathQueue() {
@@ -203,7 +206,9 @@ export class SegmentsManager {
 
     if (this.isOneOfLoversInDeathQueue()) {
       if (this.game.isPartnerHunter()) {
-        console.log('[CONSOLE AUDIO] Would play lover-hunter special scenario audio');
+        console.log(
+          '[CONSOLE AUDIO] Would play lover-hunter special scenario audio'
+        );
         this.specialScenarios.partnerIsHunter();
         return true;
       }
@@ -220,6 +225,7 @@ export class SegmentsManager {
     console.log(`[SEGMENT] Playing segment: ${segment.type}`);
 
     if (segment.type === 'DAY') {
+      console.log('isHunterInDeathQueue', this.isHunterInDeathQueue());
       if (this.isHunterInDeathQueue()) {
         this.runHunterSegment();
         return;
@@ -227,14 +233,10 @@ export class SegmentsManager {
 
       if (this.isOneOfLoversInDeathQueue()) {
         if (this.game.isPartnerHunter()) {
-          const hunterSegment = this.segments.find((s) => s.type === 'HUNTER');
-          if (!hunterSegment) {
-            throw new Error('hunter segment not inialized');
-          }
-
+          // Direct property access - no need to find()
           this.specialScenarios.partnerIsHunter();
           this.game.updateHunterPlayerList();
-          hunterSegment.action();
+          this.hunterSegment.action();
           return;
         }
         this.runLoverSegment();
@@ -250,13 +252,8 @@ export class SegmentsManager {
     if (this.isGameOver()) {
       return;
     }
-    if (this.specialScenarios.hunterDiedFirst) {
-      this.audioManager.playPostHunterAudio();
-      this.specialScenarios.hunterDiedFirst = false;
-    } else {
-      this.audioManager.playDayVoteAudio();
-    }
 
+    this.audioManager.playDayVoteAudio();
     const segment = this.segments[this.currentSegment];
     segment.action();
   }

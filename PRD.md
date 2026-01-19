@@ -34,16 +34,16 @@ comprehensive test coverage.
 **Description:** As a developer, I need DeathManager using Effect so death operations are type-safe and testable.
 
 **Acceptance Criteria:**
-- [ ] Reference Effect submodule for idiomatic patterns
-- [ ] Convert class methods to Effect functions
-- [ ] Add proper error types (DeathManagerError)
-- [ ] Implement using Effect.Service for DI
-- [ ] Write unit tests for all DeathManager methods
-- [ ] Test error scenarios with Effect.runPromiseExit
-- [ ] Test concurrent death operations
-- [ ] 100% test coverage for DeathManager
-- [ ] Typecheck passes
-- [ ] All tests pass
+- [x] Reference Effect submodule for idiomatic patterns
+- [x] Convert class methods to Effect functions
+- [x] Add proper error types (DeathManagerError)
+- [x] Implement using Effect.Service for DI
+- [x] Write unit tests for all DeathManager methods
+- [x] Test error scenarios with Effect.runPromiseExit
+- [x] Test concurrent death operations
+- [x] 100% test coverage for DeathManager
+- [x] Typecheck passes
+- [x] All tests pass
 
 ### US-003: Migrate Game class core methods with tests
 **Description:** As a developer, I need Game class using Effect for state operations with comprehensive tests.

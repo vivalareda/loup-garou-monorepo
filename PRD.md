@@ -1,31 +1,202 @@
-# Project: Werewolf Server (Effect-TS)
+# PRD: Migrate Loup-Garou Server to Effect-TS
 
-## Context
-Build a new game server in `apps/server` using Effect-TS.
+## Introduction
+Migrate the game server from traditional async/await patterns to Effect-TS 
+for better type safety, error handling, and testability. All code will follow 
+idiomatic Effect patterns verified against the Effect-TS submodule, with 
+comprehensive test coverage.
 
-## Rules for OpenCode
-- **Language**: TypeScript (idiomatic Effect).
-- **Style**: Use `Effect.gen`, `Context.Tag`, and `Layer`.
-- **Validation**: Use `@effect/schema` for all data.
-- **Testing**: Use `vitest`. Create a test file for every service.
-- **Errors**: No `any`. Use `Data.TaggedError` for domain errors.
+## Goals
+- Replace manual error handling with Effect's typed error channels
+- Implement dependency injection using Effect Context
+- Make async operations composable and testable
+- Achieve 100% test coverage for migrated modules
+- Follow idiomatic Effect patterns from the Effect-TS source
+- Maintain 100% feature parity during migration
 
----
+## User Stories
 
-## Phase 1: Infrastructure
-- [ ] **Setup Project**: Initialize `apps/server`, configure a strict `tsconfig.json`, and install `effect`, `@effect/schema`, and `vitest`.
-- [x] **Player Domain**: Create `src/Domain/Player.ts`. Define `PlayerId` (branded string) and `Player` schema.
-- [ ] **PlayerRepository**: Create `src/Services/PlayerRepository.ts`. Implement a service using `Ref` to manage players in-memory.
-- [ ] **Test Players**: Create `test/PlayerRepository.test.ts`. Verify add/remove logic.
+### US-001: Set up Effect-TS infrastructure and testing
+**Description:** As a developer, I need Effect-TS configured with testing infrastructure so I can write idiomatic, tested Effect code.
 
-## Phase 2: Game State & Loop
-- [ ] **State Domain**: Create `src/Domain/GameState.ts`. Define a union of states: `Lobby`, `Night`, `Day`, `Voting`.
-- [ ] **GameManager**: Create `src/Services/GameManager.ts`. Handle the logic for transitioning from one phase to the next.
-- [ ] **Test GameLoop**: Create `test/GameManager.test.ts`. Ensure transitions are valid and error on invalid moves.
+**Acceptance Criteria:**
+- [x] Install `effect` package in server
+- [x] Configure Effect submodule in git (already done)
+- [x] Set up Effect test utilities (@effect/vitest or similar)
+- [x] Create base Effect types and utilities
+- [x] Add script to reference Effect submodule examples
+- [x] Create test helpers for Effect assertions
+- [x] Document how to reference Effect submodule patterns
+- [x] Typecheck passes
+- [x] All existing tests still pass
 
-## Phase 3: Voting logic
-- [ ] **Voting Service**: Create `src/Services/Voting.ts`. Logic to aggregate votes and return a result (Winner or Tie).
-- [ ] **Test Voting**: Create `test/Voting.test.ts` with edge cases for ties.
+### US-002: Migrate DeathManager to Effect with tests
+**Description:** As a developer, I need DeathManager using Effect so death operations are type-safe and testable.
 
-## Phase 4: Main Entry
-- [ ] **Application Entry**: Create `src/main.ts`. Wire all Layers together and create a runnable Effect entry point.
+**Acceptance Criteria:**
+- [ ] Reference Effect submodule for idiomatic patterns
+- [ ] Convert class methods to Effect functions
+- [ ] Add proper error types (DeathManagerError)
+- [ ] Implement using Effect.Service for DI
+- [ ] Write unit tests for all DeathManager methods
+- [ ] Test error scenarios with Effect.runPromiseExit
+- [ ] Test concurrent death operations
+- [ ] 100% test coverage for DeathManager
+- [ ] Typecheck passes
+- [ ] All tests pass
+
+### US-003: Migrate Game class core methods with tests
+**Description:** As a developer, I need Game class using Effect for state operations with comprehensive tests.
+
+**Acceptance Criteria:**
+- [ ] Review Effect submodule Ref/State patterns
+- [ ] Convert player management methods to Effect
+- [ ] Convert role assignment to Effect pipeline
+- [ ] Add error types (GameError)
+- [ ] Use Effect.Ref for game state management
+- [ ] Write tests for player lifecycle operations
+- [ ] Write tests for role assignment edge cases
+- [ ] Write tests for state consistency
+- [ ] Test error handling for invalid operations
+- [ ] 100% test coverage for migrated methods
+- [ ] Typecheck passes
+- [ ] All tests pass
+- [ ] Existing game flow still works
+
+### US-004: Create Socket.io Effect wrapper with tests
+**Description:** As a developer, I need Socket.io wrapped in Effect so events are composable and testable.
+
+**Acceptance Criteria:**
+- [ ] Review Effect submodule integration patterns
+- [ ] Create Effect.Service for Socket.io
+- [ ] Wrap emit in Effect with error handling
+- [ ] Wrap on/once in Effect streams
+- [ ] Add SocketError error type
+- [ ] Write tests for socket emit operations
+- [ ] Write tests for socket event streams
+- [ ] Write tests for connection failures
+- [ ] Test concurrent socket operations
+- [ ] Mock Socket.io in tests using Effect.Layer
+- [ ] 100% test coverage
+- [ ] Typecheck passes
+- [ ] All tests pass
+
+### US-005: Migrate AudioManager to Effect with tests
+**Description:** As a developer, I need AudioManager using Effect for audio operations with full test coverage.
+
+**Acceptance Criteria:**
+- [ ] Review Effect submodule async patterns
+- [ ] Wrap sound-play in Effect
+- [ ] Add AudioError error type
+- [ ] Implement timeout using Effect.timeout
+- [ ] Create audio queue with Effect.Queue
+- [ ] Write tests for audio playback
+- [ ] Write tests for audio queue management
+- [ ] Write tests for timeout scenarios
+- [ ] Write tests for concurrent audio requests
+- [ ] Mock sound-play in tests
+- [ ] 100% test coverage
+- [ ] Typecheck passes
+- [ ] All tests pass
+
+### US-006: Migrate SegmentsManager orchestration with tests
+**Description:** As a developer, I need SegmentsManager using Effect for game flow with comprehensive tests.
+
+**Acceptance Criteria:**
+- [ ] Review Effect submodule workflow patterns
+- [ ] Convert segment execution to Effect pipeline
+- [ ] Use Effect.Deferred for segment transitions
+- [ ] Implement segment concurrency with Effect
+- [ ] Add SegmentError error types
+- [ ] Write tests for segment execution flow
+- [ ] Write tests for segment transitions
+- [ ] Write tests for segment skip logic
+- [ ] Write tests for error recovery
+- [ ] Test concurrent segment operations
+- [ ] 100% test coverage
+- [ ] Typecheck passes
+- [ ] All tests pass
+- [ ] Game segments execute correctly
+
+### US-007: Migrate GameActions to Effect with tests
+**Description:** As a developer, I need GameActions using Effect for action execution with full test coverage.
+
+**Acceptance Criteria:**
+- [ ] Review Effect submodule action patterns
+- [ ] Convert action methods to Effect
+- [ ] Add ActionError error types
+- [ ] Integrate with Effect-based services
+- [ ] Write tests for all game actions
+- [ ] Write tests for action error scenarios
+- [ ] Write tests for action side effects
+- [ ] Test action composition
+- [ ] Mock dependencies using Effect.Layer
+- [ ] 100% test coverage
+- [ ] Typecheck passes
+- [ ] All tests pass
+
+### US-008: Create Effect-based dependency injection with tests
+**Description:** As a developer, I need DI using Effect Context instead of constructors, fully tested.
+
+**Acceptance Criteria:**
+- [ ] Review Effect submodule Context patterns
+- [ ] Define Context for Game, AudioManager, etc.
+- [ ] Create Effect.Layer for each service
+- [ ] Replace constructor injection with Context
+- [ ] Update initialization in index.ts to use Runtime
+- [ ] Write tests for service composition
+- [ ] Write tests for layer dependencies
+- [ ] Test service lifecycle
+- [ ] Create test layers for mocking
+- [ ] Document DI patterns used
+- [ ] 100% test coverage for DI setup
+- [ ] Typecheck passes
+- [ ] All tests pass
+
+### US-009: Integration tests for full game flow
+**Description:** As a developer, I need integration tests verifying the entire Effect-based game works correctly.
+
+**Acceptance Criteria:**
+- [ ] Write integration test for full game setup
+- [ ] Write integration test for night phase
+- [ ] Write integration test for day phase
+- [ ] Write integration test for death mechanics
+- [ ] Write integration test for win conditions
+- [ ] Write integration test for error recovery
+- [ ] All integration tests pass
+- [ ] Test coverage report shows >95% overall
+- [ ] Performance benchmarks show no regression
+- [ ] Typecheck passes
+
+## Non-Goals
+- Migrating mobile or dashboard apps (separate PRDs)
+- Changing game logic or features
+- Performance optimization beyond maintaining current performance
+- Adding new Effect-only features
+
+## Technical Considerations
+- Use Effect submodule at `apps/server/effect/` for reference patterns
+- Reference Effect source for idiomatic patterns (especially src/Effect.ts, src/Context.ts)
+- Use Effect Schema for runtime validation where beneficial
+- Keep socket.io integration working during migration
+- Use Effect.Layer for all service dependencies
+- Use Effect.Test for test utilities
+- Use Effect.runPromise for async test assertions
+- Consider Effect.Resource for lifecycle management
+- Use Effect.Ref/Deferred for state management
+- Document which Effect patterns are used and why
+
+## Testing Strategy
+- Unit tests for each migrated module (vitest)
+- Integration tests for game flow
+- Mock external dependencies (socket.io, sound-play) with Effect.Layer
+- Use Effect.runPromiseExit to test error scenarios
+- Achieve >95% code coverage
+- Performance benchmarks to prevent regression
+
+## Success Metrics
+- Zero regression in game functionality
+- 100% of migrated code has passing tests
+- >95% code coverage overall
+- Type safety improved (zero `any` types in migrated code)
+- Error handling explicit and typed

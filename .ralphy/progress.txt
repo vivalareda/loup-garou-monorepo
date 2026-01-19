@@ -2,3 +2,7 @@
 
 - Implemented Player domain in apps/server/src/Domain/player.ts with PlayerId branded type and Player schema using @effect/schema.
 - Added PlayerNotFound and PlayerAlreadyExists domain errors.
+- Set up Effect-TS infrastructure in apps/server.
+- Added @effect/vitest for testing.
+- Created Effect test utilities (assertSuccess, assertFailure).
+- Created base Effect types and verified setup with a test.

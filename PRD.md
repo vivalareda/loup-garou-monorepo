@@ -122,18 +122,18 @@ comprehensive test coverage.
 **Description:** As a developer, I need GameActions using Effect for action execution with full test coverage.
 
 **Acceptance Criteria:**
-- [ ] Review Effect submodule action patterns
-- [ ] Convert action methods to Effect
-- [ ] Add ActionError error types
-- [ ] Integrate with Effect-based services
-- [ ] Write tests for all game actions
-- [ ] Write tests for action error scenarios
-- [ ] Write tests for action side effects
-- [ ] Test action composition
-- [ ] Mock dependencies using Effect.Layer
-- [ ] 100% test coverage
-- [ ] Typecheck passes
-- [ ] All tests pass
+- [x] Review Effect submodule action patterns
+- [x] Convert action methods to Effect
+- [x] Add ActionError error types
+- [x] Integrate with Effect-based services
+- [x] Write tests for all game actions
+- [x] Write tests for action error scenarios
+- [x] Write tests for action side effects
+- [x] Test action composition
+- [x] Mock dependencies using Effect.Layer
+- [x] 100% test coverage
+- [x] Typecheck passes
+- [x] All tests pass
 
 ### US-008: Create Effect-based dependency injection with tests
 **Description:** As a developer, I need DI using Effect Context instead of constructors, fully tested.

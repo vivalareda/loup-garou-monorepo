@@ -23,12 +23,17 @@ export const assertSuccess = async <A, E>(
 /**
  * Runs an effect and asserts that it fails.
  */
-export const assertFailure = async <A, E>(effect: Effect.Effect<A, E>) => {
+export const assertFailure = async <A, E>(
+  effect: Effect.Effect<A, E>,
+  // biome-ignore lint/suspicious/noExplicitAny: <generic constructor type>
+  _expectedErrorClass?: new (...args: any[]) => any
+) => {
   const exit = await Effect.runPromiseExit(effect);
   if (Exit.isSuccess(exit)) {
     throw new Error(
       `Expected failure but succeeded with: ${JSON.stringify(exit.value)}`
     );
   }
+
   return exit.cause;
 };

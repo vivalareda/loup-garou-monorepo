@@ -1,9 +1,15 @@
 import type { Segment } from '@repo/types';
 import { Context, Effect, Layer, Ref } from 'effect';
+import { GameActionsService } from '../core/game-actions-effect';
 import { GameService } from '../core/game-effect';
+import type { ActionError } from '../Domain/ActionError';
 import type { AudioError } from '../Domain/audio-error';
 import { SegmentError } from '../Domain/SegmentError';
 import { AudioManagerTag } from './audio-manager-effect';
+
+type ServerSegment = Omit<Segment, 'action'> & {
+  action: Effect.Effect<void, ActionError>;
+};
 
 export class SegmentsManagerService extends Context.Tag(
   'SegmentsManagerService'
@@ -11,9 +17,18 @@ export class SegmentsManagerService extends Context.Tag(
   SegmentsManagerService,
   {
     readonly initializeSegments: Effect.Effect<void, SegmentError>;
-    readonly startGame: Effect.Effect<void, SegmentError | AudioError>;
-    readonly playSegment: Effect.Effect<void, SegmentError | AudioError>;
-    readonly finishSegment: Effect.Effect<void, SegmentError | AudioError>;
+    readonly startGame: Effect.Effect<
+      void,
+      SegmentError | AudioError | ActionError
+    >;
+    readonly playSegment: Effect.Effect<
+      void,
+      SegmentError | AudioError | ActionError
+    >;
+    readonly finishSegment: Effect.Effect<
+      void,
+      SegmentError | AudioError | ActionError
+    >;
     readonly getCurrentSegmentType: Effect.Effect<string>;
     readonly checkPostDayVoteScenarios: Effect.Effect<boolean, SegmentError>;
   }
@@ -24,8 +39,9 @@ export const SegmentsManagerLive = Layer.effect(
   Effect.gen(function* (_) {
     yield* _(GameService);
     const audioManager = yield* _(AudioManagerTag);
+    const gameActions = yield* _(GameActionsService);
 
-    const segmentsRef = yield* _(Ref.make<Segment[]>([]));
+    const segmentsRef = yield* _(Ref.make<ServerSegment[]>([]));
     const currentSegmentIndexRef = yield* _(Ref.make(0));
 
     const getSegments = Ref.get(segmentsRef);
@@ -35,54 +51,40 @@ export const SegmentsManagerLive = Layer.effect(
       type === 'CUPID' || type === 'LOVERS';
 
     const initializeSegments = Effect.gen(function* ($) {
-      const segments: Segment[] = [
+      const segments: ServerSegment[] = [
         {
           type: 'CUPID',
-          action: () => {
-            /* Placeholder for GameActions */
-          },
+          action: gameActions.cupidAction,
           skip: false,
         },
         {
           type: 'LOVERS',
-          action: () => {
-            /* Placeholder for GameActions */
-          },
+          action: gameActions.loversAction,
           skip: false,
         },
         {
           type: 'WEREWOLF',
-          action: () => {
-            /* Placeholder for GameActions */
-          },
+          action: gameActions.werewolfAction,
           skip: false,
         },
         {
           type: 'WITCH-HEAL',
-          action: () => {
-            /* Placeholder for GameActions */
-          },
+          action: gameActions.witchHealAction,
           skip: true,
         },
         {
           type: 'WITCH-POISON',
-          action: () => {
-            /* Placeholder for GameActions */
-          },
+          action: gameActions.witchPoisonAction,
           skip: true,
         },
         {
           type: 'DAY',
-          action: () => {
-            /* Placeholder for GameActions */
-          },
+          action: gameActions.dayAction,
           skip: false,
         },
         {
           type: 'HUNTER',
-          action: () => {
-            /* Placeholder for GameActions */
-          },
+          action: gameActions.hunterAction,
           skip: true,
         },
       ];
@@ -108,7 +110,7 @@ export const SegmentsManagerLive = Layer.effect(
       yield* $(Ref.set(currentSegmentIndexRef, currentIndex));
     });
 
-    const markFirstNightSegment = (segment: Segment) => {
+    const markFirstNightSegment = (segment: ServerSegment) => {
       if (isFirstNightSegment(segment.type)) {
         segment.skip = true;
       }
@@ -129,6 +131,7 @@ export const SegmentsManagerLive = Layer.effect(
       console.log(`[SEGMENT] Playing segment: ${segment.type}`);
 
       yield* $(audioManager.playSegmentAudio(segment.type, true));
+      yield* $(segment.action);
     });
 
     const finishSegment = Effect.gen(function* ($) {

@@ -1,5 +1,6 @@
 import { Effect, Layer } from 'effect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GameActionsService } from '../../core/game-actions-effect';
 import { GameService } from '../../core/game-effect';
 import { AudioManagerTag } from '../audio-manager-effect';
 import {
@@ -14,19 +15,35 @@ describe('SegmentsManagerService', () => {
 
   const mockGameService = {}; // Placeholder
 
+  const mockGameActionsService = {
+    cupidAction: Effect.void,
+    loversAction: Effect.void,
+    werewolfAction: Effect.void,
+    witchHealAction: Effect.void,
+    witchPoisonAction: Effect.void,
+    dayAction: Effect.void,
+    hunterAction: Effect.void,
+  };
+
   const AudioManagerTest = Layer.succeed(
     AudioManagerTag,
-    mockAudioService as unknown as any
+    mockAudioService as unknown as typeof AudioManagerTag.Service
   );
 
   const GameServiceTest = Layer.succeed(
     GameService,
-    mockGameService as unknown as any
+    mockGameService as unknown as typeof GameService.Service
+  );
+
+  const GameActionsServiceTest = Layer.succeed(
+    GameActionsService,
+    mockGameActionsService as unknown as typeof GameActionsService.Service
   );
 
   const TestLayer = SegmentsManagerLive.pipe(
     Layer.provide(AudioManagerTest),
-    Layer.provide(GameServiceTest)
+    Layer.provide(GameServiceTest),
+    Layer.provide(GameActionsServiceTest)
   );
 
   beforeEach(() => {
@@ -126,5 +143,40 @@ describe('SegmentsManagerService', () => {
     await expect(
       Effect.runPromise(program.pipe(Effect.provide(TestLayer)))
     ).rejects.toThrow();
+  });
+
+  it('should handle errors during segment execution', async () => {
+    const error = new Error('Action failed');
+    const mockGameActionsWithError = {
+      ...mockGameActionsService,
+      werewolfAction: Effect.fail(error),
+    };
+
+    const GameActionsErrorTest = Layer.succeed(
+      GameActionsService,
+      mockGameActionsWithError as unknown as typeof GameActionsService.Service
+    );
+
+    const ErrorTestLayer = SegmentsManagerLive.pipe(
+      Layer.provide(AudioManagerTest),
+      Layer.provide(GameServiceTest),
+      Layer.provide(GameActionsErrorTest)
+    );
+
+    const program = Effect.gen(function* (_) {
+      const service = yield* _(SegmentsManagerService);
+      yield* _(service.initializeSegments);
+
+      // Advance to WEREWOLF segment
+      yield* _(service.finishSegment); // CUPID -> LOVERS
+      yield* _(service.finishSegment); // LOVERS -> WEREWOLF
+
+      // Playing WEREWOLF should fail
+      yield* _(service.playSegment);
+    });
+
+    await expect(
+      Effect.runPromise(program.pipe(Effect.provide(ErrorTestLayer)))
+    ).rejects.toThrow('Action failed');
   });
 });

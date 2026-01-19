@@ -1,7 +1,7 @@
 import type { Role } from '@repo/types';
 import { Context, Effect, HashMap, Layer, Ref } from 'effect';
 import type { Player } from '@/core/player';
-import { GameError } from '@/Domain/GameError';
+import { GameError } from '../Domain/GameError';
 import { DeathManagerService } from './death-manager-effect';
 
 /**

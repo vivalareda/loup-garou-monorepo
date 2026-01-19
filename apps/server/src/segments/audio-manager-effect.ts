@@ -3,7 +3,7 @@ import type { SegmentType } from '@repo/types';
 import { Context, Data, Effect, Layer, Queue } from 'effect';
 import sound from 'sound-play';
 import type { DeathManager } from '@/core/death-manager';
-import { AudioError } from '@/Domain/audio-error';
+import { AudioError } from '../Domain/audio-error';
 
 // Define the service interface
 export interface AudioManagerService {

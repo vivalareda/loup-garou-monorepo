@@ -9,3 +9,4 @@
   - Comprehensive testing with mock socket.io
   - Fixed TypeScript strict errors
 Migrated AudioManager to Effect-TS with full test coverage.
+Migrated SegmentsManager to Effect with tests covering initialization, execution flow, skipping logic, and wrapping around.

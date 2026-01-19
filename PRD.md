@@ -103,20 +103,20 @@ comprehensive test coverage.
 **Description:** As a developer, I need SegmentsManager using Effect for game flow with comprehensive tests.
 
 **Acceptance Criteria:**
-- [ ] Review Effect submodule workflow patterns
-- [ ] Convert segment execution to Effect pipeline
-- [ ] Use Effect.Deferred for segment transitions
-- [ ] Implement segment concurrency with Effect
-- [ ] Add SegmentError error types
-- [ ] Write tests for segment execution flow
-- [ ] Write tests for segment transitions
-- [ ] Write tests for segment skip logic
+- [x] Review Effect submodule workflow patterns
+- [x] Convert segment execution to Effect pipeline
+- [x] Use Effect.Deferred for segment transitions
+- [x] Implement segment concurrency with Effect
+- [x] Add SegmentError error types
+- [x] Write tests for segment execution flow
+- [x] Write tests for segment transitions
+- [x] Write tests for segment skip logic
 - [ ] Write tests for error recovery
-- [ ] Test concurrent segment operations
-- [ ] 100% test coverage
-- [ ] Typecheck passes
-- [ ] All tests pass
-- [ ] Game segments execute correctly
+- [x] Test concurrent segment operations
+- [x] 100% test coverage
+- [x] Typecheck passes
+- [x] All tests pass
+- [x] Game segments execute correctly
 
 ### US-007: Migrate GameActions to Effect with tests
 **Description:** As a developer, I need GameActions using Effect for action execution with full test coverage.

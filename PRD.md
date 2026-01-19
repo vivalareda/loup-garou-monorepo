@@ -67,19 +67,19 @@ comprehensive test coverage.
 **Description:** As a developer, I need Socket.io wrapped in Effect so events are composable and testable.
 
 **Acceptance Criteria:**
-- [ ] Review Effect submodule integration patterns
-- [ ] Create Effect.Service for Socket.io
-- [ ] Wrap emit in Effect with error handling
-- [ ] Wrap on/once in Effect streams
-- [ ] Add SocketError error type
-- [ ] Write tests for socket emit operations
-- [ ] Write tests for socket event streams
-- [ ] Write tests for connection failures
-- [ ] Test concurrent socket operations
-- [ ] Mock Socket.io in tests using Effect.Layer
-- [ ] 100% test coverage
-- [ ] Typecheck passes
-- [ ] All tests pass
+- [x] Review Effect submodule integration patterns
+- [x] Create Effect.Service for Socket.io
+- [x] Wrap emit in Effect with error handling
+- [x] Wrap on/once in Effect streams
+- [x] Add SocketError error type
+- [x] Write tests for socket emit operations
+- [x] Write tests for socket event streams
+- [x] Write tests for connection failures
+- [x] Test concurrent socket operations
+- [x] Mock Socket.io in tests using Effect.Layer
+- [x] 100% test coverage
+- [x] Typecheck passes
+- [x] All tests pass
 
 ### US-005: Migrate AudioManager to Effect with tests
 **Description:** As a developer, I need AudioManager using Effect for audio operations with full test coverage.

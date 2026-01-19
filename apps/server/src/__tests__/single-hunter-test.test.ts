@@ -49,7 +49,7 @@ describe('Single Hunter Test', () => {
       mockSpecialScenarios
     );
 
-    eventsActions = new EventsActions(game, segmentsManager);
+    eventsActions = new EventsActions(game, segmentsManager, mockIo);
   });
 
   it('should kill partner when lover (who is hunter) dies', () => {

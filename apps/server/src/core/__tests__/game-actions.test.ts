@@ -15,7 +15,7 @@ describe('GameActions', () => {
     const mockGame = {
       processPendingDeaths: vi.fn(),
       checkIfWinner: vi.fn().mockReturnValue('werewolves'),
-      alertWinner: vi.fn(),
+      alertWinnersAndLosers: vi.fn(),
     } as unknown as Game;
 
     const mockIo = {
@@ -23,7 +23,15 @@ describe('GameActions', () => {
       emit: vi.fn(),
     } as unknown as SocketType;
 
-    const gameActions = new GameActions(mockGame, mockIo);
+    const mockAudioManager = {
+      playWinnerAudio: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const gameActions = new GameActions(
+      mockGame,
+      mockIo,
+      mockAudioManager as any
+    );
 
     gameActions.dayAction();
 
@@ -31,6 +39,6 @@ describe('GameActions', () => {
 
     expect(mockGame.processPendingDeaths).toHaveBeenCalled();
     expect(mockGame.checkIfWinner).toHaveBeenCalled();
-    expect(mockGame.alertWinner).toHaveBeenCalledWith('werewolves');
+    expect(mockGame.alertWinnersAndLosers).toHaveBeenCalledWith('werewolves');
   });
 });

@@ -85,19 +85,19 @@ comprehensive test coverage.
 **Description:** As a developer, I need AudioManager using Effect for audio operations with full test coverage.
 
 **Acceptance Criteria:**
-- [ ] Review Effect submodule async patterns
-- [ ] Wrap sound-play in Effect
-- [ ] Add AudioError error type
-- [ ] Implement timeout using Effect.timeout
-- [ ] Create audio queue with Effect.Queue
-- [ ] Write tests for audio playback
-- [ ] Write tests for audio queue management
-- [ ] Write tests for timeout scenarios
-- [ ] Write tests for concurrent audio requests
-- [ ] Mock sound-play in tests
-- [ ] 100% test coverage
-- [ ] Typecheck passes
-- [ ] All tests pass
+- [x] Review Effect submodule async patterns
+- [x] Wrap sound-play in Effect
+- [x] Add AudioError error type
+- [x] Implement timeout using Effect.timeout
+- [x] Create audio queue with Effect.Queue
+- [x] Write tests for audio playback
+- [x] Write tests for audio queue management
+- [x] Write tests for timeout scenarios
+- [x] Write tests for concurrent audio requests
+- [x] Mock sound-play in tests
+- [x] 100% test coverage
+- [x] Typecheck passes
+- [x] All tests pass
 
 ### US-006: Migrate SegmentsManager orchestration with tests
 **Description:** As a developer, I need SegmentsManager using Effect for game flow with comprehensive tests.

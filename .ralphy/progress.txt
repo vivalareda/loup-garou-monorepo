@@ -1,10 +1,11 @@
-# Ralphy Progress Log
-
-- Implemented Player domain in apps/server/src/Domain/player.ts with PlayerId branded type and Player schema using @effect/schema.
-- Added PlayerNotFound and PlayerAlreadyExists domain errors.
-- Set up Effect-TS infrastructure in apps/server.
-- Added @effect/vitest for testing.
-- Created Effect test utilities (assertSuccess, assertFailure).
-- Created base Effect types and verified setup with a test.
-- Migrated DeathManager to Effect-TS (DeathManagerService) with full test coverage.
-- Migrated Game class core methods to Effect-TS (GameService) with full test coverage (US-003).
+2026-01-19:
+- [x] US-001: Infrastructure Setup (Dependencies, Utils, Tests) - Completed
+- [x] US-002: DeathManager Migration - Completed
+- [x] US-003: Game Core Migration - Completed
+- [x] US-004: Socket.io Wrapper - Completed
+  - Created SocketService with Effect.Service
+  - Implemented typed emit/on methods
+  - Added SocketError domain error
+  - Comprehensive testing with mock socket.io
+  - Fixed TypeScript strict errors
+Migrated AudioManager to Effect-TS with full test coverage.

@@ -1,8 +1,8 @@
 import type { Role } from '@repo/types';
 import { Context, Effect, HashMap, Layer, Ref } from 'effect';
-import type { Player } from '@/core/player';
 import { GameError } from '../Domain/GameError';
 import { DeathManagerService } from './death-manager-effect';
+import { Player } from './player';
 
 /**
  * Game Service definition
@@ -28,6 +28,18 @@ export class GameService extends Context.Tag('GameService')<
       role: Role
     ) => Effect.Effect<Player | undefined>;
     readonly initRolesList: Effect.Effect<void>;
+    readonly getWerewolfList: Effect.Effect<Player[]>;
+    readonly getWerewolfTarget: Effect.Effect<string | undefined>;
+    readonly handleWerewolfVote: (
+      sid: string,
+      targetId: string
+    ) => Effect.Effect<void>;
+    readonly handleWerewolfUpdateVote: (
+      sid: string,
+      targetId: string,
+      oldVote: string
+    ) => Effect.Effect<void>;
+    readonly getWerewolfVoteTallies: Effect.Effect<Record<string, number>>;
   }
 >() {}
 
@@ -48,28 +60,13 @@ export const GameLive = Layer.effect(
     );
     const availableRolesRef = yield* _(Ref.make<Role[]>([]));
 
+    // Werewolf voting state
+    const werewolfVotesRef = yield* _(
+      Ref.make(HashMap.empty<string, string>())
+    ); // voter -> target
+
     const addPlayer = (name: string, sid: string) =>
       Ref.modify(playersRef, (players) => {
-        // We can reuse the existing Player class for now as it's just data + simple methods
-        // Eventually we might want to make Player purely data
-        // For now, assume Player constructor is available globally or imported
-        // Importing Player class is tricky if it's not exported or if we want to avoid side effects
-        // But the previous file imported it, so we can too.
-        // Wait, we need to import Player class.
-        // Let's assume it's imported at the top.
-        // Actually, let's create a factory or just new it up.
-        // The original code: const player = new Player(name, sid);
-
-        // We need to import Player from "@/core/player"
-        // But wait, the original code had: import { Player } from '@/core/player';
-        // We should probably check if Player is a class or interface.
-        // The read of death-manager.ts imported Player from '@/core/player'.
-
-        // Let's assume we can new it.
-        // Ideally we'd move Player creation to a factory or Effect, but for now:
-        const { Player } = require('@/core/player'); // Dynamic import/require might not work well with ESM/TS
-        // Better to import at top level.
-
         const player = new Player(name, sid);
         return [player, HashMap.set(players, sid, player)] as const;
       });
@@ -86,27 +83,35 @@ export const GameLive = Layer.effect(
         })
       );
 
-    const initRolesList = Effect.gen(function* (_) {
-      const players = yield* _(getPlayerList);
+    const initRolesList = Effect.gen(function* ($) {
+      const players = yield* $(getPlayerList);
       const playerCount = players.length;
       const roles: Role[] = [];
 
       if (playerCount >= 4) {
         const werewolfCount = Math.floor(playerCount / 3) || 1;
-        for (let i = 0; i < werewolfCount; i++) roles.push('WEREWOLF');
+        for (let i = 0; i < werewolfCount; i++) {
+          roles.push('WEREWOLF');
+        }
         roles.push('CUPID');
-        if (playerCount >= 6) roles.push('WITCH');
+        if (playerCount >= 6) {
+          roles.push('WITCH');
+        }
         if (playerCount >= 8) {
           roles.push('HUNTER');
           roles.push('CUPID');
         }
         const remaining = playerCount - roles.length;
-        for (let i = 0; i < remaining; i++) roles.push('VILLAGER');
+        for (let i = 0; i < remaining; i++) {
+          roles.push('VILLAGER');
+        }
       } else {
-        for (let i = 0; i < playerCount; i++) roles.push('VILLAGER');
+        for (let i = 0; i < playerCount; i++) {
+          roles.push('VILLAGER');
+        }
       }
 
-      yield* _(Ref.set(availableRolesRef, roles));
+      yield* $(Ref.set(availableRolesRef, roles));
     });
 
     const shuffleArray = <T>(array: T[]): T[] => {
@@ -119,10 +124,10 @@ export const GameLive = Layer.effect(
     };
 
     const setSpecialRolePlayer = (player: Player) =>
-      Effect.gen(function* (_) {
+      Effect.gen(function* ($) {
         const role = player.getRole();
         if (role !== 'WEREWOLF' && role !== 'VILLAGER' && role) {
-          yield* _(
+          yield* $(
             Ref.update(specialRolePlayersRef, (map) =>
               HashMap.set(map, role, player)
             )
@@ -131,19 +136,19 @@ export const GameLive = Layer.effect(
       });
 
     const setPlayerTeams = (player: Player) =>
-      Effect.gen(function* (_) {
+      Effect.gen(function* ($) {
         if (player.getRole() === 'WEREWOLF') {
-          yield* _(deathManager.addTeamWerewolf(player));
+          yield* $(deathManager.addTeamWerewolf(player));
         } else {
-          yield* _(deathManager.addTeamVillager(player));
+          yield* $(deathManager.addTeamVillager(player));
         }
       });
 
-    const assignRoles = Effect.gen(function* (_) {
-      yield* _(initRolesList);
-      const roles = yield* _(Ref.get(availableRolesRef));
+    const assignRoles = Effect.gen(function* ($) {
+      yield* $(initRolesList);
+      const roles = yield* $(Ref.get(availableRolesRef));
       const shuffledRoles = shuffleArray(roles);
-      const players = yield* _(getPlayerList);
+      const players = yield* $(getPlayerList);
 
       for (const player of players) {
         // Test cheat for Reda (copied from original)
@@ -151,15 +156,17 @@ export const GameLive = Layer.effect(
           const role: Role = 'HUNTER';
           player.assignRole(role);
           const index = shuffledRoles.indexOf(role);
-          if (index > -1) shuffledRoles.splice(index, 1);
-          yield* _(setPlayerTeams(player));
-          yield* _(setSpecialRolePlayer(player));
+          if (index > -1) {
+            shuffledRoles.splice(index, 1);
+          }
+          yield* $(setPlayerTeams(player));
+          yield* $(setSpecialRolePlayer(player));
           continue; // Continue outer loop
         }
 
         const role = shuffledRoles.pop();
         if (!role) {
-          yield* _(
+          yield* $(
             Effect.fail(
               new GameError({ message: 'No roles available to assign' })
             )
@@ -167,20 +174,20 @@ export const GameLive = Layer.effect(
           return; // Should be unreachable given initRolesList logic but safe to handle
         }
         player.assignRole(role);
-        yield* _(setSpecialRolePlayer(player));
-        yield* _(setPlayerTeams(player));
+        yield* $(setSpecialRolePlayer(player));
+        yield* $(setPlayerTeams(player));
       }
     });
 
     const setLovers = (selectedPlayers: string[]) =>
-      Effect.gen(function* (_) {
-        const playersMap = yield* _(Ref.get(playersRef));
+      Effect.gen(function* ($) {
+        const playersMap = yield* $(Ref.get(playersRef));
         const lovers: Player[] = [];
 
         for (const sid of selectedPlayers) {
           const result = HashMap.get(playersMap, sid);
           if (result._tag === 'None') {
-            yield* _(
+            yield* $(
               Effect.fail(
                 new GameError({ message: `Player with sid ${sid} not found` })
               )
@@ -189,32 +196,32 @@ export const GameLive = Layer.effect(
           }
           lovers.push(result.value);
         }
-        yield* _(Ref.set(loversRef, lovers));
+        yield* $(Ref.set(loversRef, lovers));
       });
 
     const getLovers = Ref.get(loversRef);
 
     const isWerewolf = (sid: string) =>
-      Effect.gen(function* (_) {
-        const player = yield* _(getPlayerBySocketId(sid));
+      Effect.gen(function* ($) {
+        const player = yield* $(getPlayerBySocketId(sid));
         return player?.getRole() === 'WEREWOLF';
       });
 
     const hasPartner = (sid: string) =>
-      Effect.gen(function* (_) {
-        const lovers = yield* _(Ref.get(loversRef));
+      Effect.gen(function* ($) {
+        const lovers = yield* $(Ref.get(loversRef));
         return lovers.some((l) => l.getSocketId() === sid);
       });
 
     const isPlayerLover = (player: Player) =>
-      Effect.gen(function* (_) {
-        const lovers = yield* _(Ref.get(loversRef));
+      Effect.gen(function* ($) {
+        const lovers = yield* $(Ref.get(loversRef));
         return lovers.includes(player);
       });
 
     const getPartner = (player: Player) =>
-      Effect.gen(function* (_) {
-        const lovers = yield* _(Ref.get(loversRef));
+      Effect.gen(function* ($) {
+        const lovers = yield* $(Ref.get(loversRef));
         return lovers.find((l) => l.getSocketId() !== player.getSocketId());
       });
 
@@ -225,6 +232,53 @@ export const GameLive = Layer.effect(
           return res._tag === 'Some' ? res.value : undefined;
         })
       );
+
+    const getWerewolfList = Effect.gen(function* ($) {
+      const players = yield* $(getPlayerList);
+      return players.filter((p) => p.getRole() === 'WEREWOLF');
+    });
+
+    const handleWerewolfVote = (sid: string, targetId: string) =>
+      Ref.update(werewolfVotesRef, (votes) =>
+        HashMap.set(votes, sid, targetId)
+      );
+
+    const handleWerewolfUpdateVote = (
+      sid: string,
+      targetId: string,
+      oldVote: string
+    ) =>
+      Ref.update(werewolfVotesRef, (votes) =>
+        HashMap.set(votes, sid, targetId)
+      );
+
+    const getWerewolfVoteTallies = Ref.get(werewolfVotesRef).pipe(
+      Effect.map((votes) => {
+        const tally: Record<string, number> = {};
+        for (const target of HashMap.values(votes)) {
+          tally[target] = (tally[target] || 0) + 1;
+        }
+        return tally;
+      })
+    );
+
+    const getWerewolfTarget = Effect.gen(function* ($) {
+      const votes = yield* $(Ref.get(werewolfVotesRef));
+      const tally: Record<string, number> = {};
+      for (const target of HashMap.values(votes)) {
+        tally[target] = (tally[target] || 0) + 1;
+      }
+
+      let maxVotes = 0;
+      let selectedTarget: string | undefined;
+      for (const [target, count] of Object.entries(tally)) {
+        if (count > maxVotes) {
+          maxVotes = count;
+          selectedTarget = target;
+        }
+      }
+      return selectedTarget;
+    });
 
     return {
       addPlayer,
@@ -239,6 +293,11 @@ export const GameLive = Layer.effect(
       getPartner,
       getSpecialRolePlayer,
       initRolesList,
+      getWerewolfList,
+      getWerewolfTarget,
+      handleWerewolfVote,
+      handleWerewolfUpdateVote,
+      getWerewolfVoteTallies,
     };
   })
 );

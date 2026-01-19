@@ -1,7 +1,7 @@
 import type { ClientToServerEvents, ServerToClientEvents } from '@repo/types';
 import { Context, Effect, Layer, Stream } from 'effect';
 import type { Server, Socket } from 'socket.io';
-import { SocketError } from '@/Domain/SocketError';
+import { SocketError } from '../Domain/SocketError';
 
 // Type definitions
 export type ServerSocket = Server<ClientToServerEvents, ServerToClientEvents>;

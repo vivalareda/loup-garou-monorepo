@@ -7,3 +7,4 @@
 - Created Effect test utilities (assertSuccess, assertFailure).
 - Created base Effect types and verified setup with a test.
 - Migrated DeathManager to Effect-TS (DeathManagerService) with full test coverage.
+- Migrated Game class core methods to Effect-TS (GameService) with full test coverage (US-003).

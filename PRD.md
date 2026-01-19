@@ -49,19 +49,19 @@ comprehensive test coverage.
 **Description:** As a developer, I need Game class using Effect for state operations with comprehensive tests.
 
 **Acceptance Criteria:**
-- [ ] Review Effect submodule Ref/State patterns
-- [ ] Convert player management methods to Effect
-- [ ] Convert role assignment to Effect pipeline
-- [ ] Add error types (GameError)
-- [ ] Use Effect.Ref for game state management
-- [ ] Write tests for player lifecycle operations
-- [ ] Write tests for role assignment edge cases
-- [ ] Write tests for state consistency
-- [ ] Test error handling for invalid operations
-- [ ] 100% test coverage for migrated methods
-- [ ] Typecheck passes
-- [ ] All tests pass
-- [ ] Existing game flow still works
+- [x] Review Effect submodule Ref/State patterns
+- [x] Convert player management methods to Effect
+- [x] Convert role assignment to Effect pipeline
+- [x] Add error types (GameError)
+- [x] Use Effect.Ref for game state management
+- [x] Write tests for player lifecycle operations
+- [x] Write tests for role assignment edge cases
+- [x] Write tests for state consistency
+- [x] Test error handling for invalid operations
+- [x] 100% test coverage for migrated methods
+- [x] Typecheck passes
+- [x] All tests pass
+- [x] Existing game flow still works
 
 ### US-004: Create Socket.io Effect wrapper with tests
 **Description:** As a developer, I need Socket.io wrapped in Effect so events are composable and testable.

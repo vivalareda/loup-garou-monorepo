@@ -1,8 +1,8 @@
 import { Effect, Layer } from 'effect';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DeathManager } from '@/core/death-manager';
-import { AudioError } from '@/Domain/audio-error';
-import { assertFailure, assertSuccess } from '@/utils/effect/test-utils';
+import { beforeEach, describe, it, vi } from 'vitest';
+import { DeathManagerService } from '../../core/death-manager-effect';
+import { AudioError } from '../../Domain/audio-error';
+import { assertFailure, assertSuccess } from '../../utils/effect/test-utils';
 import { AudioManagerLive, AudioManagerTag } from '../audio-manager-effect';
 
 // Mock sound-play
@@ -19,14 +19,17 @@ vi.mock('node:fs', () => ({
 
 describe('AudioManager', () => {
   const mockDeathManager = {
-    getPendingDeaths: vi.fn(),
-  } as unknown as DeathManager;
+    getPendingDeaths: Effect.succeed([]),
+  } as unknown as DeathManagerService;
 
-  const audioManagerLayer = AudioManagerLive(mockDeathManager);
+  const audioManagerLayer = AudioManagerLive.pipe(
+    Layer.provide(Layer.succeed(DeathManagerService, mockDeathManager))
+  );
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (mockDeathManager.getPendingDeaths as any).mockReturnValue([]);
+    // biome-ignore lint/suspicious/noExplicitAny: Mock object
+    (mockDeathManager.getPendingDeaths as any) = Effect.succeed([]);
   });
 
   it('plays start audio for valid segments', async () => {
@@ -49,6 +52,7 @@ describe('AudioManager', () => {
     // Let's test the default case of playAudio failing.
 
     const { default: sound } = await import('sound-play');
+    // biome-ignore lint/suspicious/noExplicitAny: Mocking external library method
     (sound.play as any).mockRejectedValueOnce(new Error('File not found'));
 
     const program = Effect.gen(function* (_) {
@@ -60,7 +64,8 @@ describe('AudioManager', () => {
   });
 
   it('plays death announcement when there are pending deaths', async () => {
-    (mockDeathManager.getPendingDeaths as any).mockReturnValue(['player1']);
+    // biome-ignore lint/suspicious/noExplicitAny: Mock object
+    (mockDeathManager.getPendingDeaths as any) = Effect.succeed(['player1']);
 
     const program = Effect.gen(function* (_) {
       const audioManager = yield* _(AudioManagerTag);
@@ -71,7 +76,8 @@ describe('AudioManager', () => {
   });
 
   it('plays no death announcement when there are no pending deaths', async () => {
-    (mockDeathManager.getPendingDeaths as any).mockReturnValue([]);
+    // biome-ignore lint/suspicious/noExplicitAny: Mock object
+    (mockDeathManager.getPendingDeaths as any) = Effect.succeed([]);
 
     const program = Effect.gen(function* (_) {
       const audioManager = yield* _(AudioManagerTag);

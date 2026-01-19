@@ -1,11 +1,11 @@
 import type { DeathCause, PendingDeath } from '@repo/types';
 import { Context, Effect, HashMap, Layer, Ref } from 'effect';
 import type { Player } from '@/core/player';
-import { DeathManagerError } from '@/Domain/DeathManagerError';
 
 /**
  * Service definition for DeathManager
  */
+// Revert to original type + tag definition which is standard in Effect
 export class DeathManagerService extends Context.Tag('DeathManagerService')<
   DeathManagerService,
   {

@@ -1,7 +1,5 @@
 import { Effect, Layer } from 'effect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ActionError } from '../../Domain/ActionError';
-import { AudioManagerTag } from '../../segments/audio-manager-effect';
 import { SocketService } from '../../server/socket-effect';
 import { GameActionsLive, GameActionsService } from '../game-actions-effect';
 import { GameService } from '../game-effect';
@@ -24,27 +22,21 @@ describe('GameActionsService', () => {
     handleWerewolfUpdateVote: vi.fn().mockReturnValue(Effect.void),
   };
 
-  const mockAudioManager = {};
-
   const SocketServiceTest = Layer.succeed(
     SocketService,
+    // biome-ignore lint/suspicious/noExplicitAny: Mock object
     mockSocket as unknown as any
   );
 
   const GameServiceTest = Layer.succeed(
     GameService,
+    // biome-ignore lint/suspicious/noExplicitAny: Mock object
     mockGame as unknown as any
-  );
-
-  const AudioManagerTest = Layer.succeed(
-    AudioManagerTag,
-    mockAudioManager as unknown as any
   );
 
   const TestLayer = GameActionsLive.pipe(
     Layer.provide(SocketServiceTest),
-    Layer.provide(GameServiceTest),
-    Layer.provide(AudioManagerTest)
+    Layer.provide(GameServiceTest)
   );
 
   beforeEach(() => {

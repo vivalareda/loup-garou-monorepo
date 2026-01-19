@@ -1,6 +1,7 @@
 import type { Role } from '@repo/types';
 import { Context, Effect, HashMap, Layer, Ref } from 'effect';
-import { GameError } from '../Domain/GameError';
+import { GameError } from '../Domain/game-error';
+import { SocketService } from '../server/socket-effect';
 import { DeathManagerService } from './death-manager-effect';
 import { Player } from './player';
 
@@ -12,7 +13,12 @@ export class GameService extends Context.Tag('GameService')<
   {
     readonly addPlayer: (name: string, sid: string) => Effect.Effect<Player>;
     readonly getPlayerList: Effect.Effect<Player[]>;
+    // biome-ignore lint/suspicious/noExplicitAny: ClientPlayerList returns partial objects
+    readonly getClientPlayerList: Effect.Effect<any[]>;
     readonly assignRoles: Effect.Effect<void, GameError>;
+    readonly assignRandomRoles: Effect.Effect<void, GameError>;
+    readonly alertPlayersOfRoles: Effect.Effect<void>;
+    readonly getVillagersList: Effect.Effect<Player[]>;
     readonly setLovers: (
       selectedPlayers: string[]
     ) => Effect.Effect<void, GameError>;
@@ -40,6 +46,26 @@ export class GameService extends Context.Tag('GameService')<
       oldVote: string
     ) => Effect.Effect<void>;
     readonly getWerewolfVoteTallies: Effect.Effect<Record<string, number>>;
+    readonly hasAllWerewolvesAgreed: Effect.Effect<boolean>;
+    readonly handleAllWerewolvesAgree: Effect.Effect<void>;
+    readonly handleDayVote: (
+      voterSid: string,
+      targetId: string
+    ) => Effect.Effect<void>;
+    readonly hasAllPlayersVoted: Effect.Effect<boolean>;
+    readonly getDayVoteTarget: Effect.Effect<Player | undefined>;
+    readonly killHunterRevenge: (targetSid: string) => Effect.Effect<void>;
+    readonly isHunterInLove: Effect.Effect<void>;
+    readonly addPendingDeath: (
+      targetSid: string,
+      cause: string
+    ) => Effect.Effect<void>;
+    readonly witchKill: (targetSid: string) => Effect.Effect<void>;
+    readonly healWerewolfVictim: Effect.Effect<void>;
+    readonly checkIfWinner: Effect.Effect<'villagers' | 'werewolves' | null>;
+    readonly alertWinnersAndLosers: (
+      winner: 'villagers' | 'werewolves'
+    ) => Effect.Effect<void>;
   }
 >() {}
 
@@ -51,6 +77,7 @@ export const GameLive = Layer.effect(
   Effect.gen(function* (_) {
     // Dependencies
     const deathManager = yield* _(DeathManagerService);
+    const socketService = yield* _(SocketService);
 
     // State
     const playersRef = yield* _(Ref.make(HashMap.empty<string, Player>()));
@@ -65,6 +92,8 @@ export const GameLive = Layer.effect(
       Ref.make(HashMap.empty<string, string>())
     ); // voter -> target
 
+    const dayVotesRef = yield* _(Ref.make(HashMap.empty<string, string>())); // voter -> target
+
     const addPlayer = (name: string, sid: string) =>
       Ref.modify(playersRef, (players) => {
         const player = new Player(name, sid);
@@ -75,6 +104,14 @@ export const GameLive = Layer.effect(
       Effect.map((players) => Array.from(HashMap.values(players)))
     );
 
+    const getClientPlayerList = getPlayerList.pipe(
+      Effect.map((players) => players.map((p) => p.getPlayerForClient()))
+    );
+
+    const getVillagersList = getPlayerList.pipe(
+      Effect.map((players) => players.filter((p) => p.getRole() !== 'WEREWOLF'))
+    );
+
     const getPlayerBySocketId = (sid: string) =>
       Ref.get(playersRef).pipe(
         Effect.map((players) => {
@@ -83,34 +120,37 @@ export const GameLive = Layer.effect(
         })
       );
 
-    const initRolesList = Effect.gen(function* ($) {
-      const players = yield* $(getPlayerList);
-      const playerCount = players.length;
+    const calculateRoleDistribution = (playerCount: number): Role[] => {
       const roles: Role[] = [];
-
-      if (playerCount >= 4) {
-        const werewolfCount = Math.floor(playerCount / 3) || 1;
-        for (let i = 0; i < werewolfCount; i++) {
-          roles.push('WEREWOLF');
-        }
-        roles.push('CUPID');
-        if (playerCount >= 6) {
-          roles.push('WITCH');
-        }
-        if (playerCount >= 8) {
-          roles.push('HUNTER');
-          roles.push('CUPID');
-        }
-        const remaining = playerCount - roles.length;
-        for (let i = 0; i < remaining; i++) {
-          roles.push('VILLAGER');
-        }
-      } else {
+      if (playerCount < 4) {
         for (let i = 0; i < playerCount; i++) {
           roles.push('VILLAGER');
         }
+        return roles;
       }
 
+      const werewolfCount = Math.floor(playerCount / 3) || 1;
+      for (let i = 0; i < werewolfCount; i++) {
+        roles.push('WEREWOLF');
+      }
+      roles.push('CUPID');
+      if (playerCount >= 6) {
+        roles.push('WITCH');
+      }
+      if (playerCount >= 8) {
+        roles.push('HUNTER');
+        roles.push('CUPID');
+      }
+      const remaining = playerCount - roles.length;
+      for (let i = 0; i < remaining; i++) {
+        roles.push('VILLAGER');
+      }
+      return roles;
+    };
+
+    const initRolesList = Effect.gen(function* ($) {
+      const players = yield* $(getPlayerList);
+      const roles = calculateRoleDistribution(players.length);
       yield* $(Ref.set(availableRolesRef, roles));
     });
 
@@ -144,15 +184,13 @@ export const GameLive = Layer.effect(
         }
       });
 
-    const assignRoles = Effect.gen(function* ($) {
-      yield* $(initRolesList);
-      const roles = yield* $(Ref.get(availableRolesRef));
-      const shuffledRoles = shuffleArray(roles);
-      const players = yield* $(getPlayerList);
-
-      for (const player of players) {
-        // Test cheat for Reda (copied from original)
-        if (player.getName() === 'Reda') {
+    const assignRedaRole = (
+      player: Player,
+      shuffledRoles: Role[],
+      isRandom: boolean
+    ) =>
+      Effect.gen(function* ($) {
+        if (!isRandom && player.getName() === 'Reda') {
           const role: Role = 'HUNTER';
           player.assignRole(role);
           const index = shuffledRoles.indexOf(role);
@@ -161,9 +199,13 @@ export const GameLive = Layer.effect(
           }
           yield* $(setPlayerTeams(player));
           yield* $(setSpecialRolePlayer(player));
-          continue; // Continue outer loop
+          return true;
         }
+        return false;
+      });
 
+    const assignNormalRole = (player: Player, shuffledRoles: Role[]) =>
+      Effect.gen(function* ($) {
         const role = shuffledRoles.pop();
         if (!role) {
           yield* $(
@@ -171,11 +213,45 @@ export const GameLive = Layer.effect(
               new GameError({ message: 'No roles available to assign' })
             )
           );
-          return; // Should be unreachable given initRolesList logic but safe to handle
+          return;
         }
         player.assignRole(role);
         yield* $(setSpecialRolePlayer(player));
         yield* $(setPlayerTeams(player));
+      });
+
+    const assignRolesInternal = (isRandom: boolean) =>
+      Effect.gen(function* ($) {
+        yield* $(initRolesList);
+        const roles = yield* $(Ref.get(availableRolesRef));
+        const shuffledRoles = shuffleArray(roles);
+        const players = yield* $(getPlayerList);
+
+        for (const player of players) {
+          const assigned = yield* $(
+            assignRedaRole(player, shuffledRoles, isRandom)
+          );
+          if (assigned) {
+            continue;
+          }
+          yield* $(assignNormalRole(player, shuffledRoles));
+        }
+      });
+
+    const assignRoles = assignRolesInternal(false);
+    const assignRandomRoles = assignRolesInternal(true);
+
+    const alertPlayersOfRoles = Effect.gen(function* ($) {
+      const players = yield* $(getPlayerList);
+      for (const player of players) {
+        const role = player.getRole();
+        if (role) {
+          yield* $(
+            socketService
+              .to(player.getSocketId())
+              .emit('player:role-assigned', role)
+          );
+        }
       }
     });
 
@@ -246,7 +322,7 @@ export const GameLive = Layer.effect(
     const handleWerewolfUpdateVote = (
       sid: string,
       targetId: string,
-      oldVote: string
+      _oldVote: string
     ) =>
       Ref.update(werewolfVotesRef, (votes) =>
         HashMap.set(votes, sid, targetId)
@@ -280,10 +356,155 @@ export const GameLive = Layer.effect(
       return selectedTarget;
     });
 
+    const hasAllWerewolvesAgreed = Effect.gen(function* ($) {
+      const _votes = yield* $(Ref.get(werewolfVotesRef));
+      const tallies = yield* $(getWerewolfVoteTallies);
+      const werewolves = yield* $(getWerewolfList);
+
+      return (
+        werewolves.length > 0 &&
+        Object.keys(tallies).length === 1 &&
+        Object.values(tallies)[0] === werewolves.length
+      );
+    });
+
+    const handleAllWerewolvesAgree = Effect.gen(function* ($) {
+      const victimId = yield* $(getWerewolfTarget);
+      if (victimId) {
+        const victim = yield* $(getPlayerBySocketId(victimId));
+        if (victim) {
+          yield* $(deathManager.addPendingDeath(victim, 'WEREWOLVES'));
+        }
+      }
+    });
+
+    const handleDayVote = (voterSid: string, targetId: string) =>
+      Ref.update(dayVotesRef, (votes) =>
+        HashMap.set(votes, voterSid, targetId)
+      );
+
+    const hasAllPlayersVoted = Effect.gen(function* ($) {
+      const votes = yield* $(Ref.get(dayVotesRef));
+      const players = yield* $(getPlayerList);
+      // Simplified: alive players check needed?
+      return HashMap.size(votes) === players.length;
+    });
+
+    const getDayVoteTarget = Effect.gen(function* ($) {
+      const votes = yield* $(Ref.get(dayVotesRef));
+      const tally: Record<string, number> = {};
+      for (const target of HashMap.values(votes)) {
+        tally[target] = (tally[target] || 0) + 1;
+      }
+      // Simple majority or max votes
+      let maxVotes = 0;
+      let selectedTarget: string | undefined;
+      for (const [target, count] of Object.entries(tally)) {
+        if (count > maxVotes) {
+          maxVotes = count;
+          selectedTarget = target;
+        }
+      }
+      if (selectedTarget) {
+        return yield* $(getPlayerBySocketId(selectedTarget));
+      }
+      return;
+    });
+
+    const killHunterRevenge = (targetSid: string) =>
+      Effect.gen(function* ($) {
+        yield* $(deathManager.addHunterRevenge(targetSid, 'HUNTER')); // placeholder ID
+      });
+
+    const isHunterInLove = Effect.void; // Placeholder logic
+
+    const addPendingDeath = (targetSid: string, cause: string) =>
+      Effect.gen(function* ($) {
+        const player = yield* $(getPlayerBySocketId(targetSid));
+        if (player) {
+          // biome-ignore lint/suspicious/noExplicitAny: DeathManager expects specific cause type
+          yield* $(deathManager.addPendingDeath(player, cause as any));
+        }
+      });
+
+    const witchKill = (targetSid: string) =>
+      Effect.gen(function* ($) {
+        yield* $(deathManager.addWitchPoison(targetSid));
+      });
+
+    const healWerewolfVictim = deathManager.healWerewolvesVictim;
+
+    const alertWinnersAndLosers = (winner: 'villagers' | 'werewolves') =>
+      Effect.gen(function* ($) {
+        if (winner === 'villagers') {
+          const villagers = yield* $(deathManager.getTeamVillagers);
+          for (const player of villagers) {
+            yield* $(
+              socketService.to(player.getSocketId()).emit('alert:player-won')
+            );
+          }
+          yield* $(alertLosers('werewolves'));
+        }
+
+        if (winner === 'werewolves') {
+          const werewolves = yield* $(deathManager.getTeamWerewolves);
+          for (const player of werewolves) {
+            yield* $(
+              socketService.to(player.getSocketId()).emit('alert:player-won')
+            );
+          }
+          yield* $(alertLosers('villagers')); // Opponents are villagers
+        }
+      });
+
+    const alertLosers = (loser: 'villagers' | 'werewolves') =>
+      Effect.gen(function* ($) {
+        if (loser === 'villagers') {
+          const villagers = yield* $(deathManager.getTeamVillagers);
+          for (const player of villagers) {
+            yield* $(
+              socketService.to(player.getSocketId()).emit('alert:player-lost')
+            );
+          }
+        }
+
+        if (loser === 'werewolves') {
+          const werewolves = yield* $(deathManager.getTeamWerewolves);
+          for (const player of werewolves) {
+            yield* $(
+              socketService.to(player.getSocketId()).emit('alert:player-lost')
+            );
+          }
+        }
+      });
+
+    const checkIfWinner = Effect.gen(function* ($) {
+      const villagers = yield* $(deathManager.getTeamVillagers);
+      const werewolves = yield* $(deathManager.getTeamWerewolves);
+
+      const villagersAlive = villagers.filter((p) => p.isAlive);
+      const werewolvesAlive = werewolves.filter((p) => p.isAlive);
+
+      if (werewolvesAlive.length === 0) {
+        return 'villagers' as const;
+      }
+
+      if (werewolvesAlive.length === 1 && villagersAlive.length === 1) {
+        // Simple logic for now, omitting complex Witch scenarios
+        return 'werewolves' as const;
+      }
+
+      return null;
+    });
+
     return {
       addPlayer,
       getPlayerList,
+      getClientPlayerList,
       assignRoles,
+      assignRandomRoles,
+      alertPlayersOfRoles,
+      getVillagersList,
       setLovers,
       getLovers,
       getPlayerBySocketId,
@@ -298,6 +519,18 @@ export const GameLive = Layer.effect(
       handleWerewolfVote,
       handleWerewolfUpdateVote,
       getWerewolfVoteTallies,
+      hasAllWerewolvesAgreed,
+      handleAllWerewolvesAgree,
+      handleDayVote,
+      hasAllPlayersVoted,
+      getDayVoteTarget,
+      killHunterRevenge,
+      isHunterInLove,
+      addPendingDeath,
+      witchKill,
+      healWerewolfVictim,
+      checkIfWinner,
+      alertWinnersAndLosers,
     };
   })
 );

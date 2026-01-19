@@ -1,11 +1,13 @@
-import { Effect, Exit, Fiber, Layer, Stream } from 'effect';
+import { Effect, Fiber, Stream } from 'effect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SocketError } from '@/Domain/SocketError';
-import { assertFailure, assertSuccess } from '@/utils/effect/test-utils';
+import { SocketError } from '../../Domain/socket-error';
+import { assertFailure, assertSuccess } from '../../utils/effect/test-utils';
 import { type ServerSocket, SocketLive, SocketService } from '../socket-effect';
 
 describe('SocketService', () => {
+  // biome-ignore lint/suspicious/noExplicitAny: Mock object
   let mockIo: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Mock object
   let mockSocket: any;
 
   beforeEach(() => {
@@ -25,11 +27,6 @@ describe('SocketService', () => {
       on: vi.fn(),
     } as unknown as ServerSocket;
   });
-
-  const getService = (io = mockIo) => {
-    const layer = SocketLive(io);
-    return Effect.provide(SocketService, layer);
-  };
 
   it('should emit events successfully', async () => {
     const program = Effect.gen(function* (_) {
@@ -85,13 +82,16 @@ describe('SocketService', () => {
   });
 
   it('should stream incoming events', async () => {
+    // biome-ignore lint/suspicious/noExplicitAny: Mocking socket callback
     let capturedCallback: any;
+    // biome-ignore lint/suspicious/noExplicitAny: Mocking socket callback
     mockIo.on.mockImplementation((event: string, cb: any) => {
       if (event === 'connection') {
         cb(mockSocket);
       }
     });
 
+    // biome-ignore lint/suspicious/noExplicitAny: Mocking socket callback
     mockSocket.on.mockImplementation((event: string, cb: any) => {
       if (event === 'player:join') {
         capturedCallback = cb;
@@ -117,6 +117,9 @@ describe('SocketService', () => {
       yield* _(Effect.sleep('10 millis'));
       yield* _(Fiber.interrupt(fiber));
     });
+
+    // Execute the program to verify the logic
+    await Effect.runPromise(Effect.provide(program, SocketLive(mockIo)));
 
     // Since we're using runCollect on an infinite stream that gets interrupted,
     // testing this exact flow with standard vitest/effect patterns is slightly complex.

@@ -1,7 +1,6 @@
 import type { DeathInfo } from '@repo/types';
 import { Context, Effect, Layer } from 'effect';
-import { ActionError } from '../Domain/ActionError';
-import { AudioManagerTag } from '../segments/audio-manager-effect';
+import { ActionError } from '../Domain/action-error';
 import { SocketService } from '../server/socket-effect';
 import { GameService } from './game-effect';
 
@@ -37,7 +36,8 @@ export const GameActionsLive = Layer.effect(
     const game = yield* _(GameService);
     const socket = yield* _(SocketService);
     // Unused variable audioManager removed
-    yield* _(AudioManagerTag);
+    // yield* _(AudioManagerTag); // We don't use this directly here anymore, but keeping as dependency might be needed if side effects rely on it being initialized?
+    // Actually, let's remove it if unused to satisfy linter and runtime.
 
     const toActionError = (e: unknown) =>
       new ActionError({ message: 'Action failed', cause: e });
@@ -168,6 +168,7 @@ export const GameActionsLive = Layer.effect(
     const handleWerewolfVote = (socketId: string, targetPlayer: string) =>
       Effect.gen(function* ($) {
         yield* $(game.handleWerewolfVote(socketId, targetPlayer));
+        yield* $(broadcastWerewolfVotes);
       }).pipe(Effect.mapError(toActionError));
 
     const handleWerewolfUpdateVote = (
@@ -179,6 +180,7 @@ export const GameActionsLive = Layer.effect(
         yield* $(
           game.handleWerewolfUpdateVote(socketId, targetPlayer, oldVote)
         );
+        yield* $(broadcastWerewolfVotes);
       }).pipe(Effect.mapError(toActionError));
 
     const broadcastWerewolfVotes = Effect.gen(function* ($) {

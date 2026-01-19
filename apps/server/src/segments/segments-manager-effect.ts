@@ -2,9 +2,9 @@ import type { Segment } from '@repo/types';
 import { Context, Effect, Layer, Ref } from 'effect';
 import { GameActionsService } from '../core/game-actions-effect';
 import { GameService } from '../core/game-effect';
-import type { ActionError } from '../Domain/ActionError';
+import type { ActionError } from '../Domain/action-error';
 import type { AudioError } from '../Domain/audio-error';
-import { SegmentError } from '../Domain/SegmentError';
+import { SegmentError } from '../Domain/segment-error';
 import { AudioManagerTag } from './audio-manager-effect';
 
 type ServerSegment = Omit<Segment, 'action'> & {
@@ -31,6 +31,9 @@ export class SegmentsManagerService extends Context.Tag(
     >;
     readonly getCurrentSegmentType: Effect.Effect<string>;
     readonly checkPostDayVoteScenarios: Effect.Effect<boolean, SegmentError>;
+    readonly witchDied: Effect.Effect<void>;
+    readonly continueDayAction: Effect.Effect<void>;
+    readonly isGameOver: Effect.Effect<boolean>;
   }
 >() {}
 
@@ -38,6 +41,7 @@ export const SegmentsManagerLive = Layer.effect(
   SegmentsManagerService,
   Effect.gen(function* (_) {
     yield* _(GameService);
+    const game = yield* _(GameService);
     const audioManager = yield* _(AudioManagerTag);
     const gameActions = yield* _(GameActionsService);
 
@@ -155,6 +159,7 @@ export const SegmentsManagerLive = Layer.effect(
     });
 
     const startGame = Effect.gen(function* ($) {
+      yield* $(initializeSegments);
       yield* $(playSegment);
     });
 
@@ -166,6 +171,39 @@ export const SegmentsManagerLive = Layer.effect(
 
     const checkPostDayVoteScenarios = Effect.succeed(false);
 
+    const witchDied = Effect.gen(function* ($) {
+      const segments = yield* $(getSegments);
+      const updatedSegments = segments.map((seg) => {
+        if (seg.type === 'WITCH-HEAL' || seg.type === 'WITCH-POISON') {
+          return { ...seg, skip: true };
+        }
+        return seg;
+      });
+      yield* $(Ref.set(segmentsRef, updatedSegments));
+    });
+
+    const continueDayAction = Effect.gen(function* ($) {
+      yield* $(gameActions.dayAction);
+    });
+
+    const isGameOver = Effect.gen(function* ($) {
+      const winner = yield* $(game.checkIfWinner);
+
+      if (winner === 'villagers') {
+        yield* $(audioManager.playVillagersWonAudio);
+        yield* $(game.alertWinnersAndLosers(winner));
+        return true;
+      }
+
+      if (winner === 'werewolves') {
+        yield* $(audioManager.playWerewolvesWonAudio);
+        yield* $(game.alertWinnersAndLosers(winner));
+        return true;
+      }
+
+      return false;
+    });
+
     return {
       initializeSegments,
       startGame,
@@ -173,6 +211,9 @@ export const SegmentsManagerLive = Layer.effect(
       finishSegment,
       getCurrentSegmentType,
       checkPostDayVoteScenarios,
+      witchDied,
+      continueDayAction,
+      isGameOver,
     };
   })
 );

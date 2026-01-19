@@ -1,0 +1,4 @@
+# Ralphy Progress Log
+
+- Implemented Player domain in apps/server/src/Domain/player.ts with PlayerId branded type and Player schema using @effect/schema.
+- Added PlayerNotFound and PlayerAlreadyExists domain errors.

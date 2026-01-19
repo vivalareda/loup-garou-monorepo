@@ -27,7 +27,9 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@effect/schema": "^0.75.5",
     "@repo/types": "workspace:*",
+    "effect": "^3.19.14",
     "socket.io": "^4.8.1",
     "sound-play": "^1.1.0"
   }

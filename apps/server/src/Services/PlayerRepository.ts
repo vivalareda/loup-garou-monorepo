@@ -13,7 +13,7 @@ export class PlayerRepository extends Context.Tag('PlayerRepository')<
     readonly add: (player: Player) => Effect.Effect<void, PlayerAlreadyExists>;
     readonly remove: (id: PlayerId) => Effect.Effect<void, PlayerNotFound>;
     readonly findById: (id: PlayerId) => Effect.Effect<Player, PlayerNotFound>;
-    readonly getAll: Effect.Effect<Array<Player>>;
+    readonly getAll: Effect.Effect<Player[]>;
   }
 >() {}
 
@@ -31,7 +31,10 @@ export const PlayerRepositoryLive = Layer.effect(
             players,
           ] as const;
         }
-        return [Effect.void, HashMap.set(players, player.id, player)] as const;
+        return [
+          Effect.void as Effect.Effect<void, PlayerAlreadyExists>,
+          HashMap.set(players, player.id, player),
+        ] as const;
       }).pipe(Effect.flatten);
 
     const remove = (id: PlayerId) =>
@@ -39,7 +42,10 @@ export const PlayerRepositoryLive = Layer.effect(
         if (!HashMap.has(players, id)) {
           return [Effect.fail(new PlayerNotFound({ id })), players] as const;
         }
-        return [Effect.void, HashMap.remove(players, id)] as const;
+        return [
+          Effect.void as Effect.Effect<void, PlayerNotFound>,
+          HashMap.remove(players, id),
+        ] as const;
       }).pipe(Effect.flatten);
 
     const findById = (id: PlayerId) =>

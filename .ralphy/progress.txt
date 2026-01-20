@@ -7,3 +7,4 @@
 - [✓] 2026-01-20 21:31 - Task 1.5: Death Processing Workflow - Two-pass death processing with cascades
 - [✓] 2026-01-20 21:38 - Task 1.6: Lover Mechanics - Lover tracking and partner suicide logic
 - [✓] 2026-01-20 21:44 - Task 1.7: Witch Potion Mechanics - Witch potion tracking and actions
+- [✓] 2026-01-20 21:43 - Task 1.7: Witch Potion Mechanics - Witch potion tracking and actions

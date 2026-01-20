@@ -39,9 +39,26 @@ export class SocketServer extends Effect.Service<SocketServer>()(
   {
     scoped: Effect.gen(function* () {
       const httpServer = yield* HttpServer;
-      return yield* Effect.acquireRelease(acquire(httpServer), release);
+      const io = yield* Effect.acquireRelease(acquire(httpServer), release);
+      return {
+        io,
+        emit: (
+          event: keyof ServerToClientEvents,
+          ...args: Parameters<ServerToClientEvents[typeof event]>
+        ) =>
+          Effect.sync(() => {
+            io.emit(event, ...args);
+          }),
+        emitTo: (
+          socketId: string,
+          event: keyof ServerToClientEvents,
+          ...args: Parameters<ServerToClientEvents[typeof event]>
+        ) =>
+          Effect.sync(() => {
+            io.to(socketId).emit(event, ...args);
+          }),
+      };
     }),
     dependencies: [HttpServer.Live],
   }
-) { }
- 
+) {}

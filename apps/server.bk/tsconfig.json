@@ -12,16 +12,10 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
-    "declaration": true,
     "declarationMap": true,
     "paths": {
       "@/*": ["./src/*"]
-    },
-    "plugins": [
-      {
-        "name": "@effect/language-service"
-      }
-    ],
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

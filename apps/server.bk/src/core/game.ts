@@ -29,14 +29,14 @@ export class Game {
     this.lovers = [];
   }
 
-  addPlayer(name: string, sid: string) {
-    const player = new Player(name, sid);
-    this.players.set(sid, player);
-    console.log(
-      `new players list: ${JSON.stringify(Array.from(this.players.keys()))}`
-    );
-    return player;
-  }
+  // addPlayer(name: string, sid: string) {
+  //   const player = new Player(name, sid);
+  //   this.players.set(sid, player);
+  //   console.log(
+  //     `new players list: ${JSON.stringify(Array.from(this.players.keys()))}`
+  //   );
+  //   return player;
+  // }
 
   getClientPlayerList(): PlayerListItem[] {
     return Array.from(this.players.values()).map((player) => ({

@@ -6,7 +6,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo dev",
+    "prepare": "effect-language-service patch",
+    "dev": "turbo dev PORT=3000 HOST=0.0.0.0",
     "lint": "turbo run lint",
     "build": "turbo build",
     "check-types": "turbo check-types",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
+    "@effect/language-service": "^0.67.0",
     "lint-staged": "^16.1.5",
     "turbo": "^2.5.4",
     "typescript": "5.8.3",
@@ -26,5 +28,8 @@
     "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
       "npx ultracite format"
     ]
+  },
+  "dependencies": {
+    "effect": "^3.19.14"
   }
 }

@@ -11,11 +11,9 @@ export type {
 export {
   type GamePlayer,
   isGamePlayer,
-  type Player,
-  type PlayerGetters,
-  type PlayerListItem,
-  type PlayerSetters,
-  type WaitingRoomPlayer,
+  isLobbyPlayer,
+  type LobbyPlayer,
+  type PlayerIdentity,
 } from './src/player';
 export { getRoleDescription, type Role } from './src/role';
 export type {

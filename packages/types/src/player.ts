@@ -1,33 +1,24 @@
 import type { Role } from './role';
 
-export type GamePlayer = {
-  type: 'game';
-  name: string;
-  socketId: string;
-  isAlive: boolean;
+export type PlayerIdentity = {
+  readonly name: string;
+  readonly sid: string;
+};
+
+export type LobbyPlayer = PlayerIdentity & {
+  readonly type: 'lobby';
+};
+
+export type GamePlayer = PlayerIdentity & {
+  readonly type: 'game';
   role: Role;
+  isAlive: boolean;
 };
 
-export type PlayerGetters = {
-  [K in keyof GamePlayer as K extends 'type' | 'isAlive'
-    ? never
-    : `get${Capitalize<K>}`]: () => GamePlayer[K];
-};
+export type Player = LobbyPlayer | GamePlayer;
 
-export type PlayerSetters = {
-  [K in keyof GamePlayer as K extends 'isAlive' | 'role'
-    ? `set${Capitalize<K>}`
-    : never]: (value: GamePlayer[K]) => void;
-};
+export const isLobbyPlayer = (player: Player): player is LobbyPlayer =>
+  player.type === 'lobby';
 
-export type Player = GamePlayer | WaitingRoomPlayer;
-
-export type PlayerListItem = Pick<Player, 'name' | 'socketId'>;
-
-export type WaitingRoomPlayer = Pick<GamePlayer, 'name' | 'socketId'> & {
-  type: 'waiting';
-};
-
-export function isGamePlayer(player: Player) {
-  return player.type === 'game';
-}
+export const isGamePlayer = (player: Player): player is GamePlayer =>
+  player.type === 'game';

@@ -1,40 +1,43 @@
-import type {
-  PlayerGetters,
-  PlayerListItem,
-  PlayerSetters,
-  Role,
-  WaitingRoomPlayer,
-} from '@repo/types';
+import type { PlayerIdentity, Role } from '@repo/types';
 
-export class Player implements PlayerGetters, PlayerSetters {
+export class Player {
   readonly name: string;
   readonly socketId: string;
-  role: Role | null;
+  role: Role;
   isAlive: boolean;
 
-  constructor(name: string, sid: string) {
+  constructor(name: string, sid: string, role: Role) {
     this.name = name;
-    this.role = null;
+    this.role = role;
     this.isAlive = true;
     this.socketId = sid;
   }
 
-  getPlayerForClient() {
-    const playerListItem: PlayerListItem = {
+  getIdentity() {
+    const identity: PlayerIdentity = {
       name: this.name,
-      socketId: this.socketId,
+      sid: this.socketId,
     };
-    return playerListItem;
+
+    return identity;
   }
 
-  getWaitingRoomData() {
-    const waitingRoomPlayer: WaitingRoomPlayer = {
-      type: 'waiting',
-      name: this.name,
-      socketId: this.socketId,
-    };
-    return waitingRoomPlayer;
-  }
+  // getPlayerForClient() {
+  //   const playerListItem: PlayerListItem = {
+  //     name: this.name,
+  //     socketId: this.socketId,
+  //   };
+  //   return playerListItem;
+  // }
+  //
+  // getWaitingRoomData() {
+  //   const waitingRoomPlayer: WaitingRoomPlayer = {
+  //     type: 'waiting',
+  //     name: this.name,
+  //     socketId: this.socketId,
+  //   };
+  //   return waitingRoomPlayer;
+  // }
 
   setRole(role: Role) {
     this.role = role;

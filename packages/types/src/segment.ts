@@ -15,6 +15,5 @@ export type SegmentType = Exclude<BaseSegment, 'WITCH'> | `WITCH-${WitchPhase}`;
 
 export type Segment = {
   type: SegmentType;
-  action: () => void;
   skip: boolean;
 };

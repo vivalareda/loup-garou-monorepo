@@ -15,11 +15,9 @@ const make = Effect.gen(function* () {
     }),
 
     loversAction: Effect.gen(function* () {
-      // Implementation for lovers action will go here
-      // We need to wait for Game implementation to have getLovers() or similar
-      // For now, based on instructions, we're migrating non-voting actions
+      // Logic handled via alert:player-is-lover in SocketHandlers during cupid selection
       yield* Console.log(
-        'loversAction called - waiting for Game service update'
+        'loversAction: Notifications sent during selection phase'
       );
     }),
 

@@ -12,3 +12,6 @@
 - [✓] 2026-01-20 22:06 - Task 1.9: Winner Detection Logic - Game-over detection and winner announcement
 - [✓] 2026-01-20 22:16 - Task 2.1: Segment State Management - Segment/phase tracking and skip logic
 - [✓] 2026-01-20 22:20 - Task 2.2: Segment Execution Engine - Segment playback and action execution
+- [✓] 2026-01-20 22:32 - Task 2.3: Special Segment Scenarios - Complex edge case handling
+- [✓] 2026-01-20 22:37 - Task 2.4: Day Action Split - Death processing and voting phases
+- [✓] 2026-01-20 22:42 - Task 3.1: Socket Event Router - Extend SocketHandlers with game event routing

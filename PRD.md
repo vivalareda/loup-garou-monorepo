@@ -14,12 +14,12 @@
 
 - [x] Task 2.1: Segment State Management - Segment/phase tracking and skip logic
 - [x] Task 2.2: Segment Execution Engine - Segment playback and action execution
-- [ ] Task 2.3: Special Segment Scenarios - Complex edge case handling
-- [ ] Task 2.4: Day Action Split - Death processing and voting phases
+- [x] Task 2.3: Special Segment Scenarios - Complex edge case handling
+- [x] Task 2.4: Day Action Split - Death processing and voting phases
 
 ## Phase 3: Event Handling Migration
 
-- [ ] Task 3.1: Socket Event Router - Extend SocketHandlers with game event routing
+- [x] Task 3.1: Socket Event Router - Extend SocketHandlers with game event routing
 - [ ] Task 3.2: EventsActions Service (Part 1) - Voting event processing
 - [ ] Task 3.3: EventsActions Service (Part 2) - Special role event processing
 - [ ] Task 3.4: Admin/Testing Events - Admin dashboard testing events

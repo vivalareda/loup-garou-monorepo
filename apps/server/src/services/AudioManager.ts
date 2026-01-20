@@ -74,6 +74,14 @@ export class AudioManager extends Effect.Service<AudioManager>()(
                 break;
             }
           }),
+
+        playDayVoteHunterHasPartner: Effect.gen(function* () {
+          yield* playAudio('Special-death/Hunter-has-lover');
+        }),
+
+        playDayVoteLoversDeath: Effect.gen(function* () {
+          yield* playAudio('Day-vote/Lover');
+        }),
       };
     }),
     dependencies: [], // No dependencies, self-contained

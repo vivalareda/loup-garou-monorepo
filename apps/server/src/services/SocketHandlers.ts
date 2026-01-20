@@ -16,10 +16,10 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       return {
         promptCupid: Effect.gen(function* () {
           const cupid = yield* game.getSpecialRolePlayer('CUPID');
-          io.to(cupid.getSocketId()).emit('cupid:pick-required');
+          io.io.to(cupid.getSocketId()).emit('cupid:pick-required');
         }),
         setupHandlers: Effect.sync(() => {
-          io.on('connection', (socket) => {
+          io.io.on('connection', (socket) => {
             socket.on('player:join', (name: string) => {
               Effect.gen(function* () {
                 const player = yield* lobby.addPlayer(name, socket.id);
@@ -48,6 +48,31 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                 .pipe(Effect.runPromise);
             });
 
+            socket.on('cupid:lovers-pick', (selectedPlayers: string[]) => {
+              Effect.gen(function* () {
+                if (
+                  !Array.isArray(selectedPlayers) ||
+                  selectedPlayers.length !== 2
+                ) {
+                  console.error('Invalid lovers selection');
+                  return;
+                }
+
+                const [p1Id, p2Id] = selectedPlayers;
+                const player1 = yield* game.getPlayerBySocketId(p1Id);
+                const player2 = yield* game.getPlayerBySocketId(p2Id);
+
+                yield* game.setLovers(player1, player2);
+
+                io.io
+                  .to(player1.getSocketId())
+                  .emit('alert:player-is-lover', player2.getName());
+                io.io
+                  .to(player2.getSocketId())
+                  .emit('alert:player-is-lover', player1.getName());
+              }).pipe(Effect.runPromise);
+            });
+
             socket.on('disconnect', () => {
               console.log('Player disconnected:', socket.id);
             });
@@ -62,4 +87,4 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       Game.Default,
     ],
   }
-) { }
+) {}

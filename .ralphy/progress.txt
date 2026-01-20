@@ -3,3 +3,7 @@
 - [✓] 2026-01-20 21:00 - Task 1.1: DeathManager Service - Migrate death queue and team management
 - [✓] 2026-01-20 21:06 - Task 1.2: GameActions Service (Part 1) - Migrate non-voting segment actions
 - [✓] 2026-01-20 21:13 - Task 1.3: Voting Logic - Werewolf Voting - Implement werewolf consensus voting
+- [✓] 2026-01-20 21:27 - Task 1.4: Voting Logic - Day Voting - Implement day phase voting with tie handling
+- [✓] 2026-01-20 21:31 - Task 1.5: Death Processing Workflow - Two-pass death processing with cascades
+- [✓] 2026-01-20 21:38 - Task 1.6: Lover Mechanics - Lover tracking and partner suicide logic
+- [✓] 2026-01-20 21:44 - Task 1.7: Witch Potion Mechanics - Witch potion tracking and actions

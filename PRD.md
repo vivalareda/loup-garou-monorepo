@@ -7,7 +7,7 @@
 - [x] Task 1.5: Death Processing Workflow - Two-pass death processing with cascades
 - [x] Task 1.6: Lover Mechanics - Lover tracking and partner suicide logic
 - [x] Task 1.7: Witch Potion Mechanics - Witch potion tracking and actions
-- [ ] Task 1.8: Hunter Revenge Mechanics - Hunter revenge and special scenarios
+- [x] Task 1.8: Hunter Revenge Mechanics - Hunter revenge and special scenarios
 - [ ] Task 1.9: Winner Detection Logic - Game-over detection and winner announcement
 
 ## Phase 2: Segment Management Migration

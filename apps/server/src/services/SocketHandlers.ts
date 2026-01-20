@@ -1,3 +1,4 @@
+import type { ServerToClientEvents } from '@repo/types';
 import { Effect } from 'effect';
 import { Game } from './Game.js';
 import { HunterService } from './HunterService.js';
@@ -16,6 +17,14 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       const hunterService = yield* HunterService;
 
       return {
+        emit: <K extends keyof ServerToClientEvents>(
+          event: K,
+          ...args: Parameters<ServerToClientEvents[K]>
+        ) =>
+          Effect.sync(() => {
+            // @ts-expect-error
+            io.io.emit(event, ...args);
+          }),
         promptCupid: Effect.gen(function* () {
           const cupid = yield* game.getSpecialRolePlayer('CUPID');
           io.io.to(cupid.getSocketId()).emit('cupid:pick-required');

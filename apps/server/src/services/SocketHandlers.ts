@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import { Game } from './Game.js';
+import { HunterService } from './HunterService.js';
 import { Lobby } from './Lobby.js';
 import { LobbyConfig } from './LobbyConfig.js';
 import { SocketServer } from './SocketServer.js';
@@ -12,6 +13,7 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       const io = yield* SocketServer;
       const config = yield* LobbyConfig;
       const game = yield* Game;
+      const hunterService = yield* HunterService;
 
       return {
         promptCupid: Effect.gen(function* () {
@@ -73,6 +75,40 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
               }).pipe(Effect.runPromise);
             });
 
+            socket.on('hunter:killed-player', (selectedPlayer: string) => {
+              Effect.gen(function* () {
+                yield* hunterService.processRevenge(socket.id, selectedPlayer);
+              })
+                .pipe(
+                  Effect.catchTags({
+                    NotHunterError: () =>
+                      Effect.sync(() => {
+                        socket.emit('error', 'You are not the hunter');
+                      }),
+                    HunterAlreadyFiredError: () =>
+                      Effect.sync(() => {
+                        socket.emit(
+                          'error',
+                          'You have already used your revenge'
+                        );
+                      }),
+                    HunterTargetSelfError: () =>
+                      Effect.sync(() => {
+                        socket.emit('error', 'You cannot shoot yourself');
+                      }),
+                    HunterTargetDeadError: () =>
+                      Effect.sync(() => {
+                        socket.emit('error', 'The target is already dead');
+                      }),
+                    PlayerNotFoundError: () =>
+                      Effect.sync(() => {
+                        socket.emit('error', 'Player not found');
+                      }),
+                  })
+                )
+                .pipe(Effect.runPromise);
+            });
+
             socket.on('disconnect', () => {
               console.log('Player disconnected:', socket.id);
             });
@@ -85,6 +121,7 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       Lobby.Default,
       LobbyConfig.Live,
       Game.Default,
+      HunterService.Default,
     ],
   }
 ) {}

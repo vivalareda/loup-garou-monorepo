@@ -39,6 +39,7 @@ export type ServerToClientEvents = {
 
   'hunter:pick-required': () => void;
   'hunter:killed-player': (selectedPlayer: string) => void;
+  'hunter:revenge-taken': (data: { hunter: string; victim: string }) => void;
 
   error: (message: string) => void;
 };

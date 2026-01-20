@@ -67,6 +67,7 @@ const make = Effect.gen(function* () {
   });
 
   return {
+    _tag: '@app/WerewolfVoting' as const,
     // Called when a werewolf submits a vote
     handleVote: (voterId: string, targetId: string) =>
       Effect.gen(function* () {

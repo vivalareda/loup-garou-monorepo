@@ -33,6 +33,7 @@ export type ServerToClientEvents = {
   'witch:pick-poison-player': () => void;
 
   'night:deaths-announced': (deaths: DeathInfo[]) => void;
+  'game:segment-start': (segment: { type: string; skip: boolean }) => void;
   'day:voting-phase-start': () => void;
   'day-vote:start': () => void;
   'day-vote:update': (currentvotes: Record<string, number>) => void;

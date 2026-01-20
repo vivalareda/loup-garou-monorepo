@@ -2,22 +2,22 @@
 import type { Role } from '@repo/types';
 import { Data } from 'effect';
 
-export class NameExistsError extends Data.TaggedError('NameExists')<{}> { }
-export class LobbyFullError extends Data.TaggedError('LobbyFull')<{}> { }
+export class NameExistsError extends Data.TaggedError('NameExists')<{}> {}
+export class LobbyFullError extends Data.TaggedError('LobbyFull')<{}> {}
 
 export class PlayerNotFoundError extends Data.TaggedError(
   'PlayerNotFoundError'
 )<{
   socketId: string;
-}> { }
+}> {}
 
 export class SpecialPlayerNotFoundError extends Data.TaggedError(
-  'PlayerNotFoundError'
+  'SpecialPlayerNotFoundError'
 )<{
   role: Role;
-}> { }
+}> {}
 
 export class AudioPlaybackError extends Data.TaggedError('AudioPlaybackError')<{
   file: string;
   error: unknown;
-}> { }
+}> {}

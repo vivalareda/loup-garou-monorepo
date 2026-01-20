@@ -7,8 +7,15 @@ const make = Effect.gen(function* () {
   const socketServer = yield* SocketServer;
 
   return {
+    _tag: '@app/GameActions' as const,
     cupidAction: Effect.gen(function* () {
-      const cupid = yield* game.getSpecialRolePlayer('CUPID');
+      const cupid = yield* game.getSpecialRolePlayer('CUPID').pipe(
+        Effect.catchTag('SpecialPlayerNotFoundError', () => {
+          return Effect.succeed(undefined);
+        })
+      );
+      if (!cupid) return;
+
       const socketId = cupid.getSocketId();
 
       yield* socketServer.emitTo(socketId, 'cupid:pick-required');

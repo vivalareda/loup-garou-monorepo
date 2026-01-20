@@ -9,3 +9,4 @@
 - [✓] 2026-01-20 21:44 - Task 1.7: Witch Potion Mechanics - Witch potion tracking and actions
 - [✓] 2026-01-20 21:43 - Task 1.7: Witch Potion Mechanics - Witch potion tracking and actions
 - [✓] 2026-01-20 21:50 - Task 1.8: Hunter Revenge Mechanics - Hunter revenge and special scenarios
+- [✓] 2026-01-20 22:06 - Task 1.9: Winner Detection Logic - Game-over detection and winner announcement

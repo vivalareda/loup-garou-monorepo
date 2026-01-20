@@ -30,6 +30,7 @@ const make = Effect.gen(function* () {
     });
 
   return {
+    _tag: '@app/DayVoting' as const,
     startVoting: Effect.gen(function* () {
       yield* Ref.set(votesRef, {});
       yield* Ref.set(isVotingOpenRef, true);

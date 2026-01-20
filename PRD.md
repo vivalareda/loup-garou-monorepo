@@ -8,7 +8,7 @@
 - [x] Task 1.6: Lover Mechanics - Lover tracking and partner suicide logic
 - [x] Task 1.7: Witch Potion Mechanics - Witch potion tracking and actions
 - [x] Task 1.8: Hunter Revenge Mechanics - Hunter revenge and special scenarios
-- [ ] Task 1.9: Winner Detection Logic - Game-over detection and winner announcement
+- [x] Task 1.9: Winner Detection Logic - Game-over detection and winner announcement
 
 ## Phase 2: Segment Management Migration
 

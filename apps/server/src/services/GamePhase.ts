@@ -5,6 +5,7 @@ import { DeathManager } from './DeathManager.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
 import { SocketHandlers } from './SocketHandlers.js';
+import { SpecialScenarios } from './SpecialScenarios.js';
 
 export const makeGamePhase = Effect.gen(function* () {
   const game = yield* Game;
@@ -12,6 +13,7 @@ export const makeGamePhase = Effect.gen(function* () {
   const deathManager = yield* DeathManager;
   const gameActions = yield* GameActions;
   const audioManager = yield* AudioManager;
+  const specialScenarios = yield* SpecialScenarios;
 
   const processDeathsAndCheckWinner = Effect.gen(function* () {
     // Process any pending deaths
@@ -41,6 +43,9 @@ export const makeGamePhase = Effect.gen(function* () {
 
       deaths.push(deathInfo);
     }
+
+    // Check for special scenarios first (narrative audio)
+    yield* specialScenarios.handleSpecialDeathScenarios;
 
     if (deaths.length > 0) {
       // Announce deaths to clients
@@ -130,5 +135,6 @@ export class GamePhase extends Effect.Service<GamePhase>()('GamePhase', {
     SocketHandlers.Default,
     GameActions.Default,
     AudioManager.Default,
+    SpecialScenarios.Default,
   ],
 }) {}

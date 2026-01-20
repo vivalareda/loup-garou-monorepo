@@ -11,3 +11,4 @@
 - [✓] 2026-01-20 21:50 - Task 1.8: Hunter Revenge Mechanics - Hunter revenge and special scenarios
 - [✓] 2026-01-20 22:06 - Task 1.9: Winner Detection Logic - Game-over detection and winner announcement
 - [✓] 2026-01-20 22:16 - Task 2.1: Segment State Management - Segment/phase tracking and skip logic
+- [✓] 2026-01-20 22:20 - Task 2.2: Segment Execution Engine - Segment playback and action execution

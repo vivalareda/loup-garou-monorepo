@@ -55,6 +55,25 @@ export class AudioManager extends Effect.Service<AudioManager>()(
               ? 'End-game/Werewolves-won'
               : 'End-game/Villagers-won'
           ),
+
+        playSpecialAudio: (
+          type: 'HUNTER_IS_LOVER' | 'PARTNER_IS_HUNTER' | 'LOVER_DEATH'
+        ) =>
+          Effect.gen(function* () {
+            switch (type) {
+              case 'HUNTER_IS_LOVER':
+                yield* playAudio('Special-scenarios/hunter-is-lover');
+                break;
+              case 'PARTNER_IS_HUNTER':
+                yield* playAudio('Special-death/Lover-Hunter');
+                break;
+              case 'LOVER_DEATH':
+                yield* playAudio('Special-death/Lover-Death');
+                break;
+              default:
+                break;
+            }
+          }),
       };
     }),
     dependencies: [], // No dependencies, self-contained

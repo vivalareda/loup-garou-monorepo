@@ -1,8 +1,8 @@
-import { Effect, Config } from 'effect';
 import { existsSync } from 'node:fs';
+import type { SegmentType } from '@repo/types';
+import { Config, Effect } from 'effect';
 import sound from 'sound-play';
 import { AudioPlaybackError } from './errors.js';
-import { SegmentType } from '@repo/types';
 
 export class AudioManager extends Effect.Service<AudioManager>()(
   '@app/AudioManager',
@@ -28,6 +28,9 @@ export class AudioManager extends Effect.Service<AudioManager>()(
         playSegmentStart: (segment: SegmentType) =>
           Effect.gen(function* () {
             const audioFile = getSegmentStartAudio(segment);
+            if (!audioFile) {
+              return;
+            }
 
             if (segment === 'LOVERS' || segment === 'DAY') {
               Effect.runFork(playAudio(audioFile));
@@ -40,7 +43,9 @@ export class AudioManager extends Effect.Service<AudioManager>()(
         playSegmentEnd: (segment: SegmentType) =>
           Effect.gen(function* () {
             const audioFile = getSegmentEndAudio(segment);
-            if (!audioFile) return;
+            if (!audioFile) {
+              return;
+            }
             yield* playAudio(audioFile);
           }),
 
@@ -54,19 +59,40 @@ export class AudioManager extends Effect.Service<AudioManager>()(
     }),
     dependencies: [], // No dependencies, self-contained
   }
-) { }
+) {}
 
-const getSegmentStartAudio = (segment: SegmentType): string => {
+const getSegmentStartAudio = (segment: SegmentType): string | undefined => {
   switch (segment) {
     case 'CUPID':
       return 'Cupidon/Cupidon-1';
-    case 'LOVERS_REVEAL':
+    case 'LOVERS':
       return 'Lovers/combined_lover';
     case 'WEREWOLF':
       return 'Werewolves/Werewolves-1';
-    case 'WITCH':
+    case 'WITCH-HEAL':
       return 'Witch/Witch-wake-up';
-    case 'DAY_VOTE':
-      return 'Day-vote/Vote-Start';
+    case 'WITCH-POISON':
+      return 'Witch/Witch-poison';
+    case 'HUNTER':
+      return 'Hunter/Hunter';
+    case 'DAY':
+      return 'Wake-up-everyone';
+    default:
+      return;
+  }
+};
+
+const getSegmentEndAudio = (segment: SegmentType): string | undefined => {
+  switch (segment) {
+    case 'CUPID':
+      return 'Cupidon/Cupidon-2';
+    case 'WEREWOLF':
+      return 'Werewolves/Werewolves-2';
+    case 'WITCH-POISON':
+      return 'Witch/Witch-end';
+    case 'HUNTER':
+      return 'Hunter-end';
+    default:
+      return;
   }
 };

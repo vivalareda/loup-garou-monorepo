@@ -1,5 +1,6 @@
 import type { DeathInfo, Segment } from '@repo/types';
 import { Effect } from 'effect';
+import { AudioManager } from './AudioManager.js';
 import { DeathManager } from './DeathManager.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
@@ -10,6 +11,7 @@ export const makeGamePhase = Effect.gen(function* () {
   const socket = yield* SocketHandlers;
   const deathManager = yield* DeathManager;
   const gameActions = yield* GameActions;
+  const audioManager = yield* AudioManager;
 
   const processDeathsAndCheckWinner = Effect.gen(function* () {
     // Process any pending deaths
@@ -70,6 +72,8 @@ export const makeGamePhase = Effect.gen(function* () {
           return;
         }
 
+        yield* audioManager.playSegmentStart(segment.type);
+
         switch (segment.type) {
           case 'CUPID':
             yield* gameActions.cupidAction;
@@ -99,6 +103,8 @@ export const makeGamePhase = Effect.gen(function* () {
             break;
         }
 
+        yield* audioManager.playSegmentEnd(segment.type);
+
         // After certain segments (like WEREWOLF or DAY), we should process deaths
         if (
           segment.type === 'WEREWOLF' ||
@@ -123,5 +129,6 @@ export class GamePhase extends Effect.Service<GamePhase>()('GamePhase', {
     DeathManager.Default,
     SocketHandlers.Default,
     GameActions.Default,
+    AudioManager.Default,
   ],
 }) {}

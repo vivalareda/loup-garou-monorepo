@@ -1,6 +1,7 @@
 import { Effect, Layer } from 'effect';
 import { describe, expect, it, vi } from 'vitest';
 import { Player } from '../../core/player.js';
+import { AudioManager } from '../AudioManager.js';
 import { DeathManager } from '../DeathManager.js';
 import { Game } from '../Game.js';
 import { GameActions } from '../GameActions.js';
@@ -43,7 +44,16 @@ describe('GamePhase', () => {
     witchPoisonAction: Effect.succeed(undefined),
   };
 
-  it('should play a segment and call the corresponding action', async () => {
+  const audioManagerPlayStartSpy = vi.fn(() => Effect.succeed(undefined));
+  const audioManagerPlayEndSpy = vi.fn(() => Effect.succeed(undefined));
+
+  const AudioManagerMock = {
+    playSegmentStart: audioManagerPlayStartSpy,
+    playSegmentEnd: audioManagerPlayEndSpy,
+    playWinnerAudio: () => Effect.succeed(undefined),
+  };
+
+  it('should play a segment and call the corresponding action and audio', async () => {
     const program = Effect.gen(function* () {
       const gamePhase = yield* makeGamePhase;
       yield* gamePhase.playSegment({ type: 'CUPID', skip: false });
@@ -62,12 +72,17 @@ describe('GamePhase', () => {
       DeathManagerMock as any
     );
     const GameActionsLayer = Layer.succeed(GameActions, GameActionsMock as any);
+    const AudioManagerLayer = Layer.succeed(
+      AudioManager,
+      AudioManagerMock as any
+    );
 
     const TestLayer = Layer.mergeAll(
       GameLayer,
       SocketLayer,
       DeathManagerLayer,
-      GameActionsLayer
+      GameActionsLayer,
+      AudioManagerLayer
     );
 
     await Effect.runPromise(program.pipe(Effect.provide(TestLayer)));
@@ -76,5 +91,7 @@ describe('GamePhase', () => {
       type: 'CUPID',
       skip: false,
     });
+    expect(audioManagerPlayStartSpy).toHaveBeenCalledWith('CUPID');
+    expect(audioManagerPlayEndSpy).toHaveBeenCalledWith('CUPID');
   });
 });

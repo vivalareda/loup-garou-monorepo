@@ -1,10 +1,12 @@
 import type { ServerToClientEvents } from '@repo/types';
 import { Effect } from 'effect';
+import { AudioManager } from './AudioManager.js';
 import { DayVoting } from './DayVoting.js';
 import { Game } from './Game.js';
 import { HunterService } from './HunterService.js';
 import { Lobby } from './Lobby.js';
 import { LobbyConfig } from './LobbyConfig.js';
+import { SegmentsManager } from './SegmentsManager.js';
 import { SocketServer } from './SocketServer.js';
 import { WerewolfVoting } from './WerewolfVoting.js';
 import { WitchService } from './WitchService.js';
@@ -21,6 +23,8 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       const dayVoting = yield* DayVoting;
       const werewolfVoting = yield* WerewolfVoting;
       const witchService = yield* WitchService;
+      const segmentsManager = yield* SegmentsManager;
+      const audioManager = yield* AudioManager;
 
       return {
         emit: <K extends keyof ServerToClientEvents>(
@@ -62,6 +66,167 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                   })
                 )
                 .pipe(Effect.runPromise);
+            });
+
+            socket.on('admin:start-game', () => {
+              Effect.gen(function* () {
+                console.log('Admin started game');
+                yield* game.startGame;
+                yield* segmentsManager.start;
+              }).pipe(
+                Effect.catchAllCause((cause) =>
+                  Effect.sync(() => console.error(cause))
+                ),
+                Effect.runPromise
+              );
+            });
+
+            socket.on('admin:next-segment', () => {
+              Effect.gen(function* () {
+                console.log('Admin next segment');
+                yield* segmentsManager.next;
+              }).pipe(
+                Effect.catchAllCause((cause) =>
+                  Effect.sync(() => console.error(cause))
+                ),
+                Effect.runPromise
+              );
+            });
+
+            socket.on('admin:simulate-werewolf-vote', (targetId: string) => {
+              Effect.gen(function* () {
+                console.log('Admin simulate werewolf vote:', targetId);
+                // Simulate a vote from a werewolf (first one found)
+                const players = yield* game.getPlayers;
+                const werewolf = players.find(
+                  (p) => p.getRole() === 'WEREWOLF' && p.isAlive
+                );
+                if (werewolf) {
+                  yield* werewolfVoting.handleVote(
+                    werewolf.getSocketId(),
+                    targetId
+                  );
+                }
+              }).pipe(
+                Effect.catchAllCause((cause) =>
+                  Effect.sync(() => console.error(cause))
+                ),
+                Effect.runPromise
+              );
+            });
+
+            socket.on('admin:mock-hunter-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin mock: Werewolf kills Hunter');
+                // Hunter dies at night -> wakes up at end of night
+                yield* audioManager.playSegmentStart('HUNTER');
+                // In a real game, this happens automatically.
+                // For testing, we might want to ensure the client shows the hunter view.
+                yield* io.emit('hunter:pick-required');
+              }).pipe(
+                Effect.catchAllCause((cause) =>
+                  Effect.sync(() => console.error(cause))
+                ),
+                Effect.runPromise
+              );
+            });
+
+            socket.on('admin:mock-lover-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin mock: Werewolf kills Lover');
+                yield* audioManager.playSpecialAudio('LOVER_DEATH');
+              }).pipe(
+                Effect.catchAllCause((cause) =>
+                  Effect.sync(() => console.error(cause))
+                ),
+                Effect.runPromise
+              );
+            });
+
+            socket.on('admin:mock-lover-second-hunter-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin mock: Lover dies, partner is Hunter');
+                yield* audioManager.playSpecialAudio('PARTNER_IS_HUNTER');
+                yield* Effect.sleep('2 seconds');
+                yield* io.emit('hunter:pick-required');
+              }).pipe(
+                Effect.catchAllCause((cause) =>
+                  Effect.sync(() => console.error(cause))
+                ),
+                Effect.runPromise
+              );
+            });
+
+            socket.on('admin:mock-lover-is-hunter-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin mock: Lover IS Hunter dies');
+                yield* audioManager.playSpecialAudio('HUNTER_IS_LOVER');
+                yield* Effect.sleep('2 seconds');
+                yield* io.emit('hunter:pick-required');
+              }).pipe(
+                Effect.catchAllCause((cause) =>
+                  Effect.sync(() => console.error(cause))
+                ),
+                Effect.runPromise
+              );
+            });
+
+            socket.on('admin:mock-day-vote-hunter-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin mock: Village kills Hunter (Standard)');
+                // Standard hunter death during day - no special "Hunter has partner" audio
+                // Just trigger the revenge mechanic
+                yield* io.emit('hunter:pick-required');
+              }).pipe(
+                Effect.catchAllCause((cause) =>
+                  Effect.sync(() => console.error(cause))
+                ),
+                Effect.runPromise
+              );
+            });
+
+            socket.on('admin:mock-day-vote-lover-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin mock: Village kills Lover');
+                yield* audioManager.playDayVoteLoversDeath;
+              }).pipe(
+                Effect.catchAllCause((cause) =>
+                  Effect.sync(() => console.error(cause))
+                ),
+                Effect.runPromise
+              );
+            });
+
+            socket.on('admin:mock-day-vote-lover-is-hunter-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin mock: Village kills Lover who IS Hunter');
+                // Logic: Lover death audio -> Hunter revenge
+                yield* audioManager.playDayVoteLoversDeath;
+                yield* Effect.sleep('2 seconds');
+                yield* io.emit('hunter:pick-required');
+              }).pipe(
+                Effect.catchAllCause((cause) =>
+                  Effect.sync(() => console.error(cause))
+                ),
+                Effect.runPromise
+              );
+            });
+
+            socket.on('admin:mock-day-vote-lover-second-hunter-event', () => {
+              Effect.gen(function* () {
+                console.log(
+                  'Admin mock: Village kills Lover, partner is Hunter'
+                );
+                // Logic: "Hunter has partner" special audio -> Hunter revenge
+                yield* audioManager.playDayVoteHunterHasPartner;
+                yield* Effect.sleep('2 seconds');
+                yield* io.emit('hunter:pick-required');
+              }).pipe(
+                Effect.catchAllCause((cause) =>
+                  Effect.sync(() => console.error(cause))
+                ),
+                Effect.runPromise
+              );
             });
 
             socket.on('werewolf:player-voted', (targetId: string) => {
@@ -235,6 +400,7 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       DayVoting.Default,
       WerewolfVoting.Default,
       WitchService.Default,
+      SegmentsManager.Default,
     ],
   }
 ) {}

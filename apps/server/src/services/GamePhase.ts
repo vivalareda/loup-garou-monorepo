@@ -4,12 +4,12 @@ import { AudioManager } from './AudioManager.js';
 import { DeathManager } from './DeathManager.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
-import { SocketHandlers } from './SocketHandlers.js';
+import { SocketServer } from './SocketServer.js';
 import { SpecialScenarios } from './SpecialScenarios.js';
 
 export const makeGamePhase = Effect.gen(function* () {
   const game = yield* Game;
-  const socket = yield* SocketHandlers;
+  const socket = yield* SocketServer;
   const deathManager = yield* DeathManager;
   const gameActions = yield* GameActions;
   const audioManager = yield* AudioManager;
@@ -132,7 +132,7 @@ export class GamePhase extends Effect.Service<GamePhase>()('GamePhase', {
   dependencies: [
     Game.Default,
     DeathManager.Default,
-    SocketHandlers.Default,
+    SocketServer.Default,
     GameActions.Default,
     AudioManager.Default,
     SpecialScenarios.Default,

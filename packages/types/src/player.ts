@@ -1,8 +1,19 @@
-import type { Role } from './role';
+import type { Role } from './role.js';
 
 export type PlayerIdentity = {
   readonly name: string;
   readonly sid: string;
+};
+
+export type PlayerListItem = {
+  name: string;
+  socketId: string;
+};
+
+export type WaitingRoomPlayer = {
+  type: 'waiting';
+  name: string;
+  socketId: string;
 };
 
 export type LobbyPlayer = PlayerIdentity & {

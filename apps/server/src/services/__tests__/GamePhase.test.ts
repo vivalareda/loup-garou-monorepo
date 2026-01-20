@@ -5,8 +5,9 @@ import { AudioManager } from '../AudioManager.js';
 import { DeathManager } from '../DeathManager.js';
 import { Game } from '../Game.js';
 import { GameActions } from '../GameActions.js';
-import { GamePhase, makeGamePhase } from '../GamePhase.js';
+import { makeGamePhase } from '../GamePhase.js';
 import { SocketHandlers } from '../SocketHandlers.js';
+import { SpecialScenarios } from '../SpecialScenarios.js';
 
 describe('GamePhase', () => {
   const mockPlayer = new Player('TestPlayer', 'socket1', 'VILLAGER');
@@ -25,10 +26,6 @@ describe('GamePhase', () => {
   const socketHandlersEmitSpy = vi.fn((event, data) => {
     return Effect.succeed(undefined);
   });
-
-  const SocketHandlersMock = {
-    emit: socketHandlersEmitSpy,
-  };
 
   const DeathManagerMock = {
     processDeaths: (fn: any) => Effect.succeed([]),
@@ -51,6 +48,10 @@ describe('GamePhase', () => {
     playSegmentStart: audioManagerPlayStartSpy,
     playSegmentEnd: audioManagerPlayEndSpy,
     playWinnerAudio: () => Effect.succeed(undefined),
+  };
+
+  const SpecialScenariosMock = {
+    handleSpecialDeathScenarios: Effect.succeed(undefined),
   };
 
   it('should play a segment and call the corresponding action and audio', async () => {
@@ -77,12 +78,18 @@ describe('GamePhase', () => {
       AudioManagerMock as any
     );
 
+    const SpecialScenariosLayer = Layer.succeed(
+      SpecialScenarios,
+      SpecialScenariosMock as any
+    );
+
     const TestLayer = Layer.mergeAll(
       GameLayer,
       SocketLayer,
       DeathManagerLayer,
       GameActionsLayer,
-      AudioManagerLayer
+      AudioManagerLayer,
+      SpecialScenariosLayer
     );
 
     await Effect.runPromise(program.pipe(Effect.provide(TestLayer)));

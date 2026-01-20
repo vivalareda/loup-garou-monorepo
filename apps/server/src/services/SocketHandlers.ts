@@ -1,5 +1,6 @@
 import type { ServerToClientEvents } from '@repo/types';
 import { Effect } from 'effect';
+import { DayVoting } from './DayVoting.js';
 import { Game } from './Game.js';
 import { HunterService } from './HunterService.js';
 import { Lobby } from './Lobby.js';
@@ -15,6 +16,7 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       const config = yield* LobbyConfig;
       const game = yield* Game;
       const hunterService = yield* HunterService;
+      const dayVoting = yield* DayVoting;
 
       return {
         emit: <K extends keyof ServerToClientEvents>(
@@ -118,6 +120,33 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                 .pipe(Effect.runPromise);
             });
 
+            socket.on('day:vote', (targetId: string) => {
+              Effect.gen(function* () {
+                yield* dayVoting.handleVote(socket.id, targetId);
+              })
+                .pipe(
+                  Effect.catchTags({
+                    VotingClosedError: () =>
+                      Effect.sync(() => {
+                        socket.emit('error', 'Voting is closed');
+                      }),
+                    InvalidVoterError: () =>
+                      Effect.sync(() => {
+                        socket.emit('error', 'You cannot vote');
+                      }),
+                    InvalidVoteTargetError: () =>
+                      Effect.sync(() => {
+                        socket.emit('error', 'Invalid vote target');
+                      }),
+                    PlayerNotFoundError: () =>
+                      Effect.sync(() => {
+                        socket.emit('error', 'Player not found');
+                      }),
+                  })
+                )
+                .pipe(Effect.runPromise);
+            });
+
             socket.on('disconnect', () => {
               console.log('Player disconnected:', socket.id);
             });
@@ -131,6 +160,7 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       LobbyConfig.Live,
       Game.Default,
       HunterService.Default,
+      DayVoting.Default,
     ],
   }
 ) {}

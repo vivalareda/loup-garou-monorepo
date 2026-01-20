@@ -77,6 +77,7 @@ export type ClientToServerEvents = {
   'witch:skipped-heal': () => void;
   'witch:skipped-poison': () => void;
 
+  'day:vote': (targetPlayer: string) => void;
   'day:player-voted': (targetPlayer: string) => void;
   'alert:hunter-died': () => void;
   'hunter:killed-player': (selectedPlayer: string) => void;

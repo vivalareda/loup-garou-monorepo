@@ -4,8 +4,10 @@ import { DayVoting } from './DayVoting.js';
 import { DeathManager } from './DeathManager.js';
 import { Game } from './Game.js';
 import { HunterService } from './HunterService.js';
+import { SeerService } from './SeerService.js';
 import { SocketServer } from './SocketServer.js';
 import { WerewolfVoting } from './WerewolfVoting.js';
+import { WitchService } from './WitchService.js';
 
 const make = Effect.gen(function* () {
   const game = yield* Game;
@@ -15,6 +17,8 @@ const make = Effect.gen(function* () {
   const deathManager = yield* DeathManager;
   const audioManager = yield* AudioManager;
   const hunterService = yield* HunterService;
+  const seerService = yield* SeerService;
+  const witchService = yield* WitchService;
 
   return {
     _tag: '@app/EventsActions' as const,
@@ -74,6 +78,48 @@ const make = Effect.gen(function* () {
         // Delegate to HunterService
         yield* hunterService.processRevenge(hunterSid, targetSid);
       }),
+
+    handleSeerCheck: (seerSid: string, targetSid: string) =>
+      Effect.gen(function* () {
+        // Check role
+        const role = yield* seerService.checkPlayer(targetSid);
+
+        // Notify seer
+        yield* socketServer.emitTo(seerSid, 'player:role-assigned', role);
+        yield* Console.log(`[EventsActions] Seer checked player: ${targetSid}`);
+      }),
+
+    handleWitchAction: (
+      witchSid: string,
+      action: 'heal' | 'poison' | 'skip-heal' | 'skip-poison',
+      targetSid?: string
+    ) =>
+      Effect.gen(function* () {
+        switch (action) {
+          case 'heal':
+            yield* witchService.healPlayer;
+            yield* socketServer.emitTo(witchSid, 'witch:healed-player');
+            break;
+          case 'poison':
+            if (targetSid) {
+              yield* witchService.poisonPlayer(targetSid);
+              yield* socketServer.emitTo(
+                witchSid,
+                'witch:poisoned-player',
+                targetSid
+              );
+            }
+            break;
+          case 'skip-heal':
+            yield* witchService.skipHeal;
+            yield* socketServer.emitTo(witchSid, 'witch:skipped-heal');
+            break;
+          case 'skip-poison':
+            yield* witchService.skipPoison;
+            yield* socketServer.emitTo(witchSid, 'witch:skipped-poison');
+            break;
+        }
+      }),
   };
 });
 
@@ -89,6 +135,8 @@ export class EventsActions extends Effect.Service<EventsActions>()(
       DeathManager.Default,
       AudioManager.Default,
       HunterService.Default,
+      SeerService.Default,
+      WitchService.Default,
     ],
   }
 ) {

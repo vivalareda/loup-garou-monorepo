@@ -31,6 +31,10 @@ export type ServerToClientEvents = {
 
   'witch:can-heal': (playerSid: string) => void;
   'witch:pick-poison-player': () => void;
+  'witch:healed-player': () => void;
+  'witch:poisoned-player': (targetPlayer: string) => void;
+  'witch:skipped-heal': () => void;
+  'witch:skipped-poison': () => void;
 
   'night:deaths-announced': (deaths: DeathInfo[]) => void;
   'game:segment-start': (segment: { type: string; skip: boolean }) => void;

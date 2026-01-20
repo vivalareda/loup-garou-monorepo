@@ -135,6 +135,44 @@ export class DeathManager extends Effect.Service<DeathManager>()(
           };
           pendingDeaths.set(victimId, pendingDeath);
         }),
+
+        processDeaths: Effect.fn('DeathManager.processDeaths')(function* (
+          getPartner: (
+            playerId: string
+          ) => Effect.Effect<string | undefined, any, any>
+        ) {
+          // Pass 1: Mark direct victims as dead
+          const deaths = new Map<string, PendingDeath>();
+
+          for (const [id, death] of pendingDeaths) {
+            deaths.set(id, death);
+            yield* Effect.log(
+              `[DeathManager] Processing direct death: ${id} (${death.cause})`
+            );
+          }
+
+          // Pass 2: Handle cascades (lovers)
+          const directDeaths = Array.from(deaths.values());
+          for (const death of directDeaths) {
+            const partnerId = yield* getPartner(death.playerId);
+            if (partnerId && !deaths.has(partnerId)) {
+              const suicide: PendingDeath = {
+                playerId: partnerId,
+                cause: 'PARTNER_SUICIDE',
+                metadata: { loverId: death.playerId },
+              };
+              deaths.set(partnerId, suicide);
+              yield* Effect.log(
+                `[DeathManager] Added cascade death (suicide): ${partnerId}`
+              );
+            }
+          }
+
+          // Clear pending deaths as they are now processed
+          pendingDeaths.clear();
+
+          return Array.from(deaths.values());
+        }),
       };
     }),
   }

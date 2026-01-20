@@ -123,4 +123,69 @@ describe('DeathManager', () => {
 
     Effect.runSync(program);
   });
+
+  describe('processDeaths', () => {
+    it('should process direct deaths', () => {
+      const program = Effect.gen(function* () {
+        yield* deathManager.addPendingDeath('p1', 'WEREWOLVES');
+        yield* deathManager.addPendingDeath('p2', 'WITCH_POISON');
+
+        const deaths = yield* deathManager.processDeaths(() =>
+          Effect.succeed(undefined)
+        );
+
+        expect(deaths).toHaveLength(2);
+        expect(deaths.find((d) => d.playerId === 'p1')?.cause).toBe(
+          'WEREWOLVES'
+        );
+        expect(deaths.find((d) => d.playerId === 'p2')?.cause).toBe(
+          'WITCH_POISON'
+        );
+      });
+
+      Effect.runSync(program);
+    });
+
+    it('should handle cascades (lovers suicide)', () => {
+      const program = Effect.gen(function* () {
+        // p1 dies, p2 is lover of p1
+        yield* deathManager.addPendingDeath('p1', 'WEREWOLVES');
+
+        const deaths = yield* deathManager.processDeaths((id) =>
+          id === 'p1' ? Effect.succeed('p2') : Effect.succeed(undefined)
+        );
+
+        expect(deaths).toHaveLength(2);
+
+        const p1Death = deaths.find((d) => d.playerId === 'p1');
+        expect(p1Death?.cause).toBe('WEREWOLVES');
+
+        const p2Death = deaths.find((d) => d.playerId === 'p2');
+        expect(p2Death?.cause).toBe('PARTNER_SUICIDE');
+        expect(p2Death?.metadata?.loverId).toBe('p1');
+      });
+
+      Effect.runSync(program);
+    });
+
+    it('should not add duplicate deaths if lover is already dead', () => {
+      const program = Effect.gen(function* () {
+        // both die directly
+        yield* deathManager.addPendingDeath('p1', 'WEREWOLVES');
+        yield* deathManager.addPendingDeath('p2', 'WITCH_POISON');
+
+        // p2 is lover of p1, but p2 is already dying
+        const deaths = yield* deathManager.processDeaths((id) =>
+          id === 'p1' ? Effect.succeed('p2') : Effect.succeed(undefined)
+        );
+
+        expect(deaths).toHaveLength(2);
+        // p2 should keep original cause
+        const p2Death = deaths.find((d) => d.playerId === 'p2');
+        expect(p2Death?.cause).toBe('WITCH_POISON');
+      });
+
+      Effect.runSync(program);
+    });
+  });
 });

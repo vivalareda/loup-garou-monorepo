@@ -52,6 +52,7 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
 
     const players = new Map<string, Player>();
     const specialRolePlayers = new Map<Role, Player>();
+    let lovers: [Player, Player] | null = null;
 
     const setSpecialRolePlayer = (player: Player, role: Role) => {
       if (role !== 'WEREWOLF' && role !== 'VILLAGER') {
@@ -94,6 +95,23 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
             players.get(socketId) ??
             (yield* Effect.fail(new PlayerNotFoundError({ socketId })))
           );
+        }),
+      setLovers: (player1: Player, player2: Player) =>
+        Effect.sync(() => {
+          lovers = [player1, player2];
+        }),
+      getPartner: (player: Player) =>
+        Effect.sync(() => {
+          if (!lovers) {
+            return;
+          }
+          if (lovers[0] === player) {
+            return lovers[1];
+          }
+          if (lovers[1] === player) {
+            return lovers[0];
+          }
+          return;
         }),
     };
   }),

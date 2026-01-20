@@ -18,3 +18,5 @@ export class VoteProcessingError extends Data.TaggedError(
   message: string;
   cause?: unknown;
 }> {}
+
+export class VotingClosedError extends Data.TaggedError('VotingClosedError') {}

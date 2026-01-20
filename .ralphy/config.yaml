@@ -1,0 +1,18 @@
+project:
+  name: loup-garou
+  language: TypeScript
+  framework: ""
+  description: ""
+commands:
+  test: ""
+  lint: npm run lint
+  build: npm run build
+rules:
+  - You must use Effect for the server
+  - You must test every feature
+  - If some audio files are missing you can create mock names just make it
+    obvious
+  - Create as custom errors to make it easy to know what failed if something
+    goes wrong
+boundaries:
+  never_touch: []

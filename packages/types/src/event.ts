@@ -34,6 +34,8 @@ export type ServerToClientEvents = {
 
   'night:deaths-announced': (deaths: DeathInfo[]) => void;
   'day:voting-phase-start': () => void;
+  'day-vote:start': () => void;
+  'day-vote:update': (currentvotes: Record<string, number>) => void;
 
   'hunter:pick-required': () => void;
   'hunter:killed-player': (selectedPlayer: string) => void;

@@ -1,6 +1,6 @@
 import type { Role } from '@repo/types';
 import { Effect } from 'effect';
-import { Player } from '@/core/player.js';
+import { Player } from '../core/player.js';
 import { PlayerNotFoundError, SpecialPlayerNotFoundError } from './errors.js';
 import { Lobby } from './Lobby.js';
 
@@ -98,4 +98,4 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
     };
   }),
   dependencies: [Lobby.Default],
-}) { }
+}) {}

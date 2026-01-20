@@ -2,11 +2,19 @@ import { createServer, type Server } from 'node:http';
 import { Config, Context, Effect, Layer } from 'effect';
 
 const acquire = (port: number, host: string) =>
-  Effect.async<Server>((resume) => {
+  Effect.async<Server, Error>((resume) => {
     const server = createServer();
-    server.listen(port, host, () => {
+    server.on('error', (err) => {
+      resume(Effect.fail(err));
+    });
+    // Use port from env if set (by test setup), otherwise config default
+    const listenPort = process.env.PORT
+      ? Number.parseInt(process.env.PORT, 10)
+      : port;
+
+    server.listen(listenPort, host, () => {
       console.log(
-        `Werewolf Game Server running on port ${port} with host ${host}`
+        `Werewolf Game Server running on port ${listenPort} with host ${host}`
       );
       resume(Effect.succeed(server));
     });

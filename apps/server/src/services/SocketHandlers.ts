@@ -6,6 +6,8 @@ import { HunterService } from './HunterService.js';
 import { Lobby } from './Lobby.js';
 import { LobbyConfig } from './LobbyConfig.js';
 import { SocketServer } from './SocketServer.js';
+import { WerewolfVoting } from './WerewolfVoting.js';
+import { WitchService } from './WitchService.js';
 
 export class SocketHandlers extends Effect.Service<SocketHandlers>()(
   '@app/SocketHandlers',
@@ -17,6 +19,8 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       const game = yield* Game;
       const hunterService = yield* HunterService;
       const dayVoting = yield* DayVoting;
+      const werewolfVoting = yield* WerewolfVoting;
+      const witchService = yield* WitchService;
 
       return {
         emit: <K extends keyof ServerToClientEvents>(
@@ -24,7 +28,6 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
           ...args: Parameters<ServerToClientEvents[K]>
         ) =>
           Effect.sync(() => {
-            // @ts-expect-error
             io.io.emit(event, ...args);
           }),
         promptCupid: Effect.gen(function* () {
@@ -59,6 +62,75 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                   })
                 )
                 .pipe(Effect.runPromise);
+            });
+
+            socket.on('werewolf:player-voted', (targetId: string) => {
+              Effect.gen(function* () {
+                yield* werewolfVoting.handleVote(socket.id, targetId);
+              })
+                .pipe(
+                  Effect.catchTags({
+                    InvalidVoterError: (err) =>
+                      Effect.sync(() => {
+                        socket.emit('error', err.reason);
+                      }),
+                    InvalidVoteTargetError: (err) =>
+                      Effect.sync(() => {
+                        socket.emit('error', err.reason);
+                      }),
+                    PlayerNotFoundError: () =>
+                      Effect.sync(() => {
+                        socket.emit('error', 'Player not found');
+                      }),
+                  })
+                )
+                .pipe(Effect.runPromise);
+            });
+
+            socket.on('witch:healed-player', () => {
+              Effect.gen(function* () {
+                yield* witchService.healPlayer;
+              })
+                .pipe(
+                  Effect.catchTags({
+                    WitchHasNoPotionError: () =>
+                      Effect.sync(() => {
+                        socket.emit('error', 'You have no heal potion left');
+                      }),
+                  })
+                )
+                .pipe(Effect.runPromise);
+            });
+
+            socket.on('witch:poisoned-player', (targetId: string) => {
+              Effect.gen(function* () {
+                yield* witchService.poisonPlayer(targetId);
+              })
+                .pipe(
+                  Effect.catchTags({
+                    WitchHasNoPotionError: () =>
+                      Effect.sync(() => {
+                        socket.emit('error', 'You have no poison potion left');
+                      }),
+                    InvalidWitchTargetError: (err) =>
+                      Effect.sync(() => {
+                        socket.emit('error', err.reason);
+                      }),
+                    PlayerNotFoundError: () =>
+                      Effect.sync(() => {
+                        socket.emit('error', 'Player not found');
+                      }),
+                  })
+                )
+                .pipe(Effect.runPromise);
+            });
+
+            socket.on('witch:skipped-heal', () => {
+              witchService.skipHeal.pipe(Effect.runPromise);
+            });
+
+            socket.on('witch:skipped-poison', () => {
+              witchService.skipPoison.pipe(Effect.runPromise);
             });
 
             socket.on('cupid:lovers-pick', (selectedPlayers: string[]) => {
@@ -161,6 +233,8 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       Game.Default,
       HunterService.Default,
       DayVoting.Default,
+      WerewolfVoting.Default,
+      WitchService.Default,
     ],
   }
 ) {}

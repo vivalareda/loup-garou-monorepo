@@ -3,48 +3,7 @@ import { Effect } from 'effect';
 import { Player } from '@/core/player.js';
 import { PlayerNotFoundError, SpecialPlayerNotFoundError } from './errors.js';
 import { Lobby } from './Lobby.js';
-
-function initRolesList(playerCount: number): Role[] {
-  const roles: Role[] = [];
-
-  if (playerCount >= 4) {
-    const werewolfCount = Math.floor(playerCount / 3) || 1;
-
-    for (let i = 0; i < werewolfCount; i++) {
-      roles.push('WEREWOLF');
-    }
-
-    roles.push('CUPID');
-
-    if (playerCount >= 6) {
-      roles.push('WITCH');
-    }
-
-    if (playerCount >= 8) {
-      roles.push('HUNTER');
-    }
-
-    const remainingSlots = playerCount - roles.length;
-    for (let i = 0; i < remainingSlots; i++) {
-      roles.push('VILLAGER');
-    }
-  } else {
-    for (let i = 0; i < playerCount; i++) {
-      roles.push('VILLAGER');
-    }
-  }
-
-  return shuffleArray(roles);
-}
-
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
+import { initRolesList } from './role-assignment.js';
 
 export class Game extends Effect.Service<Game>()('@app/Game', {
   effect: Effect.gen(function* () {
@@ -94,4 +53,4 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
     };
   }),
   dependencies: [Lobby.Default],
-}) { }
+}) {}

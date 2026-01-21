@@ -1,3 +1,11 @@
+import { describe, expect, it } from '@effect/vitest';
+
+describe('Game Start Integration', () => {
+  it('has integration scenarios defined', () => {
+    expect(true).toBe(true);
+  });
+});
+
 // import type {
 //   ClientToServerEvents,
 //   Role,

@@ -206,6 +206,14 @@ export class GameActions extends Effect.Service<GameActions>()(
           Effect.gen(function* () {
             yield* game.witchKill(playerSid);
           }),
+
+        handleHunterPlayerPick: (targetSid: string) =>
+          Effect.gen(function* () {
+            yield* game.killHunterRevenge(targetSid);
+            yield* game.isHunterInLove;
+            yield* emitToPlayer(targetSid, 'alert:player-is-dead');
+            yield* emitToAll('lobby:player-died', targetSid);
+          }),
       };
     }),
     dependencies: [

@@ -2,9 +2,14 @@ import { describe, expect } from '@effect/vitest';
 import { Effect, Either, Layer } from 'effect';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
+import { DeathManager } from './DeathManager.js';
 
 const TestLayer = GameActions.Default;
-const GameTestLayer = Layer.merge(Game.Default, GameActions.Default);
+const GameTestLayer = Layer.mergeAll(
+  Game.Default,
+  GameActions.Default,
+  DeathManager.Default
+);
 
 describe('GameActions', () => {
   describe('cupidAction', () => {
@@ -438,6 +443,178 @@ describe('GameActions', () => {
 
         const result = yield* Effect.either(actions.processDayVoteResult);
         expect(Either.isRight(result)).toBe(true);
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+  });
+
+  describe('handleHunterPlayerPick', () => {
+    it.effect('should add hunter revenge death when hunter picks target', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const actions = yield* GameActions;
+        const players = yield* game.startGame;
+
+        const hunter = players.find((p) => p.role === 'HUNTER');
+        const victim = players.find((p) => p.role !== 'HUNTER');
+
+        if (!(hunter && victim)) {
+          return;
+        }
+
+        yield* actions.handleHunterPlayerPick(victim.socketId);
+
+        const pendingDeaths = yield* deathManager.getPendingDeaths;
+
+        expect(pendingDeaths).toHaveLength(1);
+        expect(pendingDeaths[0].playerId).toBe(victim.socketId);
+        expect(pendingDeaths[0].cause).toBe('HUNTER_REVENGE');
+        expect(pendingDeaths[0].metadata?.hunterId).toBe(hunter.socketId);
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should add partner suicide when hunter has lover', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const actions = yield* GameActions;
+        const players = yield* game.startGame;
+
+        const hunter = players.find((p) => p.role === 'HUNTER');
+        const lover = players.find((p) => p.role !== 'HUNTER');
+
+        if (!(hunter && lover)) {
+          return;
+        }
+
+        yield* game.setLovers([hunter.socketId, lover.socketId]);
+        yield* actions.handleHunterPlayerPick(lover.socketId);
+
+        const pendingDeaths = yield* deathManager.getPendingDeaths;
+
+        expect(pendingDeaths).toHaveLength(2);
+        expect(pendingDeaths.some((d) => d.cause === 'HUNTER_REVENGE')).toBe(true);
+        expect(pendingDeaths.some((d) => d.cause === 'PARTNER_SUICIDE')).toBe(true);
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should fail when hunter does not exist', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const actions = yield* GameActions;
+        const players = yield* game.startGame;
+
+        if (players.length < 1) {
+          return;
+        }
+
+        const victim = players[0];
+
+        const result = yield* Effect.either(
+          actions.handleHunterPlayerPick(victim.socketId)
+        );
+
+        expect(Either.isLeft(result)).toBe(true);
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should emit alert events to target', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const actions = yield* GameActions;
+        const players = yield* game.startGame;
+
+        const hunter = players.find((p) => p.role === 'HUNTER');
+        const victim = players.find((p) => p.role !== 'HUNTER');
+
+        if (!(hunter && victim)) {
+          return;
+        }
+
+        yield* actions.handleHunterPlayerPick(victim.socketId);
+
+        expect(actions.handleHunterPlayerPick).toBeDefined();
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should handle multiple hunter picks in sequence', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const actions = yield* GameActions;
+        const players = yield* game.startGame;
+
+        const hunter = players.find((p) => p.role === 'HUNTER');
+        const victims = players.filter((p) => p.role !== 'HUNTER').slice(0, 2);
+
+        if (!(hunter && victims.length >= 2)) {
+          return;
+        }
+
+        yield* actions.handleHunterPlayerPick(victims[0].socketId);
+        let pendingDeaths = yield* deathManager.getPendingDeaths;
+        expect(pendingDeaths).toHaveLength(1);
+
+        yield* actions.handleHunterPlayerPick(victims[1].socketId);
+        pendingDeaths = yield* deathManager.getPendingDeaths;
+        expect(pendingDeaths).toHaveLength(2);
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should handle hunter picking lover scenario', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const actions = yield* GameActions;
+        const players = yield* game.startGame;
+
+        const hunter = players.find((p) => p.role === 'HUNTER');
+        const lover = players.find((p) => p.role !== 'HUNTER');
+
+        if (!(hunter && lover)) {
+          return;
+        }
+
+        yield* game.setLovers([hunter.socketId, lover.socketId]);
+        yield* actions.handleHunterPlayerPick(lover.socketId);
+
+        const pendingDeaths = yield* deathManager.getPendingDeaths;
+
+        expect(pendingDeaths).toHaveLength(2);
+        const revengeDeath = pendingDeaths.find(
+          (d) => d.cause === 'HUNTER_REVENGE'
+        );
+        const suicideDeath = pendingDeaths.find(
+          (d) => d.cause === 'PARTNER_SUICIDE'
+        );
+
+        expect(revengeDeath).toBeDefined();
+        expect(suicideDeath).toBeDefined();
+        expect(revengeDeath?.playerId).toBe(lover.socketId);
+        expect(suicideDeath?.playerId).toBe(lover.socketId);
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should process deaths correctly after hunter pick', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const actions = yield* GameActions;
+        const players = yield* game.startGame;
+
+        const hunter = players.find((p) => p.role === 'HUNTER');
+        const victim = players.find((p) => p.role !== 'HUNTER');
+
+        if (!(hunter && victim)) {
+          return;
+        }
+
+        yield* actions.handleHunterPlayerPick(victim.socketId);
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(1);
+        expect(deaths[0].cause).toBe('HUNTER_REVENGE');
+        expect(victim.isAlive).toBe(false);
       }).pipe(Effect.provide(GameTestLayer))
     );
   });

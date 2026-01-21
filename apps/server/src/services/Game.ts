@@ -408,7 +408,7 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
         }
 
         return deathInfos;
-      }).pipe(Effect.withSpan('processPendingDeaths')),
+      }),
 
       checkIfWinner: Effect.sync(() => {
         return null;
@@ -433,6 +433,79 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
 
       canWitchPoison: Effect.sync(() => {
         return witchHasPoisonPotion;
+      }),
+
+      killHunterRevenge: (targetSid: string) =>
+        Effect.gen(function* () {
+          const deathManager = yield* DeathManager;
+
+          const hunter = specialRolePlayers.get('HUNTER');
+          if (!hunter) {
+            return yield* Effect.fail(
+              new Error('Tried to kill hunter target but hunter player not found')
+            );
+          }
+
+          const target = players.get(targetSid);
+          if (!target) {
+            return yield* Effect.fail(
+              new Error(`Player with sid ${targetSid} not found`)
+            );
+          }
+
+          yield* deathManager.addHunterRevenge(targetSid, hunter.socketId);
+        }),
+
+      isHunterInLove: Effect.gen(function* () {
+        const deathManager = yield* DeathManager;
+
+        const hunter = specialRolePlayers.get('HUNTER');
+        if (!hunter) {
+          return yield* Effect.void;
+        }
+
+        const isLover = lovers.some(
+          (lover) => lover.socketId === hunter.socketId
+        );
+
+        if (isLover) {
+          const lover = lovers.find(
+            (l) => l.socketId !== hunter.socketId
+          );
+          if (
+            lover?.isAlive &&
+            !(yield* deathManager.isInDeathQueue(lover.socketId))
+          ) {
+            yield* deathManager.addPartnerSuicide(
+              lover.socketId,
+              hunter.socketId
+            );
+          }
+        }
+      }),
+
+      hunterIsInDeathQueue: Effect.gen(function* () {
+        const deathManager = yield* DeathManager;
+
+        const hunter = specialRolePlayers.get('HUNTER');
+        if (!hunter) {
+          return false;
+        }
+
+        return yield* deathManager.isInDeathQueue(hunter.socketId);
+      }),
+
+      isPartnerHunter: Effect.gen(function* () {
+        const deathManager = yield* DeathManager;
+
+        for (const lover of lovers) {
+          const inQueue = yield* deathManager.isInDeathQueue(lover.socketId);
+          if (!inQueue) {
+            return lover.role === 'HUNTER';
+          }
+        }
+
+        return false;
       }),
     };
   }),

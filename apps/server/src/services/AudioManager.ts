@@ -50,11 +50,23 @@ export class AudioManager extends Effect.Service<AudioManager>()(
               ? 'End-game/Werewolves-won'
               : 'End-game/Villagers-won'
           ),
+
+        nightHasEndedAudio: playAudio('Night/night-has-ended'),
+
+        playLoverAudio: playAudio('Lovers/combined_lover'),
+
+        playSecondLoverIsHunterAudio: playAudio(
+          'Hunter/second-lover-is-hunter'
+        ),
+
+        playHunterIsLoverAudio: playAudio('Hunter/hunter-is-lover'),
+
+        playHunterAudio: playAudio('Hunter/hunter'),
       };
     }),
-    dependencies: [], // No dependencies, self-contained
+    dependencies: [],
   }
-) { }
+) {}
 
 const getSegmentStartAudio = (segment: SegmentType): string => {
   switch (segment) {

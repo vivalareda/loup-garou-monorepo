@@ -47,6 +47,51 @@ describe('Lobby Service', () => {
     }).pipe(Effect.provide(TestLayer))
   );
 
+  it.effect('returns all players in insertion order', () =>
+    Effect.gen(function* () {
+      const lobby = yield* Lobby;
+
+      yield* lobby.addPlayer('Alice', 'socket-1');
+      yield* lobby.addPlayer('Bob', 'socket-2');
+
+      const players = yield* lobby.getAllPlayers;
+
+      expect(players).toHaveLength(2);
+      expect(players.map((player) => player.name)).toEqual(['Alice', 'Bob']);
+    }).pipe(Effect.provide(TestLayer))
+  );
+
+  it.effect('tracks player count updates', () =>
+    Effect.gen(function* () {
+      const lobby = yield* Lobby;
+
+      const emptyCount = yield* lobby.getPlayerCount;
+      expect(emptyCount).toBe(0);
+
+      yield* lobby.addPlayer('Alice', 'socket-1');
+
+      const count = yield* lobby.getPlayerCount;
+      expect(count).toBe(1);
+    }).pipe(Effect.provide(TestLayer))
+  );
+
+  it.effect('clears all players', () =>
+    Effect.gen(function* () {
+      const lobby = yield* Lobby;
+
+      yield* lobby.addPlayer('Alice', 'socket-1');
+      yield* lobby.addPlayer('Bob', 'socket-2');
+
+      yield* lobby.clear;
+
+      const players = yield* lobby.getAllPlayers;
+      const count = yield* lobby.getPlayerCount;
+
+      expect(players).toHaveLength(0);
+      expect(count).toBe(0);
+    }).pipe(Effect.provide(TestLayer))
+  );
+
   // it('should handle concurrent adds without race conditions', async () => {
   //   const testLayer = Layer.mergeAll(Lobby.Default, LobbyConfig.Live);
   //

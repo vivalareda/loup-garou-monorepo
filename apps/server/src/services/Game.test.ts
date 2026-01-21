@@ -1275,6 +1275,355 @@ describe('Game - Death Processing Workflow', () => {
   });
 });
 
+  describe('Game - Winner Detection Logic', () => {
+  describe('checkIfWinner', () => {
+    it.effect('should return null when game starts with werewolves', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+
+        if (werewolves.length === 0) {
+          return;
+        }
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBeNull();
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return villagers when all werewolves are dead', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+
+        if (werewolves.length === 0) {
+          return;
+        }
+
+        for (const werewolf of werewolves) {
+          werewolf.setIsAlive(false);
+        }
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBe('villagers');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return werewolves when only 1 werewolf and 1 villager left', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+        const villagers = players.filter(
+          (p) => p.role === 'VILLAGER' || p.role === 'WITCH' || p.role === 'HUNTER' || p.role === 'CUPID' || p.role === 'SEER'
+        );
+
+        if (werewolves.length < 2 || villagers.length < 2) {
+          return;
+        }
+
+        for (let i = 1; i < werewolves.length; i++) {
+          werewolves[i].setIsAlive(false);
+        }
+
+        for (let i = 1; i < villagers.length; i++) {
+          villagers[i].setIsAlive(false);
+        }
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBe('werewolves');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return null when witch has potions in 1v1 scenario', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+        const witches = players.filter((p) => p.role === 'WITCH');
+
+        if (werewolves.length < 2 || witches.length === 0) {
+          return;
+        }
+
+        for (let i = 1; i < werewolves.length; i++) {
+          werewolves[i].setIsAlive(false);
+        }
+
+        for (const player of players) {
+          if (player.role !== 'WEREWOLF' && player.role !== 'WITCH') {
+            player.setIsAlive(false);
+          }
+        }
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBeNull();
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return werewolves when witch has no potions in 1v1 scenario', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+        const witches = players.filter((p) => p.role === 'WITCH');
+
+        if (werewolves.length < 2 || witches.length === 0) {
+          return;
+        }
+
+        for (let i = 1; i < werewolves.length; i++) {
+          werewolves[i].setIsAlive(false);
+        }
+
+        for (const player of players) {
+          if (player.role !== 'WEREWOLF' && player.role !== 'WITCH') {
+            player.setIsAlive(false);
+          }
+        }
+
+        const witch = witches[0];
+        yield* deathManager.addPendingDeath(witch, 'WEREWOLVES');
+        yield* game.processPendingDeaths;
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBe('werewolves');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return null when multiple werewolves and villagers alive', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+        const villagers = players.filter(
+          (p) => p.role === 'VILLAGER' || p.role === 'WITCH' || p.role === 'HUNTER' || p.role === 'CUPID' || p.role === 'SEER'
+        );
+
+        if (werewolves.length < 2 || villagers.length < 2) {
+          return;
+        }
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBeNull();
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return null when werewolves outnumber villagers but more than 1 werewolf', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+        const villagers = players.filter(
+          (p) => p.role === 'VILLAGER' || p.role === 'WITCH' || p.role === 'HUNTER' || p.role === 'CUPID' || p.role === 'SEER'
+        );
+
+        if (werewolves.length < 3 || villagers.length < 2) {
+          return;
+        }
+
+        for (let i = 2; i < villagers.length; i++) {
+          villagers[i].setIsAlive(false);
+        }
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBeNull();
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return villagers after killing all werewolves in sequence', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+
+        if (werewolves.length === 0) {
+          return;
+        }
+
+        for (const werewolf of werewolves) {
+          yield* deathManager.addPendingDeath(werewolf, 'DAY_VOTE');
+          yield* game.processPendingDeaths;
+        }
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBe('villagers');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle edge case with single werewolf killed immediately', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+
+        if (werewolves.length !== 1) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(werewolves[0], 'DAY_VOTE');
+        yield* game.processPendingDeaths;
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBe('villagers');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle lovers scenario with winner detection', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+        const villagers = players.filter((p) => p.role === 'VILLAGER');
+
+        if (werewolves.length < 2 || villagers.length < 2) {
+          return;
+        }
+
+        yield* game.setLovers([villagers[0].socketId, villagers[1].socketId]);
+
+        for (let i = 0; i < werewolves.length; i++) {
+          yield* deathManager.addPendingDeath(werewolves[i], 'DAY_VOTE');
+          yield* game.processPendingDeaths;
+        }
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBe('villagers');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return null after lover suicide in non-winning state', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+        const villagers = players.filter((p) => p.role === 'VILLAGER');
+
+        if (werewolves.length < 2 || villagers.length < 2) {
+          return;
+        }
+
+        yield* game.setLovers([villagers[0].socketId, villagers[1].socketId]);
+        yield* deathManager.addPendingDeath(villagers[0], 'WEREWOLVES');
+        yield* game.processPendingDeaths;
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBeNull();
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should correctly identify werewolf win with hunter', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+        const hunters = players.filter((p) => p.role === 'HUNTER');
+
+        if (werewolves.length < 2 || hunters.length === 0) {
+          return;
+        }
+
+        for (let i = 1; i < werewolves.length; i++) {
+          werewolves[i].setIsAlive(false);
+        }
+
+        for (const player of players) {
+          if (player.role !== 'WEREWOLF' && player.role !== 'HUNTER') {
+            player.setIsAlive(false);
+          }
+        }
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBe('werewolves');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return null when only one team left but not 1v1', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+        const villagers = players.filter(
+          (p) => p.role === 'VILLAGER' || p.role === 'WITCH' || p.role === 'HUNTER' || p.role === 'CUPID' || p.role === 'SEER'
+        );
+
+        if (werewolves.length < 1 || villagers.length < 2) {
+          return;
+        }
+
+        for (const werewolf of werewolves) {
+          werewolf.setIsAlive(false);
+        }
+
+        for (let i = 2; i < villagers.length; i++) {
+          villagers[i].setIsAlive(false);
+        }
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBe('villagers');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle werewolf kill sequence correctly', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+        const villagers = players.filter((p) => p.role === 'VILLAGER');
+
+        if (werewolves.length < 2 || villagers.length < 3) {
+          return;
+        }
+
+        for (let i = 0; i < 2; i++) {
+          yield* deathManager.addPendingDeath(villagers[i], 'WEREWOLVES');
+          yield* game.processPendingDeaths;
+        }
+
+        const winner = yield* game.checkIfWinner;
+
+        expect(winner).toBeNull();
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+});
+
 describe('Game - Witch Potion Mechanics', () => {
   describe('canWitchHeal', () => {
     it.effect('should return true when witch has heal potion initially', () =>

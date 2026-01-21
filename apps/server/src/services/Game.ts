@@ -410,7 +410,30 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
         return deathInfos;
       }),
 
-      checkIfWinner: Effect.sync(() => {
+      checkIfWinner: Effect.gen(function* () {
+        const deathManager = yield* DeathManager;
+        
+        const teamVillagers = yield* deathManager.getTeamVillagers;
+        const teamWerewolves = yield* deathManager.getTeamWerewolves;
+
+        const villagers = teamVillagers.filter((p) => p.isAlive);
+        const werewolves = teamWerewolves.filter((p) => p.isAlive);
+
+        if (werewolves.length === 0) {
+          return 'villagers';
+        }
+
+        if (werewolves.length === 1 && villagers.length === 1) {
+          const lastVillager = villagers[0];
+          if (
+            lastVillager.role === 'WITCH' &&
+            (witchHasHealPotion || witchHasPoisonPotion)
+          ) {
+            return null;
+          }
+          return 'werewolves';
+        }
+
         return null;
       }),
 

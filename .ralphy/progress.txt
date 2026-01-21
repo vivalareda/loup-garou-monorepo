@@ -60,3 +60,5 @@
 - [✓] 2026-01-21 05:36 - Task 2.2: Segment Execution Engine - Segment playback and action execution
 - [✓] 2026-01-21 05:47 - Task 2.3: Special Segment Scenarios - Complex edge case handling
 - [✓] 2026-01-21 08:05 - Task 2.3: Special Segment Scenarios - Complex edge case handling
+- [✓] 2026-01-21 08:36 - Task 2.4: Day Action Split - Death processing and voting phases
+- [✓] 2026-01-21 09:12 - Task 3.1: Socket Event Router - Extend SocketHandlers with game event routing

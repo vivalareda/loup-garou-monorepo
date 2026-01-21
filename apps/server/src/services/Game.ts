@@ -111,6 +111,51 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
           );
         }),
 
+      setLovers: (selectedPlayers: string[]) =>
+        Effect.gen(function* () {
+          for (const sid of selectedPlayers) {
+            const player = players.get(sid);
+            if (!player) {
+              return yield* Effect.fail(
+                new Error(`Player with sid ${sid} not found`)
+              );
+            }
+            lovers.push(player);
+          }
+        }),
+
+      isPlayerLover: (socketId: string) =>
+        Effect.sync(() => {
+          return lovers.some((lover) => lover.socketId === socketId);
+        }),
+
+      getPartner: (socketId: string) =>
+        Effect.sync(() => {
+          return lovers.find(
+            (lover) => lover.socketId !== socketId
+          );
+        }),
+
+      isOneOfLoversInDeathQueue: Effect.gen(function* () {
+        const deathManager = yield* DeathManager;
+        for (const lover of lovers) {
+          const inQueue = yield* deathManager.isInDeathQueue(lover.socketId);
+          if (inQueue) {
+            return true;
+          }
+        }
+        return false;
+      }),
+
+      isAnyOfLoversHunter: Effect.sync(() => {
+        return lovers.some((lover) => lover.role === 'HUNTER');
+      }),
+
+      hasPartner: (socketId: string) =>
+        Effect.sync(() => {
+          return lovers.some((lover) => lover.socketId === socketId);
+        }),
+
       getLovers: Effect.sync(() => lovers),
 
       getWerewolfList: Effect.sync(() => {

@@ -1274,3 +1274,468 @@ describe('Game - Death Processing Workflow', () => {
     );
   });
 });
+
+describe('Game - Lover Mechanics', () => {
+  describe('setLovers', () => {
+    it.effect('should set two players as lovers', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 2) {
+          return;
+        }
+
+        const lover1 = players[0];
+        const lover2 = players[1];
+
+        const result = yield* Effect.either(
+          game.setLovers([lover1.socketId, lover2.socketId])
+        );
+
+        expect(Either.isRight(result)).toBe(true);
+
+        const lovers = yield* game.getLovers;
+        expect(lovers).toHaveLength(2);
+        expect(lovers[0].socketId).toBe(lover1.socketId);
+        expect(lovers[1].socketId).toBe(lover2.socketId);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should fail when setting lover with non-existent socket id', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 1) {
+          return;
+        }
+
+        const lover1 = players[0];
+
+        const result = yield* Effect.either(
+          game.setLovers([lover1.socketId, 'non-existent-sid'])
+        );
+
+        expect(Either.isLeft(result)).toBe(true);
+        if (Either.isLeft(result)) {
+          expect(result.left.message).toContain('not found');
+        }
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should add lovers to existing lovers list', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 2) {
+          return;
+        }
+
+        const lover1 = players[0];
+        const lover2 = players[1];
+
+        yield* game.setLovers([lover1.socketId]);
+        yield* game.setLovers([lover2.socketId]);
+
+        const lovers = yield* game.getLovers;
+        expect(lovers).toHaveLength(2);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('isPlayerLover', () => {
+    it.effect('should return true for player who is a lover', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 1) {
+          return;
+        }
+
+        const lover = players[0];
+
+        yield* game.setLovers([lover.socketId]);
+
+        const isLover = yield* game.isPlayerLover(lover.socketId);
+
+        expect(isLover).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false for player who is not a lover', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 2) {
+          return;
+        }
+
+        const lover = players[0];
+        const nonLover = players[1];
+
+        yield* game.setLovers([lover.socketId]);
+
+        const isLover = yield* game.isPlayerLover(nonLover.socketId);
+
+        expect(isLover).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false when no lovers set', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 1) {
+          return;
+        }
+
+        const player = players[0];
+
+        const isLover = yield* game.isPlayerLover(player.socketId);
+
+        expect(isLover).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('getPartner', () => {
+    it.effect('should return partner for a lover', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 2) {
+          return;
+        }
+
+        const lover1 = players[0];
+        const lover2 = players[1];
+
+        yield* game.setLovers([lover1.socketId, lover2.socketId]);
+
+        const partner1 = yield* game.getPartner(lover1.socketId);
+        const partner2 = yield* game.getPartner(lover2.socketId);
+
+        expect(partner1?.socketId).toBe(lover2.socketId);
+        expect(partner2?.socketId).toBe(lover1.socketId);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return undefined for non-lover', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 3) {
+          return;
+        }
+
+        const lover1 = players[0];
+        const lover2 = players[1];
+        const nonLover = players[2];
+
+        yield* game.setLovers([lover1.socketId, lover2.socketId]);
+
+        const partner = yield* game.getPartner(nonLover.socketId);
+
+        expect(partner).toBeUndefined();
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return undefined when no lovers set', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 1) {
+          return;
+        }
+
+        const player = players[0];
+
+        const partner = yield* game.getPartner(player.socketId);
+
+        expect(partner).toBeUndefined();
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return undefined when single lover', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 1) {
+          return;
+        }
+
+        const lover = players[0];
+
+        yield* game.setLovers([lover.socketId]);
+
+        const partner = yield* game.getPartner(lover.socketId);
+
+        expect(partner).toBeUndefined();
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('isOneOfLoversInDeathQueue', () => {
+    it.effect('should return true when lover is in death queue', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        if (players.length < 2) {
+          return;
+        }
+
+        const lover = players[0];
+        const nonLover = players[1];
+
+        yield* game.setLovers([lover.socketId]);
+        yield* deathManager.addPendingDeath(lover, 'WEREWOLVES');
+
+        const isInQueue = yield* game.isOneOfLoversInDeathQueue;
+
+        expect(isInQueue).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false when lover is not in death queue', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 1) {
+          return;
+        }
+
+        const lover = players[0];
+
+        yield* game.setLovers([lover.socketId]);
+
+        const isInQueue = yield* game.isOneOfLoversInDeathQueue;
+
+        expect(isInQueue).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false when no lovers set', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+
+        const isInQueue = yield* game.isOneOfLoversInDeathQueue;
+
+        expect(isInQueue).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return true when non-lover in death queue but lover not', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        if (players.length < 2) {
+          return;
+        }
+
+        const lover = players[0];
+        const nonLover = players[1];
+
+        yield* game.setLovers([lover.socketId]);
+        yield* deathManager.addPendingDeath(nonLover, 'WEREWOLVES');
+
+        const isInQueue = yield* game.isOneOfLoversInDeathQueue;
+
+        expect(isInQueue).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('isAnyOfLoversHunter', () => {
+    it.effect('should return true when one lover is hunter', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const hunter = players.find((p) => p.role === 'HUNTER');
+        const villager = players.find((p) => p.role === 'VILLAGER');
+
+        if (!(hunter && villager)) {
+          return;
+        }
+
+        yield* game.setLovers([hunter.socketId, villager.socketId]);
+
+        const isHunter = yield* game.isAnyOfLoversHunter;
+
+        expect(isHunter).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false when no lover is hunter', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const villagers = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+
+        if (villagers.length < 2) {
+          return;
+        }
+
+        yield* game.setLovers([villagers[0].socketId, villagers[1].socketId]);
+
+        const isHunter = yield* game.isAnyOfLoversHunter;
+
+        expect(isHunter).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false when no lovers set', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+
+        const isHunter = yield* game.isAnyOfLoversHunter;
+
+        expect(isHunter).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('hasPartner', () => {
+    it.effect('should return true for player who has a partner', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 1) {
+          return;
+        }
+
+        const lover = players[0];
+
+        yield* game.setLovers([lover.socketId]);
+
+        const hasPartner = yield* game.hasPartner(lover.socketId);
+
+        expect(hasPartner).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false for player who does not have a partner', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 2) {
+          return;
+        }
+
+        const lover = players[0];
+        const nonLover = players[1];
+
+        yield* game.setLovers([lover.socketId]);
+
+        const hasPartner = yield* game.hasPartner(nonLover.socketId);
+
+        expect(hasPartner).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false when no lovers set', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        if (players.length < 1) {
+          return;
+        }
+
+        const player = players[0];
+
+        const hasPartner = yield* game.hasPartner(player.socketId);
+
+        expect(hasPartner).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('Lover Mechanics Integration', () => {
+    it.effect('should handle full lover setup and queries', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const lovers = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+
+        if (lovers.length < 2) {
+          return;
+        }
+
+        yield* game.setLovers([lovers[0].socketId, lovers[1].socketId]);
+
+        const loversList = yield* game.getLovers;
+        expect(loversList).toHaveLength(2);
+
+        const isLover1 = yield* game.isPlayerLover(lovers[0].socketId);
+        const isLover2 = yield* game.isPlayerLover(lovers[1].socketId);
+        expect(isLover1).toBe(true);
+        expect(isLover2).toBe(true);
+
+        const partner1 = yield* game.getPartner(lovers[0].socketId);
+        const partner2 = yield* game.getPartner(lovers[1].socketId);
+        expect(partner1?.socketId).toBe(lovers[1].socketId);
+        expect(partner2?.socketId).toBe(lovers[0].socketId);
+
+        const hasPartner1 = yield* game.hasPartner(lovers[0].socketId);
+        const hasPartner2 = yield* game.hasPartner(lovers[1].socketId);
+        expect(hasPartner1).toBe(true);
+        expect(hasPartner2).toBe(true);
+
+        yield* deathManager.addPendingDeath(lovers[0], 'WEREWOLVES');
+
+        const isInQueue = yield* game.isOneOfLoversInDeathQueue;
+        expect(isInQueue).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should verify lover suicide cascade through lover methods', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const lovers = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+
+        if (lovers.length < 2) {
+          return;
+        }
+
+        yield* game.setLovers([lovers[0].socketId, lovers[1].socketId]);
+
+        const beforeDeathInQueue = yield* game.isOneOfLoversInDeathQueue;
+        expect(beforeDeathInQueue).toBe(false);
+
+        yield* deathManager.addPendingDeath(lovers[0], 'WEREWOLVES');
+
+        const afterAddInQueue = yield* game.isOneOfLoversInDeathQueue;
+        expect(afterAddInQueue).toBe(true);
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(2);
+        expect(lovers[0].isAlive).toBe(false);
+        expect(lovers[1].isAlive).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+});

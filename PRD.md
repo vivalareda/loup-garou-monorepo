@@ -14,8 +14,8 @@
 
 - [x] Task 2.1: Segment State Management - Segment/phase tracking and skip logic
 - [x] Task 2.2: Segment Execution Engine - Segment playback and action execution
-- [ ] Task 2.3: Special Segment Scenarios - Complex edge case handling
-- [ ] Task 2.4: Day Action Split - Death processing and voting phases
+- [x] Task 2.3: Special Segment Scenarios - Complex edge case handling
+- [x] Task 2.4: Day Action Split - Death processing and voting phases
 
 ## Phase 3: Event Handling Migration
 

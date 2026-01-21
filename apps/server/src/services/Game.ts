@@ -78,6 +78,7 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
 
     return {
       startGame: Effect.gen(function* () {
+        const deathManager = yield* DeathManager;
         const lobbyPlayers = yield* lobby.getAllPlayers;
         const roles = initRolesList(lobbyPlayers.length);
 
@@ -88,6 +89,14 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
           setSpecialRolePlayer(player, role);
           return player;
         });
+
+        for (const player of gamePlayers) {
+          if (player.role === 'WEREWOLF') {
+            yield* deathManager.addTeamWerewolf(player);
+          } else {
+            yield* deathManager.addTeamVillager(player);
+          }
+        }
 
         yield* lobby.clear;
 

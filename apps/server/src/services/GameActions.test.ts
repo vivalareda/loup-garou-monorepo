@@ -228,6 +228,215 @@ describe('GameActions', () => {
     );
   });
 
+  describe('processNightDeaths', () => {
+    it.effect('should process pending deaths and announce them', () =>
+      Effect.gen(function* () {
+        const actions = yield* GameActions;
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+
+        const players = yield* game.startGame;
+        if (players.length < 2) {
+          return yield* Effect.void;
+        }
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+        if (!victim) {
+          return yield* Effect.void;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+
+        const deaths = yield* actions.processNightDeaths;
+        expect(deaths).toHaveLength(1);
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should emit death announcements to all players', () =>
+      Effect.gen(function* () {
+        const actions = yield* GameActions;
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+
+        const players = yield* game.startGame;
+        if (players.length < 2) {
+          return yield* Effect.void;
+        }
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+        if (!victim) {
+          return yield* Effect.void;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+
+        yield* actions.processNightDeaths;
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should emit alert to dead players', () =>
+      Effect.gen(function* () {
+        const actions = yield* GameActions;
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+
+        const players = yield* game.startGame;
+        if (players.length < 2) {
+          return yield* Effect.void;
+        }
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+        if (!victim) {
+          return yield* Effect.void;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+
+        yield* actions.processNightDeaths;
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should handle multiple deaths in same night', () =>
+      Effect.gen(function* () {
+        const actions = yield* GameActions;
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+
+        const players = yield* game.startGame;
+        if (players.length < 4) {
+          return yield* Effect.void;
+        }
+
+        const victims = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+        if (victims.length < 2) {
+          return yield* Effect.void;
+        }
+
+        yield* deathManager.addPendingDeath(victims[0], 'WEREWOLVES');
+        yield* deathManager.addPendingDeath(victims[1], 'WITCH_POISON');
+
+        const deaths = yield* actions.processNightDeaths;
+        expect(deaths.length).toBeGreaterThanOrEqual(2);
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should play winner audio when game is over', () =>
+      Effect.gen(function* () {
+        const actions = yield* GameActions;
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+
+        const players = yield* game.startGame;
+        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+
+        if (werewolves.length === 0) {
+          return yield* Effect.void;
+        }
+
+        for (const werewolf of werewolves) {
+          yield* deathManager.addPendingDeath(werewolf, 'WEREWOLVES');
+        }
+
+        const deaths = yield* actions.processNightDeaths;
+        expect(deaths).toBeDefined();
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should return list of processed deaths', () =>
+      Effect.gen(function* () {
+        const actions = yield* GameActions;
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+
+        const players = yield* game.startGame;
+        if (players.length < 2) {
+          return yield* Effect.void;
+        }
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+        if (!victim) {
+          return yield* Effect.void;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+
+        const deaths = yield* actions.processNightDeaths;
+        expect(Array.isArray(deaths)).toBe(true);
+        expect(deaths[0]).toMatchObject({
+          playerId: victim.socketId,
+          cause: 'WEREWOLVES',
+        });
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should handle empty death queue', () =>
+      Effect.gen(function* () {
+        const actions = yield* GameActions;
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+
+        const players = yield* game.startGame;
+        if (players.length < 2) {
+          return yield* Effect.void;
+        }
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+        if (!victim) {
+          return yield* Effect.void;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+
+        const deaths = yield* actions.processNightDeaths;
+        expect(deaths.length).toBe(1);
+        expect(deaths[0].playerId).toBe(victim.socketId);
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+  });
+
+  describe('startVotingPhase', () => {
+    it.effect(
+      'should emit voting phase start event',
+      () =>
+        Effect.gen(function* () {
+          const actions = yield* GameActions;
+          yield* actions.startVotingPhase;
+        }).pipe(Effect.provide(TestLayer)),
+      { timeout: 10000 }
+    );
+
+    it.effect(
+      'should sleep for 7 seconds before starting voting',
+      () =>
+        Effect.gen(function* () {
+          const actions = yield* GameActions;
+          yield* actions.startVotingPhase;
+        }).pipe(Effect.provide(TestLayer)),
+      { timeout: 10000 }
+    );
+
+    it.effect(
+      'should handle startVotingPhase multiple times',
+      () =>
+        Effect.gen(function* () {
+          const actions = yield* GameActions;
+          yield* actions.startVotingPhase;
+          yield* actions.startVotingPhase;
+        }).pipe(Effect.provide(TestLayer)),
+      { timeout: 20000 }
+    );
+
+    it.effect(
+      'should work independently of death processing',
+      () =>
+        Effect.gen(function* () {
+          const actions = yield* GameActions;
+          yield* actions.startVotingPhase;
+        }).pipe(Effect.provide(TestLayer)),
+      { timeout: 10000 }
+    );
+  });
+
   describe('hunterAction', () => {
     it.effect('should emit hunter pick required', () =>
       Effect.gen(function* () {

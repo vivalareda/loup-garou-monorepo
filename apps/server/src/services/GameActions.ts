@@ -154,6 +154,29 @@ export class GameActions extends Effect.Service<GameActions>()(
             yield* broadcastWerewolfVotes;
           }),
 
+        processNightDeaths: Effect.gen(function* () {
+          const deaths = yield* game.processPendingDeaths;
+          yield* emitToAll('night:deaths-announced', deaths);
+
+          for (const death of deaths) {
+            yield* emitToPlayer(death.playerId, 'alert:player-is-dead');
+            yield* emitToAll('lobby:player-died', death.playerId);
+          }
+
+          const winner = yield* game.checkIfWinner;
+
+          if (winner) {
+            yield* audioManager.playWinnerAudio(winner);
+          }
+
+          return deaths;
+        }),
+
+        startVotingPhase: Effect.gen(function* () {
+          yield* Effect.sleep('7 seconds');
+          yield* emitToAll('day:voting-phase-start');
+        }),
+
         dayAction: Effect.gen(function* () {
           const deaths = yield* game.processPendingDeaths;
           yield* emitToAll('night:deaths-announced', deaths);

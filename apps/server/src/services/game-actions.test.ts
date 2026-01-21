@@ -402,7 +402,7 @@ describe('GameActions', () => {
           const actions = yield* GameActions;
           yield* actions.startVotingPhase;
         }).pipe(Effect.provide(TestLayer)),
-      { timeout: 10000 }
+      { timeout: 10_000 }
     );
 
     it.effect(
@@ -412,7 +412,7 @@ describe('GameActions', () => {
           const actions = yield* GameActions;
           yield* actions.startVotingPhase;
         }).pipe(Effect.provide(TestLayer)),
-      { timeout: 10000 }
+      { timeout: 10_000 }
     );
 
     it.effect(
@@ -423,7 +423,7 @@ describe('GameActions', () => {
           yield* actions.startVotingPhase;
           yield* actions.startVotingPhase;
         }).pipe(Effect.provide(TestLayer)),
-      { timeout: 20000 }
+      { timeout: 20_000 }
     );
 
     it.effect(
@@ -433,7 +433,7 @@ describe('GameActions', () => {
           const actions = yield* GameActions;
           yield* actions.startVotingPhase;
         }).pipe(Effect.provide(TestLayer)),
-      { timeout: 10000 }
+      { timeout: 10_000 }
     );
   });
 

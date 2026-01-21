@@ -1,7 +1,7 @@
 import { Effect, Config } from 'effect';
 import { existsSync } from 'node:fs';
 import sound from 'sound-play';
-import { SegmentType } from '@repo/types';
+import type { SegmentType } from '@repo/types';
 
 export class AudioManager extends Effect.Service<AudioManager>()(
   '@app/AudioManager',

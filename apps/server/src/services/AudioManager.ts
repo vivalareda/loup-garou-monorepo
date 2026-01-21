@@ -62,6 +62,8 @@ export class AudioManager extends Effect.Service<AudioManager>()(
         playHunterIsLoverAudio: playAudio('Hunter/hunter-is-lover'),
 
         playHunterAudio: playAudio('Hunter/hunter'),
+
+        playPostHunterAudio: playAudio('Hunter/Hunter-start-vote'),
       };
     }),
     dependencies: [],

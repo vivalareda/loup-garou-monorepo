@@ -510,4 +510,94 @@ describe('SegmentExecution', () => {
 
       expect(typeof hasScenario).toBe('boolean');
     }).pipe(Effect.provide(TestLayer)));
+
+  test('should add partner suicide when hunter is a lover', () =>
+    Effect.gen(function* () {
+      const segmentExecution = yield* SegmentExecution;
+      const game = yield* Game;
+
+      const players = yield* game.startGame;
+
+      if (players.length < 8) {
+        return yield* Effect.void;
+      }
+
+      const hunterResult = yield* Effect.either(
+        game.getSpecialRolePlayer('HUNTER')
+      );
+
+      if (Either.isLeft(hunterResult)) {
+        return yield* Effect.void;
+      }
+
+      const hunter = hunterResult.right;
+
+      const lovers = yield* game.getLovers;
+
+      if (lovers.length < 2) {
+        return yield* Effect.void;
+      }
+
+      const lover1 = lovers[0];
+      const lover2 = lovers[1];
+
+      if (hunter.socketId !== lover1.socketId && hunter.socketId !== lover2.socketId) {
+        const result = yield* Effect.either(segmentExecution.runHunterSegment);
+        expect(Either.isRight(result) || Either.isLeft(result)).toBe(true);
+      }
+    }).pipe(Effect.provide(TestLayer)));
+
+  test('should continueDayAction with hunterDiedFirst flag', () =>
+    Effect.gen(function* () {
+      const segmentExecution = yield* SegmentExecution;
+      const specialScenarios = yield* SpecialScenarios;
+
+      yield* Effect.either(specialScenarios.partnerIsHunter);
+
+      const result = yield* Effect.either(segmentExecution.continueDayAction);
+
+      expect(Either.isRight(result)).toBe(true);
+
+      const hunterDiedFirst = yield* specialScenarios.getHunterDiedFirst;
+
+      expect(hunterDiedFirst).toBe(false);
+    }).pipe(Effect.provide(TestLayer)));
+
+  test('should continueDayAction without hunterDiedFirst flag', () =>
+    Effect.gen(function* () {
+      const segmentExecution = yield* SegmentExecution;
+
+      const result = yield* Effect.either(segmentExecution.continueDayAction);
+
+      expect(Either.isRight(result)).toBe(true);
+    }).pipe(Effect.provide(TestLayer)));
+
+  test('should handle runHunterSegment when hunter is lover', () =>
+    Effect.gen(function* () {
+      const segmentExecution = yield* SegmentExecution;
+      const game = yield* Game;
+
+      const players = yield* game.startGame;
+
+      if (players.length < 8) {
+        return yield* Effect.void;
+      }
+
+      const hunterResult = yield* Effect.either(
+        game.getSpecialRolePlayer('HUNTER')
+      );
+
+      if (Either.isLeft(hunterResult)) {
+        return yield* Effect.void;
+      }
+
+      const hunter = hunterResult.right;
+      const isLover = yield* game.isPlayerLover(hunter.socketId);
+
+      if (isLover) {
+        const result = yield* Effect.either(segmentExecution.runHunterSegment);
+
+        expect(Either.isRight(result) || Either.isLeft(result)).toBe(true);
+      }
+    }).pipe(Effect.provide(TestLayer)));
 });

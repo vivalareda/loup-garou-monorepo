@@ -79,4 +79,50 @@ describe('SpecialScenarios', () => {
       }).pipe(Effect.provide(TestLayer))
     );
   });
+
+  describe('resetHunterDiedFirst', () => {
+    it.effect('should reset hunterDiedFirst to false', () =>
+      Effect.gen(function* () {
+        const specialScenarios = yield* SpecialScenarios;
+
+        yield* Effect.either(specialScenarios.partnerIsHunter);
+
+        const beforeReset = yield* specialScenarios.getHunterDiedFirst;
+        expect(beforeReset).toBe(true);
+
+        yield* specialScenarios.resetHunterDiedFirst;
+
+        const afterReset = yield* specialScenarios.getHunterDiedFirst;
+        expect(afterReset).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should not affect flag if already false', () =>
+      Effect.gen(function* () {
+        const specialScenarios = yield* SpecialScenarios;
+
+        const beforeReset = yield* specialScenarios.getHunterDiedFirst;
+        expect(beforeReset).toBe(false);
+
+        yield* specialScenarios.resetHunterDiedFirst;
+
+        const afterReset = yield* specialScenarios.getHunterDiedFirst;
+        expect(afterReset).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should allow multiple resets', () =>
+      Effect.gen(function* () {
+        const specialScenarios = yield* SpecialScenarios;
+
+        yield* Effect.either(specialScenarios.partnerIsHunter);
+
+        for (let i = 0; i < 5; i++) {
+          yield* specialScenarios.resetHunterDiedFirst;
+          const flag = yield* specialScenarios.getHunterDiedFirst;
+          expect(flag).toBe(false);
+        }
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
 });

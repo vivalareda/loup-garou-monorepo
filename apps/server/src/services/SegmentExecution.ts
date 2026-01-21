@@ -1,6 +1,7 @@
 import type { SegmentType } from '@repo/types';
 import { Effect, Either } from 'effect';
 import { AudioManager } from './AudioManager.js';
+import { DeathManager } from './DeathManager.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
 import { SegmentManager } from './SegmentManager.js';
@@ -31,6 +32,7 @@ export class SegmentExecution extends Effect.Service<SegmentExecution>()(
       const audioManager = yield* AudioManager;
       const game = yield* Game;
       const specialScenarios = yield* SpecialScenarios;
+      const deathManager = yield* DeathManager;
 
       const getSegmentAction = (segmentType: SegmentType) =>
         Effect.gen(function* () {
@@ -97,6 +99,13 @@ export class SegmentExecution extends Effect.Service<SegmentExecution>()(
         const isLover = yield* game.isPlayerLover(hunter.socketId);
 
         if (isLover) {
+          const partner = yield* game.getPartner(hunter.socketId);
+          if (!partner) {
+            return yield* Effect.fail(
+              new SegmentExecutionError('HUNTER', 'lover could not be found')
+            );
+          }
+          yield* deathManager.addPartnerSuicide(hunter.socketId, partner.socketId);
           yield* specialScenarios.hunterIsLover;
         } else {
           yield* audioManager.playHunterAudio;
@@ -129,7 +138,8 @@ export class SegmentExecution extends Effect.Service<SegmentExecution>()(
         const hunterDiedFirst = yield* specialScenarios.getHunterDiedFirst;
 
         if (hunterDiedFirst) {
-          yield* audioManager.playHunterAudio;
+          yield* audioManager.playPostHunterAudio;
+          yield* specialScenarios.resetHunterDiedFirst;
         } else {
           yield* audioManager.nightHasEndedAudio;
         }
@@ -195,6 +205,7 @@ export class SegmentExecution extends Effect.Service<SegmentExecution>()(
       AudioManager.Default,
       Game.Default,
       SpecialScenarios.Default,
+      DeathManager.Default,
     ],
   }
 ) {}

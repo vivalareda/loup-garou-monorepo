@@ -23,6 +23,10 @@ export class SpecialScenarios extends Effect.Service<SpecialScenarios>()(
         }),
 
         getHunterDiedFirst: Effect.sync(() => hunterDiedFirst),
+
+        resetHunterDiedFirst: Effect.sync(() => {
+          hunterDiedFirst = false;
+        }),
       };
     }),
     dependencies: [AudioManager.Default],

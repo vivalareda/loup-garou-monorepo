@@ -48,3 +48,4 @@
 - [✗] 2026-01-21 02:56 - Task 1.2: GameActions Service (Part 1) - Migrate non-voting segment actions
 - [✓] 2026-01-21 03:06 - Task 1.2: GameActions Service (Part 1) - Migrate non-voting segment actions
 - [✓] 2026-01-21 03:11 - Task 1.1: DeathManager Service - Migrate death queue and team management
+- [✓] 2026-01-21 03:50 - Task 1.2: GameActions Service (Part 1) - Migrate non-voting segment actions

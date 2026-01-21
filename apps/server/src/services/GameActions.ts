@@ -32,6 +32,19 @@ export class GameActions extends Effect.Service<GameActions>()(
           io.emit(event, ...(args as Parameters<ServerToClientEvents[K]>));
         });
 
+      const broadcastWerewolfVotes = Effect.gen(function* () {
+        const voteTallies = yield* game.getWerewolfVoteTallies;
+        const werewolves = yield* game.getWerewolfList;
+
+        for (const werewolf of werewolves) {
+          yield* emitToPlayer(
+            werewolf.getSocketId(),
+            'werewolf:current-votes',
+            voteTallies
+          );
+        }
+      });
+
       return {
         cupidAction: Effect.gen(function* () {
           const cupid = yield* game.getSpecialRolePlayer('CUPID');
@@ -116,6 +129,28 @@ export class GameActions extends Effect.Service<GameActions>()(
           const witch = witchResult.right;
           yield* emitToPlayer(witch.getSocketId(), 'witch:pick-poison-player');
         }),
+
+        broadcastWerewolfVotes,
+
+        handleWerewolfVote: (socketId: string, targetPlayer: string) =>
+          Effect.gen(function* () {
+            yield* game.handleWerewolfVote(socketId, targetPlayer);
+            yield* broadcastWerewolfVotes;
+          }),
+
+        handleWerewolfUpdateVote: (
+          socketId: string,
+          targetPlayer: string,
+          oldVote: string
+        ) =>
+          Effect.gen(function* () {
+            yield* game.handleWerewolfUpdateVote(
+              socketId,
+              targetPlayer,
+              oldVote
+            );
+            yield* broadcastWerewolfVotes;
+          }),
 
         dayAction: Effect.gen(function* () {
           const deaths = yield* game.processPendingDeaths;

@@ -1,6 +1,6 @@
 import { describe, expect } from '@effect/vitest';
 import { Effect, Either } from 'effect';
-import { GameActions } from './GameActions';
+import { GameActions } from './GameActions.js';
 
 const TestLayer = GameActions.Default;
 
@@ -126,6 +126,79 @@ describe('GameActions', () => {
       Effect.gen(function* () {
         const actions = yield* GameActions;
         yield* actions.witchPoisonAction;
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('handleWerewolfVote', () => {
+    it.effect('should handle werewolf vote successfully', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const actions = yield* GameActions;
+
+        const players = yield* game.startGame;
+        const werewolf = players.find((p) => p.role === 'WEREWOLF');
+        const villager = players.find((p) => p.role === 'VILLAGER');
+
+        if (!(werewolf && villager)) {
+          return;
+        }
+
+        const result = yield* Effect.either(
+          actions.handleWerewolfVote(werewolf.socketId, villager.socketId)
+        );
+
+        expect(Either.isRight(result)).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should broadcast votes after voting', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const actions = yield* GameActions;
+
+        const players = yield* game.startGame;
+        const werewolf = players.find((p) => p.role === 'WEREWOLF');
+        const villager = players.find((p) => p.role === 'VILLAGER');
+
+        if (!(werewolf && villager)) {
+          return;
+        }
+
+        yield* actions.handleWerewolfVote(werewolf.socketId, villager.socketId);
+        yield* actions.broadcastWerewolfVotes;
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle vote updates', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const actions = yield* GameActions;
+
+        const players = yield* game.startGame;
+        const werewolf = players.find((p) => p.role === 'WEREWOLF');
+        const villager1 = players.find((p) => p.role === 'VILLAGER');
+        const villager2 = players.find(
+          (p) => p.role === 'VILLAGER' && p.socketId !== villager1?.socketId
+        );
+
+        if (!(werewolf && villager1 && villager2)) {
+          return;
+        }
+
+        yield* actions.handleWerewolfVote(
+          werewolf.socketId,
+          villager1.socketId
+        );
+        const result = yield* Effect.either(
+          actions.handleWerewolfUpdateVote(
+            werewolf.socketId,
+            villager2.socketId,
+            villager1.socketId
+          )
+        );
+
+        expect(Either.isRight(result)).toBe(true);
       }).pipe(Effect.provide(TestLayer))
     );
   });

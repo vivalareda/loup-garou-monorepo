@@ -89,6 +89,37 @@ export class EventsActions extends Effect.Service<EventsActions>()(
             yield* gameActions.handleHunterPlayerPick(targetSid);
             yield* segmentExecution.continueDayAction;
           }),
+
+        handleCupidLoversPick: (selectedPlayers: string[]) =>
+          Effect.gen(function* () {
+            yield* game.setLovers(selectedPlayers);
+            yield* segmentExecution.finishSegment;
+          }),
+
+        handleLoverClosedAlert: Effect.gen(function* () {
+          yield* segmentExecution.finishSegment;
+        }),
+
+        handleWitchHeal: Effect.gen(function* () {
+          yield* gameActions.healWerewolfVictim;
+          yield* segmentExecution.finishSegment;
+        }),
+
+        handleWitchPoison: (playerSid: string) =>
+          Effect.gen(function* () {
+            yield* gameActions.witchKill(playerSid);
+            yield* segmentExecution.finishSegment;
+          }),
+
+        handleWitchSkipHeal: Effect.gen(function* () {
+          console.log('Witch skipped heal action');
+          yield* segmentExecution.finishSegment;
+        }),
+
+        handleWitchSkipPoison: Effect.gen(function* () {
+          console.log('Witch skipped poison action');
+          yield* segmentExecution.finishSegment;
+        }),
       };
     }),
     dependencies: [

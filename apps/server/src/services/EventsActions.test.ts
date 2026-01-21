@@ -487,6 +487,270 @@ describe('EventsActions', () => {
     );
   });
 
+  describe('handleCupidLoversPick', () => {
+    it.effect('should set lovers and finish segment', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const events = yield* EventsActions;
+
+        yield* game.startGame;
+        const players = yield* game.getPlayers;
+
+        if (players.length < 2) {
+          return;
+        }
+
+        const selectedPlayers = [players[0].socketId, players[1].socketId];
+
+        yield* events.handleCupidLoversPick(selectedPlayers);
+
+        const lovers = yield* game.getLovers;
+        expect(lovers.length).toBe(2);
+        expect(lovers.map((l) => l.socketId)).toEqual(selectedPlayers);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should fail with invalid player count', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const events = yield* EventsActions;
+
+        yield* game.startGame;
+        const players = yield* game.getPlayers;
+
+        if (players.length === 0) {
+          return;
+        }
+
+        const selectedPlayers = [players[0].socketId];
+
+        const result = yield* Effect.either(
+          events.handleCupidLoversPick(selectedPlayers)
+        );
+
+        expect(Either.isLeft(result)).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should set lovers correctly with valid players', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const events = yield* EventsActions;
+
+        yield* game.startGame;
+        const players = yield* game.getPlayers;
+
+        if (players.length < 2) {
+          return;
+        }
+
+        const selectedPlayers = [players[0].socketId, players[1].socketId];
+
+        yield* events.handleCupidLoversPick(selectedPlayers);
+
+        const player1Lover = yield* game.isPlayerLover(players[0].socketId);
+        const player2Lover = yield* game.isPlayerLover(players[1].socketId);
+
+        expect(player1Lover).toBe(true);
+        expect(player2Lover).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('handleLoverClosedAlert', () => {
+    it.effect('should finish segment when lover closes alert', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const events = yield* EventsActions;
+
+        yield* game.startGame;
+        const players = yield* game.getPlayers;
+
+        if (players.length < 2) {
+          return;
+        }
+
+        const selectedPlayers = [players[0].socketId, players[1].socketId];
+        yield* game.setLovers(selectedPlayers);
+
+        const result = yield* Effect.either(events.handleLoverClosedAlert);
+
+        expect(Either.isRight(result)).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('handleWitchHeal', () => {
+    it.effect('should heal werewolf victim and finish segment', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const events = yield* EventsActions;
+        const deathManager = yield* DeathManager;
+
+        yield* game.startGame;
+        const werewolves = yield* game.getWerewolfList;
+        const players = yield* game.getPlayers;
+        const villagers = players.filter((p) => p.role === 'VILLAGER');
+
+        if (werewolves.length === 0 || villagers.length === 0) {
+          return;
+        }
+
+        const target = villagers[0];
+
+        for (const werewolf of werewolves) {
+          yield* game.handleWerewolfVote(werewolf.socketId, target.socketId);
+        }
+
+        const victimInQueue = yield* deathManager.isInDeathQueue(
+          target.socketId
+        );
+        expect(victimInQueue).toBe(true);
+
+        yield* events.handleWitchHeal;
+
+        const victimStillInQueue = yield* deathManager.isInDeathQueue(
+          target.socketId
+        );
+        expect(victimStillInQueue).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should successfully complete heal action', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const events = yield* EventsActions;
+        const deathManager = yield* DeathManager;
+
+        yield* game.startGame;
+        const werewolves = yield* game.getWerewolfList;
+        const players = yield* game.getPlayers;
+        const villagers = players.filter((p) => p.role === 'VILLAGER');
+
+        if (werewolves.length === 0 || villagers.length === 0) {
+          return;
+        }
+
+        const target = villagers[0];
+
+        for (const werewolf of werewolves) {
+          yield* game.handleWerewolfVote(werewolf.socketId, target.socketId);
+        }
+
+        const victimInQueue = yield* deathManager.isInDeathQueue(
+          target.socketId
+        );
+        expect(victimInQueue).toBe(true);
+
+        const result = yield* Effect.either(events.handleWitchHeal);
+
+        expect(Either.isRight(result)).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('handleWitchPoison', () => {
+    it.effect('should poison target player and finish segment', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const events = yield* EventsActions;
+        const deathManager = yield* DeathManager;
+
+        yield* game.startGame;
+        const players = yield* game.getPlayers;
+        const witch = players.find((p) => p.role === 'WITCH');
+        const targets = players.filter((p) => p.role !== 'WITCH');
+
+        if (!witch || targets.length === 0) {
+          return;
+        }
+
+        const target = targets[0];
+
+        yield* events.handleWitchPoison(target.socketId);
+
+        const targetInQueue = yield* deathManager.isInDeathQueue(
+          target.socketId
+        );
+        expect(targetInQueue).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should add witch poison death to death queue', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const events = yield* EventsActions;
+        const deathManager = yield* DeathManager;
+
+        yield* game.startGame;
+        const players = yield* game.getPlayers;
+        const witch = players.find((p) => p.role === 'WITCH');
+        const targets = players.filter((p) => p.role !== 'WITCH');
+
+        if (!witch || targets.length === 0) {
+          return;
+        }
+
+        const target = targets[0];
+
+        yield* events.handleWitchPoison(target.socketId);
+
+        const pendingDeaths = yield* deathManager.getPendingDeaths;
+        const poisonDeath = pendingDeaths.find(
+          (d) => d.playerId === target.socketId && d.cause === 'WITCH_POISON'
+        );
+
+        expect(poisonDeath).toBeDefined();
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should add witch poison death even for nonexistent player', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const events = yield* EventsActions;
+        const deathManager = yield* DeathManager;
+
+        yield* game.startGame;
+
+        const nonexistentId = 'nonexistent-player-id';
+        yield* events.handleWitchPoison(nonexistentId);
+
+        const pendingDeaths = yield* deathManager.getPendingDeaths;
+        const poisonDeath = pendingDeaths.find(
+          (d) => d.playerId === nonexistentId && d.cause === 'WITCH_POISON'
+        );
+
+        expect(poisonDeath).toBeDefined();
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('handleWitchSkipHeal', () => {
+    it.effect('should skip heal and finish segment', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const events = yield* EventsActions;
+
+        yield* game.startGame;
+
+        yield* events.handleWitchSkipHeal;
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('handleWitchSkipPoison', () => {
+    it.effect('should skip poison and finish segment', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const events = yield* EventsActions;
+
+        yield* game.startGame;
+
+        yield* events.handleWitchSkipPoison;
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
   describe('integration scenarios', () => {
     it.effect('should handle complete werewolf voting workflow', () =>
       Effect.gen(function* () {

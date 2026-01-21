@@ -1,7 +1,6 @@
 import { Effect, Config } from 'effect';
 import { existsSync } from 'node:fs';
 import sound from 'sound-play';
-import { AudioPlaybackError } from './errors.js';
 import { SegmentType } from '@repo/types';
 
 export class AudioManager extends Effect.Service<AudioManager>()(
@@ -21,8 +20,12 @@ export class AudioManager extends Effect.Service<AudioManager>()(
             }
             await sound.play(fullPath);
           },
-          catch: (error) => new AudioPlaybackError({ file, error }),
-        });
+          catch: (error) => {
+            console.error('Audio playback error (continuing):', error);
+          },
+        }).pipe(
+          Effect.catchAll(() => Effect.void)
+        );
 
       return {
         playSegmentStart: (segment: SegmentType) =>
@@ -39,6 +42,9 @@ export class AudioManager extends Effect.Service<AudioManager>()(
 
         playSegmentEnd: (segment: SegmentType) =>
           Effect.gen(function* () {
+            if (segment === 'HUNTER') {
+              return;
+            }
             const audioFile = getSegmentEndAudio(segment);
             if (!audioFile) return;
             yield* playAudio(audioFile);
@@ -74,13 +80,36 @@ const getSegmentStartAudio = (segment: SegmentType): string => {
   switch (segment) {
     case 'CUPID':
       return 'Cupidon/Cupidon-1';
-    case 'LOVERS_REVEAL':
+    case 'LOVERS':
       return 'Lovers/combined_lover';
     case 'WEREWOLF':
       return 'Werewolves/Werewolves-1';
-    case 'WITCH':
+    case 'WITCH-HEAL':
       return 'Witch/Witch-wake-up';
-    case 'DAY_VOTE':
-      return 'Day-vote/Vote-Start';
+    case 'WITCH-POISON':
+      return 'Witch/Witch-poison';
+    case 'DAY':
+      return 'Night-end/Wake-up-everyone';
   }
+  return '';
+};
+
+const getSegmentEndAudio = (
+  segment: Exclude<SegmentType, 'HUNTER'>
+): string | null => {
+  switch (segment) {
+    case 'CUPID':
+      return 'Cupidon/Cupidon-2';
+    case 'LOVERS':
+      return 'Lovers/Lover-3';
+    case 'WEREWOLF':
+      return 'Werewolves/Werewolves-2';
+    case 'WITCH-HEAL':
+      return null;
+    case 'WITCH-POISON':
+      return 'Witch/Witch-end';
+    case 'DAY':
+      return 'Day-vote/Vote-Death';
+  }
+  return null;
 };

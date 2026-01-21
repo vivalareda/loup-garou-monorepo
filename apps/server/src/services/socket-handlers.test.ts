@@ -4,7 +4,6 @@ import { DeathManager } from './death-manager.js';
 import { Game } from './game.js';
 import { GameActions } from './game-actions.js';
 import { Lobby } from './lobby.js';
-import { LobbyConfig } from './lobby-config.js';
 import { MockScenario } from './mock-scenario.js';
 import { SegmentExecution } from './segment-execution.js';
 import { SocketHandlers } from './socket-handlers.js';
@@ -13,7 +12,6 @@ import { SocketServer } from './socket-server.js';
 const TestLayer = Layer.mergeAll(
   SocketServer.Default,
   Lobby.Default,
-  LobbyConfig.Live,
   Game.Default,
   GameActions.Default,
   SegmentExecution.Default,

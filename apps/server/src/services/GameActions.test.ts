@@ -1,8 +1,10 @@
 import { describe, expect } from '@effect/vitest';
-import { Effect, Either } from 'effect';
+import { Effect, Either, Layer } from 'effect';
+import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
 
 const TestLayer = GameActions.Default;
+const GameTestLayer = Layer.merge(Game.Default, GameActions.Default);
 
 describe('GameActions', () => {
   describe('cupidAction', () => {
@@ -364,6 +366,79 @@ describe('GameActions', () => {
         yield* actions.witchHealAction;
         yield* actions.witchPoisonAction;
       }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('Day Voting', () => {
+    it.effect('should handle day vote action', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const actions = yield* GameActions;
+        const players = yield* game.startGame;
+
+        const voter = players.find((p) => p.isAlive);
+        const target = players.find(
+          (p) => p.socketId !== voter?.socketId && p.isAlive
+        );
+
+        if (!(voter && target)) {
+          return;
+        }
+
+        const result = yield* Effect.either(
+          actions.handleDayVote(voter.socketId, target.socketId)
+        );
+
+        expect(Either.isRight(result)).toBe(true);
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should process day vote result with death', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const actions = yield* GameActions;
+        const players = yield* game.startGame;
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+        if (alivePlayers.length < 2) {
+          return;
+        }
+
+        for (let i = 1; i < alivePlayers.length; i++) {
+          yield* game.handleDayVote(
+            alivePlayers[i].socketId,
+            alivePlayers[0].socketId
+          );
+        }
+
+        const result = yield* Effect.either(actions.processDayVoteResult);
+        expect(Either.isRight(result)).toBe(true);
+      }).pipe(Effect.provide(GameTestLayer))
+    );
+
+    it.effect('should process day vote result with tie (no death)', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const actions = yield* GameActions;
+        const players = yield* game.startGame;
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+        if (alivePlayers.length < 4) {
+          return;
+        }
+
+        yield* game.handleDayVote(
+          alivePlayers[0].socketId,
+          alivePlayers[1].socketId
+        );
+        yield* game.handleDayVote(
+          alivePlayers[2].socketId,
+          alivePlayers[3].socketId
+        );
+
+        const result = yield* Effect.either(actions.processDayVoteResult);
+        expect(Either.isRight(result)).toBe(true);
+      }).pipe(Effect.provide(GameTestLayer))
     );
   });
 });

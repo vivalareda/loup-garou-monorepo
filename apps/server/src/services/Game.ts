@@ -50,12 +50,13 @@ function shuffleArray<T>(array: T[]): T[] {
 export class Game extends Effect.Service<Game>()('@app/Game', {
   effect: Effect.gen(function* () {
     const lobby = yield* Lobby;
-    const deathManager = yield* DeathManager;
+    yield* DeathManager;
 
     const players = new Map<string, Player>();
     const specialRolePlayers = new Map<Role, Player>();
     const lovers: Player[] = [];
     const werewolfVotes = new Map<string, string>();
+    const dayVotes = new Map<string, string>();
 
     const setSpecialRolePlayer = (player: Player, role: Role) => {
       if (role !== 'WEREWOLF' && role !== 'VILLAGER') {
@@ -229,6 +230,62 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
             maxVotes = votes;
             targetSid = playerSid;
           }
+        }
+
+        return targetSid;
+      }),
+
+      handleDayVote: (voterSid: string, targetSid: string) =>
+        Effect.sync(() => {
+          dayVotes.set(voterSid, targetSid);
+        }),
+
+      calculateDayVoteTallies: Effect.sync<Record<string, number>>(() => {
+        const tallies: Record<string, number> = {};
+
+        for (const targetSid of dayVotes.values()) {
+          tallies[targetSid] = (tallies[targetSid] || 0) + 1;
+        }
+
+        return tallies;
+      }),
+
+      hasAllPlayersVoted: Effect.sync(() => {
+        const alivePlayers = Array.from(players.values()).filter(
+          (player) => player.isAlive
+        );
+        const alivePlayerSids = alivePlayers.map((p) => p.socketId);
+
+        if (alivePlayerSids.length === 0 || dayVotes.size === 0) {
+          return false;
+        }
+
+        return alivePlayerSids.every((sid) => dayVotes.has(sid));
+      }),
+
+      getDayVoteTarget: Effect.sync(() => {
+        const tallies: Record<string, number> = {};
+
+        for (const targetSid of dayVotes.values()) {
+          tallies[targetSid] = (tallies[targetSid] || 0) + 1;
+        }
+
+        let maxVotes = 0;
+        let targetSid: string | null = null;
+        let tieCount = 0;
+
+        for (const [playerSid, votes] of Object.entries(tallies)) {
+          if (votes > maxVotes) {
+            maxVotes = votes;
+            targetSid = playerSid;
+            tieCount = 1;
+          } else if (votes === maxVotes && maxVotes > 0) {
+            tieCount++;
+          }
+        }
+
+        if (tieCount > 1) {
+          return null;
         }
 
         return targetSid;

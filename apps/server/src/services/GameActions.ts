@@ -1,6 +1,7 @@
 import type { ServerToClientEvents } from '@repo/types';
 import { Effect, Either } from 'effect';
 import { AudioManager } from './AudioManager.js';
+import { DeathManager } from './DeathManager.js';
 import { Game } from './Game.js';
 import { SocketServer } from './SocketServer.js';
 
@@ -10,6 +11,7 @@ export class GameActions extends Effect.Service<GameActions>()(
     effect: Effect.gen(function* () {
       const game = yield* Game;
       const audioManager = yield* AudioManager;
+      const deathManager = yield* DeathManager;
       const io = yield* SocketServer;
 
       const emitToPlayer = <K extends keyof ServerToClientEvents>(
@@ -175,8 +177,33 @@ export class GameActions extends Effect.Service<GameActions>()(
         hunterAction: Effect.gen(function* () {
           yield* emitToAll('hunter:pick-required');
         }),
+
+        handleDayVote: (socketId: string, targetPlayer: string) =>
+          Effect.gen(function* () {
+            yield* game.handleDayVote(socketId, targetPlayer);
+          }),
+
+        processDayVoteResult: Effect.gen(function* () {
+          const targetSid = yield* game.getDayVoteTarget;
+
+          if (!targetSid) {
+            yield* emitToAll('day:voting-complete-no-death');
+            return yield* Effect.void;
+          }
+
+          const tallies = yield* game.calculateDayVoteTallies;
+          const voteCount = tallies[targetSid] || 0;
+
+          yield* deathManager.addDayVoteElimination(targetSid, voteCount);
+          yield* emitToAll('day:voting-complete', targetSid);
+        }),
       };
     }),
-    dependencies: [Game.Default, AudioManager.Default, SocketServer.Default],
+    dependencies: [
+      Game.Default,
+      AudioManager.Default,
+      DeathManager.Default,
+      SocketServer.Default,
+    ],
   }
 ) {}

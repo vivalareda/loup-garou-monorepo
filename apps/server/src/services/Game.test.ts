@@ -626,3 +626,241 @@ describe('Game - Werewolf Voting', () => {
     );
   });
 });
+
+describe('Game - Day Voting', () => {
+  describe('handleDayVote', () => {
+    it.effect('should allow player to vote for a valid target', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const voter = players.find((p) => p.isAlive);
+        const target = players.find(
+          (p) => p.socketId !== voter?.socketId && p.isAlive
+        );
+
+        if (!(voter && target)) {
+          return;
+        }
+
+        yield* game.handleDayVote(voter.socketId, target.socketId);
+
+        const tallies = yield* game.calculateDayVoteTallies;
+        expect(tallies[target.socketId]).toBe(1);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should overwrite previous vote from same player', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const voter = players.find((p) => p.isAlive);
+        const target1 = players.find(
+          (p) => p.socketId !== voter?.socketId && p.isAlive
+        );
+        const target2 = players.find(
+          (p) =>
+            p.socketId !== voter?.socketId &&
+            p.socketId !== target1?.socketId &&
+            p.isAlive
+        );
+
+        if (!(voter && target1 && target2)) {
+          return;
+        }
+
+        yield* game.handleDayVote(voter.socketId, target1.socketId);
+        yield* game.handleDayVote(voter.socketId, target2.socketId);
+
+        const tallies = yield* game.calculateDayVoteTallies;
+        expect(tallies[target1.socketId]).toBeUndefined();
+        expect(tallies[target2.socketId]).toBe(1);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('calculateDayVoteTallies', () => {
+    it.effect('should correctly calculate vote tallies', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+        if (alivePlayers.length < 3) {
+          return;
+        }
+
+        yield* game.handleDayVote(
+          alivePlayers[0].socketId,
+          alivePlayers[1].socketId
+        );
+        yield* game.handleDayVote(
+          alivePlayers[2].socketId,
+          alivePlayers[1].socketId
+        );
+        yield* game.handleDayVote(
+          alivePlayers[3]?.socketId || '',
+          alivePlayers[1].socketId
+        );
+
+        const tallies = yield* game.calculateDayVoteTallies;
+        expect(tallies[alivePlayers[1].socketId]).toBeGreaterThanOrEqual(2);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return empty object when no votes', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+
+        const tallies = yield* game.calculateDayVoteTallies;
+        expect(tallies).toEqual({});
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('hasAllPlayersVoted', () => {
+    it.effect('should return false when not all players have voted', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const allVoted = yield* game.hasAllPlayersVoted;
+        expect(allVoted).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false when some players have voted', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+        if (alivePlayers.length < 2) {
+          return;
+        }
+
+        yield* game.handleDayVote(
+          alivePlayers[0].socketId,
+          alivePlayers[1].socketId
+        );
+
+        const allVoted = yield* game.hasAllPlayersVoted;
+        expect(allVoted).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return true when all alive players have voted', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+        if (alivePlayers.length < 2) {
+          return;
+        }
+
+        for (let i = 1; i < alivePlayers.length; i++) {
+          yield* game.handleDayVote(
+            alivePlayers[i].socketId,
+            alivePlayers[0].socketId
+          );
+        }
+
+        const allVoted = yield* game.hasAllPlayersVoted;
+        expect(allVoted).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('getDayVoteTarget', () => {
+    it.effect('should return null when no votes', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+
+        const target = yield* game.getDayVoteTarget;
+        expect(target).toBeNull();
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return target with most votes', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+        if (alivePlayers.length < 3) {
+          return;
+        }
+
+        yield* game.handleDayVote(
+          alivePlayers[0].socketId,
+          alivePlayers[1].socketId
+        );
+        yield* game.handleDayVote(
+          alivePlayers[2].socketId,
+          alivePlayers[1].socketId
+        );
+        yield* game.handleDayVote(
+          alivePlayers[3]?.socketId || '',
+          alivePlayers[2]?.socketId || ''
+        );
+
+        const target = yield* game.getDayVoteTarget;
+        expect(target).toBe(alivePlayers[1].socketId);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return null on tie', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+        if (alivePlayers.length < 4) {
+          return;
+        }
+
+        yield* game.handleDayVote(
+          alivePlayers[0].socketId,
+          alivePlayers[1].socketId
+        );
+        yield* game.handleDayVote(
+          alivePlayers[2].socketId,
+          alivePlayers[3].socketId
+        );
+
+        const target = yield* game.getDayVoteTarget;
+        expect(target).toBeNull();
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle three-way tie', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+        if (alivePlayers.length < 6) {
+          return;
+        }
+
+        yield* game.handleDayVote(
+          alivePlayers[0].socketId,
+          alivePlayers[1].socketId
+        );
+        yield* game.handleDayVote(
+          alivePlayers[2].socketId,
+          alivePlayers[3].socketId
+        );
+        yield* game.handleDayVote(
+          alivePlayers[4].socketId,
+          alivePlayers[5].socketId
+        );
+
+        const target = yield* game.getDayVoteTarget;
+        expect(target).toBeNull();
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+});

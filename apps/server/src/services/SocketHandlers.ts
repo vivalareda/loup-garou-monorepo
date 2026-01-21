@@ -5,6 +5,7 @@ import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
 import { Lobby } from './Lobby.js';
 import { LobbyConfig } from './LobbyConfig.js';
+import { MockScenario } from './MockScenario.js';
 import { SegmentExecution } from './SegmentExecution.js';
 import { SocketServer } from './SocketServer.js';
 
@@ -19,6 +20,7 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       const gameActions = yield* GameActions;
       const segmentExecution = yield* SegmentExecution;
       const deathManager = yield* DeathManager;
+      const mockScenario = yield* MockScenario;
 
       let loversAlertClosed = 0;
 
@@ -250,7 +252,114 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
             );
 
             socket.on('admin:simulate-day-vote', (targetPlayer: string) => {
-              console.log(`Admin simulating day vote for: ${targetPlayer}`);
+              Effect.gen(function* () {
+                console.log(`Admin simulating day vote for: ${targetPlayer}`);
+                const players = yield* game.getPlayers;
+                const voters = players.filter((p) => p.role !== 'WEREWOLF');
+
+                if (voters.length === 0) {
+                  return yield* Effect.void;
+                }
+
+                for (const voter of voters) {
+                  yield* gameActions.handleDayVote(voter.socketId, targetPlayer);
+                }
+
+                const hasAllVoted = yield* game.hasAllPlayersVoted;
+                if (hasAllVoted) {
+                  yield* gameActions.processDayVoteResult;
+                  const hunterInQueue = yield* game.hunterIsInDeathQueue;
+                  if (hunterInQueue) {
+                    yield* segmentExecution.runHunterSegment;
+                  } else {
+                    const loverInQueue =
+                      yield* game.isOneOfLoversInDeathQueue;
+                    if (loverInQueue) {
+                      const isPartnerHunter = yield* game.isPartnerHunter;
+                      if (isPartnerHunter) {
+                        yield* segmentExecution.runHunterSegment;
+                      } else {
+                        yield* segmentExecution.runLoverSegment;
+                      }
+                    }
+                  }
+                  yield* segmentExecution.finishSegment;
+                }
+              })
+                .pipe(Effect.provideService(DeathManager, deathManager))
+                .pipe(Effect.runPromise);
+            });
+
+            socket.on('admin:mock-hunter-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin triggering mock hunter event');
+                yield* mockScenario.runWerewolfKillHunter;
+              })
+                .pipe(Effect.provideService(DeathManager, deathManager))
+                .pipe(Effect.runPromise);
+            });
+
+            socket.on('admin:mock-lover-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin triggering mock lover event');
+                yield* mockScenario.runWerewolfKillLover;
+              })
+                .pipe(Effect.provideService(DeathManager, deathManager))
+                .pipe(Effect.runPromise);
+            });
+
+            socket.on('admin:mock-lover-second-hunter-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin triggering mock lover second hunter event');
+                yield* mockScenario.runWerewolfKillLoverSecondIsHunter;
+              })
+                .pipe(Effect.provideService(DeathManager, deathManager))
+                .pipe(Effect.runPromise);
+            });
+
+            socket.on('admin:mock-lover-is-hunter-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin triggering mock lover is hunter event');
+                yield* mockScenario.runWerewolfKillLoverWhoIsHunter;
+              })
+                .pipe(Effect.provideService(DeathManager, deathManager))
+                .pipe(Effect.runPromise);
+            });
+
+            socket.on('admin:mock-day-vote-hunter-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin triggering mock day vote hunter event');
+                yield* mockScenario.runDayVoteKillHunter;
+              })
+                .pipe(Effect.provideService(DeathManager, deathManager))
+                .pipe(Effect.runPromise);
+            });
+
+            socket.on('admin:mock-day-vote-lover-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin triggering mock day vote lover event');
+                yield* mockScenario.runDayVoteKillLover;
+              })
+                .pipe(Effect.provideService(DeathManager, deathManager))
+                .pipe(Effect.runPromise);
+            });
+
+            socket.on('admin:mock-day-vote-lover-is-hunter-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin triggering mock day vote lover is hunter event');
+                yield* mockScenario.runDayVoteKillLoverWhoIsHunter;
+              })
+                .pipe(Effect.provideService(DeathManager, deathManager))
+                .pipe(Effect.runPromise);
+            });
+
+            socket.on('admin:mock-day-vote-lover-second-hunter-event', () => {
+              Effect.gen(function* () {
+                console.log('Admin triggering mock day vote lover second hunter event');
+                yield* mockScenario.runDayVoteKillLoverSecondIsHunter;
+              })
+                .pipe(Effect.provideService(DeathManager, deathManager))
+                .pipe(Effect.runPromise);
             });
           });
         }),
@@ -264,6 +373,7 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       GameActions.Default,
       SegmentExecution.Default,
       DeathManager.Default,
+      MockScenario.Default,
     ],
   }
 ) { }

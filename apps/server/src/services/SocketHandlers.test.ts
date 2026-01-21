@@ -8,6 +8,7 @@ import { GameActions } from './GameActions.js';
 import { SegmentExecution } from './SegmentExecution.js';
 import { SocketServer } from './SocketServer.js';
 import { DeathManager } from './DeathManager.js';
+import { MockScenario } from './MockScenario.js';
 
 const TestLayer = Layer.mergeAll(
   SocketServer.Default,
@@ -16,7 +17,9 @@ const TestLayer = Layer.mergeAll(
   Game.Default,
   GameActions.Default,
   SegmentExecution.Default,
-  DeathManager.Default
+  DeathManager.Default,
+  MockScenario.Default,
+  SocketHandlers.Default
 );
 
 describe('SocketHandlers', () => {

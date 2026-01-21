@@ -21,9 +21,9 @@
 
 - [x] Task 3.1: Socket Event Router - Extend SocketHandlers with game event routing
 - [x] Task 3.2: EventsActions Service (Part 1) - Voting event processing
-- [ ] Task 3.3: EventsActions Service (Part 2) - Special role event processing
-- [ ] Task 3.4: Admin/Testing Events - Admin dashboard testing events
-- [ ] Task 3.5: Mock Scenario Events - Complex test scenarios for dashboard
+- [x] Task 3.3: EventsActions Service (Part 2) - Special role event processing
+- [x] Task 3.4: Admin/Testing Events - Admin dashboard testing events
+- [x] Task 3.5: Mock Scenario Events - Complex test scenarios for dashboard
 
 ## Phase 4: Audio Integration Enhancement
 

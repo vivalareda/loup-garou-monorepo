@@ -140,6 +140,21 @@ export class SegmentManager extends Effect.Service<SegmentManager>()(
         segments[6].skip = true;
       });
 
+      const setSegmentIndex = (index: number) =>
+        Effect.gen(function* () {
+          if (index < 0 || index >= segments.length) {
+            return yield* Effect.fail(
+              new InvalidSegmentIndex(index, segments.length - 1)
+            );
+          }
+          currentIndex = index;
+        });
+
+      const getSegmentIndex = (type: SegmentType) =>
+        Effect.sync(() => {
+          return segments.findIndex((s) => s.type === type);
+        });
+
       return {
         getAllSegments,
         getSegments,
@@ -153,6 +168,8 @@ export class SegmentManager extends Effect.Service<SegmentManager>()(
         markWitchSegmentsAsSkipped,
         isFirstNightSegment,
         reset,
+        setSegmentIndex,
+        getSegmentIndex,
       };
     }).pipe(Effect.annotateLogs('service', 'SegmentManager')),
     dependencies: [],

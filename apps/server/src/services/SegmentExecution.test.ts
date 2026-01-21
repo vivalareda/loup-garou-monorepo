@@ -4,12 +4,9 @@ import { AudioManager } from './AudioManager.js';
 import { DeathManager } from './DeathManager.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
+import { HunterNotFoundError, SegmentExecution } from './SegmentExecution.js';
 import { SegmentManager } from './SegmentManager.js';
-import {
-  HunterNotFoundError,
-  SegmentExecution,
-} from './SegmentExecution.js';
-import { SpecialScenarios } from './SpecialScenarios.js';
+import { SpecialScenarios } from './special-scenarios.js';
 
 const TestLayer = Layer.mergeAll(
   AudioManager.Default,
@@ -137,7 +134,8 @@ describe('SegmentExecution', () => {
       yield* segmentManager.setSegmentSkip('LOVERS', true);
       yield* segmentExecution.finishSegment;
 
-      const werewolfSegment = yield* segmentManager.getSegmentByType('WEREWOLF');
+      const werewolfSegment =
+        yield* segmentManager.getSegmentByType('WEREWOLF');
       expect(werewolfSegment.skip).toBe(false);
     }).pipe(Effect.provide(TestLayer)));
 
@@ -316,7 +314,9 @@ describe('SegmentExecution', () => {
         const playResult = yield* Effect.either(segmentExecution.playSegment);
         expect(Either.isRight(playResult)).toBe(true);
 
-        const finishResult = yield* Effect.either(segmentExecution.finishSegment);
+        const finishResult = yield* Effect.either(
+          segmentExecution.finishSegment
+        );
         expect(Either.isRight(finishResult)).toBe(true);
       }
     }).pipe(Effect.provide(TestLayer)));
@@ -541,7 +541,10 @@ describe('SegmentExecution', () => {
       const lover1 = lovers[0];
       const lover2 = lovers[1];
 
-      if (hunter.socketId !== lover1.socketId && hunter.socketId !== lover2.socketId) {
+      if (
+        hunter.socketId !== lover1.socketId &&
+        hunter.socketId !== lover2.socketId
+      ) {
         const result = yield* Effect.either(segmentExecution.runHunterSegment);
         expect(Either.isRight(result) || Either.isLeft(result)).toBe(true);
       }

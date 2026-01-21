@@ -2,14 +2,11 @@ import type { SegmentType } from '@repo/types';
 import { Effect, Either } from 'effect';
 import { AudioManager } from './AudioManager.js';
 import { DeathManager } from './DeathManager.js';
+import { HunterNotFoundError, SegmentExecutionError } from './errors.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
 import { SegmentManager } from './SegmentManager.js';
-import { SpecialScenarios } from './SpecialScenarios.js';
-import {
-  HunterNotFoundError,
-  SegmentExecutionError,
-} from './errors.js';
+import { SpecialScenarios } from './special-scenarios.js';
 
 export class SegmentExecution extends Effect.Service<SegmentExecution>()(
   '@app/SegmentExecution',
@@ -63,9 +60,8 @@ export class SegmentExecution extends Effect.Service<SegmentExecution>()(
 
         yield* audioManager.playSegmentEnd(segmentType);
 
-        const isFirstNight = yield* segmentManager.isFirstNightSegment(
-          segmentType
-        );
+        const isFirstNight =
+          yield* segmentManager.isFirstNightSegment(segmentType);
         if (isFirstNight) {
           yield* segmentManager.markFirstNightSegmentsAsSkipped;
         }
@@ -90,10 +86,16 @@ export class SegmentExecution extends Effect.Service<SegmentExecution>()(
           const partner = yield* game.getPartner(hunter.socketId);
           if (!partner) {
             return yield* Effect.fail(
-              new SegmentExecutionError({ segment: 'HUNTER', message: 'lover could not be found' })
+              new SegmentExecutionError({
+                segment: 'HUNTER',
+                message: 'lover could not be found',
+              })
             );
           }
-          yield* deathManager.addPartnerSuicide(hunter.socketId, partner.socketId);
+          yield* deathManager.addPartnerSuicide(
+            hunter.socketId,
+            partner.socketId
+          );
           yield* specialScenarios.hunterIsLover;
         } else {
           yield* audioManager.playHunterAudio;

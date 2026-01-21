@@ -38,4 +38,4 @@ export class Lobby extends Effect.Service<Lobby>()('@app/Lobby', {
     };
   }),
   dependencies: [],
-}) { }
+}) {}

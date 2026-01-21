@@ -34,19 +34,27 @@
       "complexity": {
         "noForEach": "off",
         "useLiteralKeys": "off",
-        "useExhaustiveDependencies": "warn",
         "noStaticOnlyClass": "warn"
       }
     }
   },
   "overrides": [
     {
-      "include": ["apps/server/src/services/Game.ts"],
+      "includes": ["apps/server/src/services/Game.ts"],
       "linter": {
         "rules": {
           "complexity": {
-            "noExcessiveCognitiveComplexity": "off",
-            "noExcessiveComplexity": "off"
+            "noExcessiveCognitiveComplexity": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/server/src/services/errors.ts"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noBannedTypes": "off"
           }
         }
       }

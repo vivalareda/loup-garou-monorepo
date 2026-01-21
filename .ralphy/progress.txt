@@ -68,3 +68,5 @@
 - [✓] 2026-01-21 10:47 - Task 3.4: Admin/Testing Events - Admin dashboard testing events
 - [✓] 2026-01-21 11:10 - Task 4.1: AudioManager Service Extension - Remaining audio coordination methods
 - [✓] 2026-01-21 11:43 - Task 5.1: Full Game Integration Test Suite - Comprehensive end-to-end tests
+- [✓] 2026-01-21 12:01 - Task 5.2: Error Handling Audit - Consolidated all error types in errors.ts using Effect TS Data.TaggedError pattern. Added proper message properties to all error types. Migrated SegmentManager and SegmentExecution errors. Updated Game.ts, GameActions.ts, EventsActions.ts, and MockScenario.ts to use typed errors. Fixed Lobby service dependency bug.
+- [✓] 2026-01-21 12:02 - Task 5.2: Error Handling Audit - Review and enhance error handling

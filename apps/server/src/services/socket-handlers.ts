@@ -4,10 +4,9 @@ import { DeathManager } from './DeathManager.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
 import { Lobby } from './Lobby.js';
-import { LobbyConfig } from './LobbyConfig.js';
 import { MockScenario } from './MockScenario.js';
 import { SegmentExecution } from './SegmentExecution.js';
-import { SocketServer } from './SocketServer.js';
+import { SocketServer } from './socket-server.js';
 
 export class SocketHandlers extends Effect.Service<SocketHandlers>()(
   '@app/SocketHandlers',
@@ -15,7 +14,6 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
     effect: Effect.gen(function* () {
       const lobby = yield* Lobby;
       const io = yield* SocketServer;
-      const config = yield* LobbyConfig;
       const game = yield* Game;
       const gameActions = yield* GameActions;
       const segmentExecution = yield* SegmentExecution;
@@ -39,10 +37,6 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                 socket.broadcast.emit('lobby:update-players-list', player);
 
                 const count = yield* lobby.getPlayerCount;
-
-                if (count >= config.maxPlayers) {
-                  console.log();
-                }
               })
                 .pipe(
                   Effect.catchTags({
@@ -172,8 +166,7 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                   if (hunterInQueue) {
                     yield* segmentExecution.runHunterSegment;
                   } else {
-                    const loverInQueue =
-                      yield* game.isOneOfLoversInDeathQueue;
+                    const loverInQueue = yield* game.isOneOfLoversInDeathQueue;
                     if (loverInQueue) {
                       const isPartnerHunter = yield* game.isPartnerHunter;
                       if (isPartnerHunter) {
@@ -205,7 +198,10 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                 const gamePlayers = yield* game.startGame;
                 const clientPlayerList = yield* game.getClientPlayerList;
                 for (const player of gamePlayers) {
-                  io.to(player.getSocketId()).emit('player:role-assigned', player.role);
+                  io.to(player.getSocketId()).emit(
+                    'player:role-assigned',
+                    player.role
+                  );
                 }
                 const lobbyPlayers: LobbyPlayer[] = clientPlayerList.map(
                   (p) => ({ ...p, type: 'lobby' as const })
@@ -262,7 +258,10 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                 }
 
                 for (const voter of voters) {
-                  yield* gameActions.handleDayVote(voter.socketId, targetPlayer);
+                  yield* gameActions.handleDayVote(
+                    voter.socketId,
+                    targetPlayer
+                  );
                 }
 
                 const hasAllVoted = yield* game.hasAllPlayersVoted;
@@ -272,8 +271,7 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                   if (hunterInQueue) {
                     yield* segmentExecution.runHunterSegment;
                   } else {
-                    const loverInQueue =
-                      yield* game.isOneOfLoversInDeathQueue;
+                    const loverInQueue = yield* game.isOneOfLoversInDeathQueue;
                     if (loverInQueue) {
                       const isPartnerHunter = yield* game.isPartnerHunter;
                       if (isPartnerHunter) {
@@ -346,7 +344,9 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
 
             socket.on('admin:mock-day-vote-lover-is-hunter-event', () => {
               Effect.gen(function* () {
-                console.log('Admin triggering mock day vote lover is hunter event');
+                console.log(
+                  'Admin triggering mock day vote lover is hunter event'
+                );
                 yield* mockScenario.runDayVoteKillLoverWhoIsHunter;
               })
                 .pipe(Effect.provideService(DeathManager, deathManager))
@@ -355,7 +355,9 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
 
             socket.on('admin:mock-day-vote-lover-second-hunter-event', () => {
               Effect.gen(function* () {
-                console.log('Admin triggering mock day vote lover second hunter event');
+                console.log(
+                  'Admin triggering mock day vote lover second hunter event'
+                );
                 yield* mockScenario.runDayVoteKillLoverSecondIsHunter;
               })
                 .pipe(Effect.provideService(DeathManager, deathManager))
@@ -376,4 +378,4 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       MockScenario.Default,
     ],
   }
-) { }
+) {}

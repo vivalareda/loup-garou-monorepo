@@ -1,7 +1,7 @@
 import { NodeRuntime } from '@effect/platform-node';
 import { Effect, Layer } from 'effect';
-import { SocketHandlers } from './services/SocketHandlers.js';
 import { DeathManager } from './services/DeathManager.js';
+import { SocketHandlers } from './services/socket-handlers.js';
 
 const mainLayer = Layer.mergeAll(SocketHandlers.Default, DeathManager.Default);
 

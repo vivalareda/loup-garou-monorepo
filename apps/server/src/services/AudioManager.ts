@@ -27,27 +27,54 @@ export class AudioManager extends Effect.Service<AudioManager>()(
           Effect.catchAll(() => Effect.void)
         );
 
-      return {
-        playSegmentStart: (segment: SegmentType) =>
-          Effect.gen(function* () {
-            const audioFile = getSegmentStartAudio(segment);
+      const playSegmentStart = (segment: SegmentType) =>
+        Effect.gen(function* () {
+          const audioFile = getSegmentStartAudio(segment);
 
-            if (segment === 'LOVERS' || segment === 'DAY') {
-              Effect.runFork(playAudio(audioFile));
+          if (segment === 'LOVERS' || segment === 'DAY') {
+            Effect.runFork(playAudio(audioFile));
+            return;
+          }
+
+          yield* playAudio(audioFile);
+        });
+
+      const playSegmentEnd = (segment: SegmentType) =>
+        Effect.gen(function* () {
+          if (segment === 'HUNTER') {
+            return;
+          }
+          const audioFile = getSegmentEndAudio(segment);
+          if (!audioFile) return;
+          yield* playAudio(audioFile);
+        });
+
+      return {
+        playSegmentStart,
+
+        playSegmentEnd,
+
+        playSegmentAudio: (
+          segment: SegmentType,
+          isStarting: boolean
+        ) =>
+          Effect.gen(function* () {
+            if (isStarting) {
+              yield* playSegmentStart(segment);
               return;
             }
 
-            yield* playAudio(audioFile);
-          }),
-
-        playSegmentEnd: (segment: SegmentType) =>
-          Effect.gen(function* () {
             if (segment === 'HUNTER') {
               return;
             }
-            const audioFile = getSegmentEndAudio(segment);
-            if (!audioFile) return;
-            yield* playAudio(audioFile);
+
+            const endAudioFile = getSegmentEndAudio(segment);
+
+            if (!endAudioFile) {
+              return;
+            }
+
+            yield* playAudio(endAudioFile);
           }),
 
         playWinnerAudio: (winner: 'werewolves' | 'villagers') =>
@@ -56,6 +83,10 @@ export class AudioManager extends Effect.Service<AudioManager>()(
               ? 'End-game/Werewolves-won'
               : 'End-game/Villagers-won'
           ),
+
+        playVillagersWonAudio: playAudio('End-game/Villagers-won'),
+
+        playWerewolvesWonAudio: playAudio('End-game/Werewolves-won'),
 
         nightHasEndedAudio: playAudio('Night/night-has-ended'),
 
@@ -70,6 +101,10 @@ export class AudioManager extends Effect.Service<AudioManager>()(
         playHunterAudio: playAudio('Hunter/hunter'),
 
         playPostHunterAudio: playAudio('Hunter/Hunter-start-vote'),
+
+        playDayEndAudio: playAudio('Day-vote/Vote-Death'),
+
+        playDayVoteAudio: playAudio('day-vote-start-universal'),
       };
     }),
     dependencies: [],

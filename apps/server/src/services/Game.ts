@@ -49,7 +49,6 @@ function shuffleArray<T>(array: T[]): T[] {
 export class Game extends Effect.Service<Game>()('@app/Game', {
   effect: Effect.gen(function* () {
     const lobby = yield* Lobby;
-
     const players = new Map<string, Player>();
     const specialRolePlayers = new Map<Role, Player>();
 
@@ -64,23 +63,20 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
         const lobbyPlayers = yield* lobby.getAllPlayers;
         const roles = initRolesList(lobbyPlayers.length);
 
-        const gamePlayers = lobbyPlayers.map((lp, index) => {
+        lobbyPlayers.map((lp, index) => {
           const role = roles[index];
           const player = new Player(lp.name, lp.sid, role);
           players.set(player.getSocketId(), player);
           setSpecialRolePlayer(player, role);
           return player;
         });
-
-        yield* lobby.clear;
-
-        return gamePlayers;
       }),
 
       getPlayers: Effect.sync(() => Array.from(players.values())),
       getClientPlayerList: Effect.sync(() =>
         Array.from(players.values()).map((player) => player.getIdentity())
       ),
+
       getSpecialRolePlayer: (role: Role) =>
         Effect.gen(function* () {
           return (

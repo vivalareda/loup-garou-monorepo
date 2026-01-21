@@ -1,8 +1,8 @@
-import { Effect, Config } from 'effect';
 import { existsSync } from 'node:fs';
+import type { SegmentType } from '@repo/types';
+import { Config, Effect, Layer } from 'effect';
 import sound from 'sound-play';
 import { AudioPlaybackError } from './errors.js';
-import { SegmentType } from '@repo/types';
 
 export class AudioManager extends Effect.Service<AudioManager>()(
   '@app/AudioManager',
@@ -29,7 +29,7 @@ export class AudioManager extends Effect.Service<AudioManager>()(
           Effect.gen(function* () {
             const audioFile = getSegmentStartAudio(segment);
 
-            if (segment === 'LOVERS' || segment === 'DAY') {
+            if (segment === 'LOVERS' || segment === 'DAY_VOTE') {
               Effect.runFork(playAudio(audioFile));
               return;
             }
@@ -39,9 +39,16 @@ export class AudioManager extends Effect.Service<AudioManager>()(
 
         playSegmentEnd: (segment: SegmentType) =>
           Effect.gen(function* () {
-            const audioFile = getSegmentEndAudio(segment);
-            if (!audioFile) return;
-            yield* playAudio(audioFile);
+            switch (segment) {
+              case 'CUPID':
+                return yield* playAudio('Cupidon/Cupidon-2');
+              case 'WEREWOLF':
+                return yield* playAudio('Werewolves/Werewolves-2');
+              case 'DAY_VOTE':
+                return yield* playAudio('Day-vote/Vote-Death');
+              case 'HUNTER':
+                return; // No end audio for hunter
+            }
           }),
 
         playWinnerAudio: (winner: 'werewolves' | 'villagers') =>
@@ -50,11 +57,23 @@ export class AudioManager extends Effect.Service<AudioManager>()(
               ? 'End-game/Werewolves-won'
               : 'End-game/Villagers-won'
           ),
+
+        playIntro: () => playAudio('Intro'),
       };
     }),
     dependencies: [], // No dependencies, self-contained
   }
-) { }
+) {
+  static Test = Layer.succeed(
+    this,
+    new AudioManager({
+      playIntro: () => Effect.void,
+      playWinnerAudio: () => Effect.void,
+      playSegmentEnd: () => Effect.void,
+      playSegmentStart: () => Effect.void,
+    })
+  );
+}
 
 const getSegmentStartAudio = (segment: SegmentType): string => {
   switch (segment) {
@@ -68,5 +87,7 @@ const getSegmentStartAudio = (segment: SegmentType): string => {
       return 'Witch/Witch-wake-up';
     case 'DAY_VOTE':
       return 'Day-vote/Vote-Start';
+    default:
+      return 'problem';
   }
 };

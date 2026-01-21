@@ -5,7 +5,9 @@ import { Lobby } from '../Lobby.js';
 import { LobbyConfig } from '../LobbyConfig.js';
 
 describe('Lobby Service', () => {
-  const TestLayer = Lobby.Default.pipe(Layer.provide(LobbyConfig.Test));
+  const TestLayer = Lobby.DefaultWithoutDependencies.pipe(
+    Layer.provide(LobbyConfig.Test)
+  );
 
   it.effect('adds a player to the list correctly', () =>
     Effect.gen(function* () {

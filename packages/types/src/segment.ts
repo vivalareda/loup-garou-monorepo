@@ -5,7 +5,7 @@ export const segments = [
   'WITCH',
   'HUNTER',
   // 'SEER',
-  'DAY',
+  'DAY_VOTE',
 ] as const;
 
 type WitchPhase = 'HEAL' | 'POISON';

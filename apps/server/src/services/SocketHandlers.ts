@@ -13,6 +13,11 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       const config = yield* LobbyConfig;
       const game = yield* Game;
 
+      const gameShouldStart = () =>
+        lobby.getPlayerCount.pipe(
+          Effect.map((count) => count >= config.maxPlayers)
+        );
+
       return {
         promptCupid: Effect.gen(function* () {
           const cupid = yield* game.getSpecialRolePlayer('CUPID');
@@ -27,10 +32,8 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                 socket.emit('lobby:player-data', player);
                 socket.broadcast.emit('lobby:update-players-list', player);
 
-                const count = yield* lobby.getPlayerCount;
-
-                if (count >= config.maxPlayers) {
-                  console.log();
+                if (yield* gameShouldStart()) {
+                  yield* game.startGame;
                 }
               })
                 .pipe(

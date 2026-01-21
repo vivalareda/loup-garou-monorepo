@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import type { ClientToServerEvents, ServerToClientEvents } from '@repo/types';
-import { Effect } from 'effect';
+import { Effect, Layer } from 'effect';
 import { Server as SocketIOServer } from 'socket.io';
 import { HttpServer } from './HttpServer.js';
 
@@ -43,5 +43,17 @@ export class SocketServer extends Effect.Service<SocketServer>()(
     }),
     dependencies: [HttpServer.Live],
   }
-) { }
- 
+) {
+  static Test = Layer.succeed(
+    this,
+    new SocketServer({
+      to: () => ({ emit: () => Effect.void }),
+      emit: () => {
+        Effect.void;
+      },
+      on: () => {
+        Effect.void;
+      },
+    } as unknown as SocketIOInstance)
+  );
+}

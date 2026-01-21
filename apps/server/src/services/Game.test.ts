@@ -1,8 +1,9 @@
 import { describe, expect } from '@effect/vitest';
-import { Effect, Either } from 'effect';
+import { Effect, Either, Layer } from 'effect';
 import { Game } from './Game.js';
+import { DeathManager } from './DeathManager.js';
 
-const TestLayer = Game.Default;
+const TestLayer = Layer.merge(DeathManager.Default, Game.Default);
 
 describe('Game - Werewolf Voting', () => {
   describe('handleWerewolfVote', () => {
@@ -860,6 +861,415 @@ describe('Game - Day Voting', () => {
 
         const target = yield* game.getDayVoteTarget;
         expect(target).toBeNull();
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+});
+
+describe('Game - Death Processing Workflow', () => {
+  describe('processPendingDeaths', () => {
+    it.effect('should process single werewolf victim death', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolf = players.find((p) => p.role === 'WEREWOLF');
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!(werewolf && victim)) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(1);
+        expect(deaths[0].playerId).toBe(victim.socketId);
+        expect(deaths[0].cause).toBe('WEREWOLVES');
+        expect(deaths[0].playerName).toBe(victim.name);
+        expect(victim.isAlive).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should process multiple deaths', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const victims = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+
+        if (victims.length < 2) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(victims[0], 'WEREWOLVES');
+        yield* deathManager.addPendingDeath(victims[1], 'WITCH_POISON');
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(2);
+        expect(deaths[0].playerId).toBe(victims[0].socketId);
+        expect(deaths[1].playerId).toBe(victims[1].socketId);
+        expect(deaths[0].cause).toBe('WEREWOLVES');
+        expect(deaths[1].cause).toBe('WITCH_POISON');
+        expect(victims[0].isAlive).toBe(false);
+        expect(victims[1].isAlive).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle lover partner suicide cascade', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const lovers = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+
+        if (lovers.length < 2) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(lovers[0], 'WEREWOLVES');
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(2);
+        expect(deaths.some((d) => d.playerId === lovers[0].socketId)).toBe(true);
+        expect(deaths.some((d) => d.playerId === lovers[1].socketId)).toBe(true);
+        expect(
+          deaths.find((d) => d.playerId === lovers[1].socketId)?.cause
+        ).toBe('PARTNER_SUICIDE');
+        expect(lovers[0].isAlive).toBe(false);
+        expect(lovers[1].isAlive).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should not cascade partner suicide if partner already dead', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const lovers = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+
+        if (lovers.length < 2) {
+          return;
+        }
+
+        lovers[1].setIsAlive(false);
+
+        yield* deathManager.addPendingDeath(lovers[0], 'WEREWOLVES');
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(1);
+        expect(deaths[0].playerId).toBe(lovers[0].socketId);
+        expect(lovers[0].isAlive).toBe(false);
+        expect(lovers[1].isAlive).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should not cascade if death cause is PARTNER_SUICIDE', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const lovers = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+
+        if (lovers.length < 2) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(
+          lovers[0],
+          'PARTNER_SUICIDE'
+        );
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(1);
+        expect(deaths[0].playerId).toBe(lovers[0].socketId);
+        expect(lovers[1].isAlive).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should include metadata in death info', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!victim) {
+          return;
+        }
+
+        yield* deathManager.addDayVoteElimination(victim.socketId, 5);
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(1);
+        expect(deaths[0].playerId).toBe(victim.socketId);
+        expect(deaths[0].cause).toBe('DAY_VOTE');
+        expect(deaths[0].metadata?.voteCount).toBe(5);
+        expect(deaths[0].timestamp).toBeInstanceOf(Date);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return empty array when no pending deaths', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toEqual([]);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should fail if player not found', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+
+        yield* deathManager.addPartnerSuicide('nonexistent-sid', 'another-sid');
+
+        const result = yield* Effect.either(game.processPendingDeaths);
+
+        expect(Either.isLeft(result)).toBe(true);
+        if (Either.isLeft(result)) {
+          expect(result.left.message).toContain('not found');
+        }
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should clear pending deaths after processing', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!victim) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+        yield* game.processPendingDeaths;
+
+        const remainingDeaths = yield* deathManager.getPendingDeaths;
+
+        expect(remainingDeaths).toHaveLength(0);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle day vote elimination', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!victim) {
+          return;
+        }
+
+        yield* deathManager.addDayVoteElimination(victim.socketId, 7);
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(1);
+        expect(deaths[0].playerId).toBe(victim.socketId);
+        expect(deaths[0].cause).toBe('DAY_VOTE');
+        expect(deaths[0].metadata?.voteCount).toBe(7);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle hunter revenge death', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const hunter = players.find((p) => p.role === 'HUNTER');
+        const victim = players.find((p) => p.role !== 'HUNTER');
+
+        if (!(hunter && victim)) {
+          return;
+        }
+
+        yield* deathManager.addHunterRevenge(victim.socketId, hunter.socketId);
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(1);
+        expect(deaths[0].playerId).toBe(victim.socketId);
+        expect(deaths[0].cause).toBe('HUNTER_REVENGE');
+        expect(deaths[0].metadata?.hunterId).toBe(hunter.socketId);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle witch poison death', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!victim) {
+          return;
+        }
+
+        yield* deathManager.addWitchPoison(victim.socketId);
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(1);
+        expect(deaths[0].playerId).toBe(victim.socketId);
+        expect(deaths[0].cause).toBe('WITCH_POISON');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should process death with all metadata types', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const hunter = players.find((p) => p.role === 'HUNTER');
+        const lovers = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+
+        if (!hunter || lovers.length < 2) {
+          return;
+        }
+
+        yield* deathManager.addDayVoteElimination(lovers[0].socketId, 6);
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(2);
+        expect(deaths[0].metadata?.voteCount).toBe(6);
+        expect(deaths[1].metadata?.loverId).toBe(lovers[0].socketId);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should verify two-pass processing: cascade then all deaths', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const lovers = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+        const hunter = players.find((p) => p.role === 'HUNTER');
+
+        if (lovers.length < 2 || !hunter) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(lovers[0], 'WEREWOLVES');
+        yield* deathManager.addPendingDeath(hunter, 'DAY_VOTE');
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(3);
+        expect(
+          deaths.filter((d) => d.playerId === lovers[0].socketId)
+        ).toHaveLength(1);
+        expect(
+          deaths.filter((d) => d.playerId === lovers[1].socketId)
+        ).toHaveLength(1);
+        expect(
+          deaths.filter((d) => d.playerId === hunter.socketId)
+        ).toHaveLength(1);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('Edge Cases', () => {
+    it.effect('should handle empty pending deaths queue', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toEqual([]);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle multiple lovers dying simultaneously', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const lovers = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+
+        if (lovers.length < 2) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(lovers[0], 'WEREWOLVES');
+        yield* deathManager.addPendingDeath(lovers[1], 'WITCH_POISON');
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(2);
+        expect(lovers[0].isAlive).toBe(false);
+        expect(lovers[1].isAlive).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should not add metadata if not present', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!victim) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(1);
+        expect(deaths[0].metadata).toBeUndefined();
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should verify timestamp is current', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+        const beforeProcess = new Date();
+
+        if (!victim) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+
+        const deaths = yield* game.processPendingDeaths;
+
+        const afterProcess = new Date();
+
+        expect(deaths).toHaveLength(1);
+        expect(deaths[0].timestamp.getTime()).toBeGreaterThanOrEqual(
+          beforeProcess.getTime()
+        );
+        expect(deaths[0].timestamp.getTime()).toBeLessThanOrEqual(
+          afterProcess.getTime()
+        );
       }).pipe(Effect.provide(TestLayer))
     );
   });

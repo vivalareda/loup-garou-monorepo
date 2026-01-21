@@ -3,8 +3,8 @@
 - [x] Task 1.1: DeathManager Service - Migrate death queue and team management
 - [x] Task 1.2: GameActions Service (Part 1) - Migrate non-voting segment actions
 - [x] Task 1.3: Voting Logic - Werewolf Voting - Implement werewolf consensus voting
-- [ ] Task 1.4: Voting Logic - Day Voting - Implement day phase voting with tie handling
-- [ ] Task 1.5: Death Processing Workflow - Two-pass death processing with cascades
+- [x] Task 1.4: Voting Logic - Day Voting - Implement day phase voting with tie handling
+- [x] Task 1.5: Death Processing Workflow - Two-pass death processing with cascades
 - [ ] Task 1.6: Lover Mechanics - Lover tracking and partner suicide logic
 - [ ] Task 1.7: Witch Potion Mechanics - Witch potion tracking and actions
 - [ ] Task 1.8: Hunter Revenge Mechanics - Hunter revenge and special scenarios

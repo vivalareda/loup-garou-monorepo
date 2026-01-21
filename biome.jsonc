@@ -27,7 +27,29 @@
       },
       "style": {
         "noMagicNumbers": "off"
+      },
+      "correctness": {
+        "noUnusedVariables": "error"
+      },
+      "complexity": {
+        "noForEach": "off",
+        "useLiteralKeys": "off",
+        "useExhaustiveDependencies": "warn",
+        "noStaticOnlyClass": "warn"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "include": ["apps/server/src/services/Game.ts"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off",
+            "noExcessiveComplexity": "off"
+          }
+        }
+      }
+    }
+  ]
 }

@@ -291,10 +291,72 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
         return targetSid;
       }),
 
-      processPendingDeaths: Effect.sync(() => {
-        const deaths: DeathInfo[] = [];
-        return deaths;
-      }),
+      // biome-ignore lint/correctness/noUnusedVariables: Complex two-pass death processing logic
+      processPendingDeaths: Effect.gen(function* () {
+        const deathManager = yield* DeathManager;
+        const initialDeaths = yield* deathManager.getPendingDeaths;
+
+        for (const pendingDeath of initialDeaths) {
+          const player = players.get(pendingDeath.playerId);
+
+          if (!player) {
+            return yield* Effect.fail(
+              new Error(
+                `Player ${pendingDeath.playerId} not found in processPendingDeaths`
+              )
+            );
+          }
+
+          const isLover = lovers.some(
+            (lover) => lover.getSocketId() === player.getSocketId()
+          );
+
+          if (isLover && pendingDeath.cause !== 'PARTNER_SUICIDE') {
+            const partner = lovers.find(
+              (lover) => lover.getSocketId() !== player.getSocketId()
+            );
+            if (
+              partner?.isAlive &&
+              !(yield* deathManager.isInDeathQueue(partner.getSocketId()))
+            ) {
+              yield* deathManager.addPartnerSuicide(
+                partner.getSocketId(),
+                pendingDeath.playerId
+              );
+            }
+          }
+        }
+
+        const allDeaths = yield* deathManager.getPendingDeaths;
+        const deathInfos: DeathInfo[] = [];
+
+        for (const pendingDeath of allDeaths) {
+          const player = players.get(pendingDeath.playerId);
+
+          if (!player) {
+            return yield* Effect.fail(
+              new Error(
+                `Player ${pendingDeath.playerId} not found in processPendingDeaths`
+              )
+            );
+          }
+
+          const deathInfo: DeathInfo = {
+            playerId: pendingDeath.playerId,
+            playerName: player.name,
+            cause: pendingDeath.cause,
+            timestamp: new Date(),
+            ...(pendingDeath.metadata && { metadata: pendingDeath.metadata }),
+          };
+
+          deathInfos.push(deathInfo);
+          player.setIsAlive(false);
+
+          yield* deathManager.removePendingDeath(pendingDeath.playerId);
+        }
+
+        return deathInfos;
+      }).pipe(Effect.withSpan('processPendingDeaths')),
 
       checkIfWinner: Effect.sync(() => {
         return null;

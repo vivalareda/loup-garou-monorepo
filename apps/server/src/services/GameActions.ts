@@ -197,6 +197,15 @@ export class GameActions extends Effect.Service<GameActions>()(
           yield* deathManager.addDayVoteElimination(targetSid, voteCount);
           yield* emitToAll('day:voting-complete', targetSid);
         }),
+
+        healWerewolfVictim: Effect.gen(function* () {
+          yield* game.healWerewolfVictim;
+        }),
+
+        witchKill: (playerSid: string) =>
+          Effect.gen(function* () {
+            yield* game.witchKill(playerSid);
+          }),
       };
     }),
     dependencies: [

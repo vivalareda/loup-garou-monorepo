@@ -1275,6 +1275,559 @@ describe('Game - Death Processing Workflow', () => {
   });
 });
 
+describe('Game - Witch Potion Mechanics', () => {
+  describe('canWitchHeal', () => {
+    it.effect('should return true when witch has heal potion initially', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        yield* game.startGame;
+
+        const canHeal = yield* game.canWitchHeal;
+
+        expect(canHeal).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false after using heal potion', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolf = players.find((p) => p.role === 'WEREWOLF');
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!(werewolf && victim)) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+        yield* game.healWerewolfVictim;
+
+        const canHeal = yield* game.canWitchHeal;
+
+        expect(canHeal).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false when witch dies', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const witch = players.find((p) => p.role === 'WITCH');
+
+        if (!witch) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(witch, 'WEREWOLVES');
+        yield* game.processPendingDeaths;
+
+        const canHeal = yield* game.canWitchHeal;
+
+        expect(canHeal).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should work when no witch in game', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        yield* game.startGame;
+
+        const canHeal = yield* game.canWitchHeal;
+
+        expect(canHeal).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('canWitchPoison', () => {
+    it.effect('should return true when witch has poison potion initially', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        yield* game.startGame;
+
+        const canPoison = yield* game.canWitchPoison;
+
+        expect(canPoison).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false after using poison potion', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!victim) {
+          return;
+        }
+
+        yield* game.witchKill(victim.socketId);
+
+        const canPoison = yield* game.canWitchPoison;
+
+        expect(canPoison).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should return false when witch dies', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const witch = players.find((p) => p.role === 'WITCH');
+
+        if (!witch) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(witch, 'WEREWOLVES');
+        yield* game.processPendingDeaths;
+
+        const canPoison = yield* game.canWitchPoison;
+
+        expect(canPoison).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should work when no witch in game', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        yield* game.startGame;
+
+        const canPoison = yield* game.canWitchPoison;
+
+        expect(canPoison).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('healWerewolfVictim', () => {
+    it.effect('should remove werewolf victim from death queue', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolf = players.find((p) => p.role === 'WEREWOLF');
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!(werewolf && victim)) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+
+        const pendingBefore = yield* deathManager.getPendingDeaths;
+        expect(pendingBefore).toHaveLength(1);
+        expect(pendingBefore[0].playerId).toBe(victim.socketId);
+
+        yield* game.healWerewolfVictim;
+
+        const pendingAfter = yield* deathManager.getPendingDeaths;
+        expect(pendingAfter).toHaveLength(0);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should consume heal potion', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!victim) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+
+        const canHealBefore = yield* game.canWitchHeal;
+        expect(canHealBefore).toBe(true);
+
+        yield* game.healWerewolfVictim;
+
+        const canHealAfter = yield* game.canWitchHeal;
+        expect(canHealAfter).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should only remove WEREWOLVES cause deaths', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolfVictim = players.find((p) => p.role === 'VILLAGER');
+        const witchVictim = players.find(
+          (p) => p.role === 'VILLAGER' && p.socketId !== werewolfVictim?.socketId
+        );
+
+        if (!(werewolfVictim && witchVictim)) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(werewolfVictim, 'WEREWOLVES');
+        yield* deathManager.addWitchPoison(witchVictim.socketId);
+
+        const pendingBefore = yield* deathManager.getPendingDeaths;
+        expect(pendingBefore).toHaveLength(2);
+
+        yield* game.healWerewolfVictim;
+
+        const pendingAfter = yield* deathManager.getPendingDeaths;
+        expect(pendingAfter).toHaveLength(1);
+        expect(pendingAfter[0].playerId).toBe(witchVictim.socketId);
+        expect(pendingAfter[0].cause).toBe('WITCH_POISON');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle no werewolf victim in queue', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const canHealBefore = yield* game.canWitchHeal;
+        expect(canHealBefore).toBe(true);
+
+        yield* game.healWerewolfVictim;
+
+        const canHealAfter = yield* game.canWitchHeal;
+        expect(canHealAfter).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('witchKill', () => {
+    it.effect('should add poison victim to death queue', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!victim) {
+          return;
+        }
+
+        yield* game.witchKill(victim.socketId);
+
+        const pendingDeaths = yield* deathManager.getPendingDeaths;
+        expect(pendingDeaths).toHaveLength(1);
+        expect(pendingDeaths[0].playerId).toBe(victim.socketId);
+        expect(pendingDeaths[0].cause).toBe('WITCH_POISON');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should consume poison potion', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!victim) {
+          return;
+        }
+
+        const canPoisonBefore = yield* game.canWitchPoison;
+        expect(canPoisonBefore).toBe(true);
+
+        yield* game.witchKill(victim.socketId);
+
+        const canPoisonAfter = yield* game.canWitchPoison;
+        expect(canPoisonAfter).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle multiple poison kills', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const victims = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+
+        if (victims.length < 2) {
+          return;
+        }
+
+        yield* game.witchKill(victims[0].socketId);
+
+        const pendingAfterFirst = yield* deathManager.getPendingDeaths;
+        expect(pendingAfterFirst).toHaveLength(1);
+
+        yield* game.witchKill(victims[1].socketId);
+
+        const pendingAfterSecond = yield* deathManager.getPendingDeaths;
+        expect(pendingAfterSecond).toHaveLength(2);
+        expect(
+          pendingAfterSecond.some((d) => d.playerId === victims[0].socketId)
+        ).toBe(true);
+        expect(
+          pendingAfterSecond.some((d) => d.playerId === victims[1].socketId)
+        ).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('Witch Death - Potion Reset', () => {
+    it.effect('should lose both potions when witch dies', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const witch = players.find((p) => p.role === 'WITCH');
+
+        if (!witch) {
+          return;
+        }
+
+        const canHealBefore = yield* game.canWitchHeal;
+        const canPoisonBefore = yield* game.canWitchPoison;
+        expect(canHealBefore).toBe(true);
+        expect(canPoisonBefore).toBe(true);
+
+        yield* deathManager.addPendingDeath(witch, 'WEREWOLVES');
+        yield* game.processPendingDeaths;
+
+        const canHealAfter = yield* game.canWitchHeal;
+        const canPoisonAfter = yield* game.canWitchPoison;
+        expect(canHealAfter).toBe(false);
+        expect(canPoisonAfter).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should reset potions only for witch death', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const villager = players.find((p) => p.role === 'VILLAGER');
+
+        if (!villager) {
+          return;
+        }
+
+        const canHealBefore = yield* game.canWitchHeal;
+        const canPoisonBefore = yield* game.canWitchPoison;
+        expect(canHealBefore).toBe(true);
+        expect(canPoisonBefore).toBe(true);
+
+        yield* deathManager.addPendingDeath(villager, 'WEREWOLVES');
+        yield* game.processPendingDeaths;
+
+        const canHealAfter = yield* game.canWitchHeal;
+        const canPoisonAfter = yield* game.canWitchPoison;
+        expect(canHealAfter).toBe(true);
+        expect(canPoisonAfter).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('Witch Potion Integration', () => {
+    it.effect('should handle heal then poison sequence', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolfVictim = players.find((p) => p.role === 'VILLAGER');
+        const poisonVictim = players.find(
+          (p) => p.role === 'VILLAGER' && p.socketId !== werewolfVictim?.socketId
+        );
+
+        if (!(werewolfVictim && poisonVictim)) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(werewolfVictim, 'WEREWOLVES');
+        yield* game.healWerewolfVictim;
+        yield* game.witchKill(poisonVictim.socketId);
+
+        const canHeal = yield* game.canWitchHeal;
+        const canPoison = yield* game.canWitchPoison;
+
+        expect(canHeal).toBe(false);
+        expect(canPoison).toBe(false);
+
+        const pendingDeaths = yield* deathManager.getPendingDeaths;
+        expect(pendingDeaths).toHaveLength(1);
+        expect(pendingDeaths[0].playerId).toBe(poisonVictim.socketId);
+        expect(pendingDeaths[0].cause).toBe('WITCH_POISON');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle poison then heal sequence', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const poisonVictim = players.find((p) => p.role === 'VILLAGER');
+        const werewolfVictim = players.find(
+          (p) => p.role === 'VILLAGER' && p.socketId !== poisonVictim?.socketId
+        );
+
+        if (!(poisonVictim && werewolfVictim)) {
+          return;
+        }
+
+        yield* game.witchKill(poisonVictim.socketId);
+        yield* deathManager.addPendingDeath(werewolfVictim, 'WEREWOLVES');
+        yield* game.healWerewolfVictim;
+
+        const canHeal = yield* game.canWitchHeal;
+        const canPoison = yield* game.canWitchPoison;
+
+        expect(canHeal).toBe(false);
+        expect(canPoison).toBe(false);
+
+        const pendingDeaths = yield* deathManager.getPendingDeaths;
+        expect(pendingDeaths).toHaveLength(1);
+        expect(pendingDeaths[0].playerId).toBe(poisonVictim.socketId);
+        expect(pendingDeaths[0].cause).toBe('WITCH_POISON');
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle full night cycle with witch actions', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const werewolfVictim = players.find((p) => p.role === 'VILLAGER');
+        const poisonVictim = players.find(
+          (p) => p.role === 'VILLAGER' && p.socketId !== werewolfVictim?.socketId
+        );
+
+        if (!(werewolfVictim && poisonVictim)) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(werewolfVictim, 'WEREWOLVES');
+        yield* game.healWerewolfVictim;
+        yield* game.witchKill(poisonVictim.socketId);
+
+        const deaths = yield* game.processPendingDeaths;
+
+        expect(deaths).toHaveLength(1);
+        expect(deaths[0].playerId).toBe(poisonVictim.socketId);
+        expect(deaths[0].cause).toBe('WITCH_POISON');
+        expect(poisonVictim.isAlive).toBe(false);
+        expect(werewolfVictim.isAlive).toBe(true);
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+
+  describe('Edge Cases', () => {
+    it.effect('should handle witch healing when no victim exists', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        yield* game.startGame;
+
+        const canHealBefore = yield* game.canWitchHeal;
+        expect(canHealBefore).toBe(true);
+
+        yield* game.healWerewolfVictim;
+
+        const canHealAfter = yield* game.canWitchHeal;
+        expect(canHealAfter).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle multiple heal attempts', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!victim) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+        yield* game.healWerewolfVictim;
+
+        const canHealAfterFirst = yield* game.canWitchHeal;
+        expect(canHealAfterFirst).toBe(false);
+
+        yield* game.healWerewolfVictim;
+
+        const canHealAfterSecond = yield* game.canWitchHeal;
+        expect(canHealAfterSecond).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle multiple poison attempts', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const players = yield* game.startGame;
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (!victim) {
+          return;
+        }
+
+        yield* game.witchKill(victim.socketId);
+
+        const canPoisonAfterFirst = yield* game.canWitchPoison;
+        expect(canPoisonAfterFirst).toBe(false);
+
+        yield* game.witchKill(victim.socketId);
+
+        const canPoisonAfterSecond = yield* game.canWitchPoison;
+        expect(canPoisonAfterSecond).toBe(false);
+      }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect('should handle witch death before using potions', () =>
+      Effect.gen(function* () {
+        const game = yield* Game;
+        const deathManager = yield* DeathManager;
+        const players = yield* game.startGame;
+
+        const witch = players.find((p) => p.role === 'WITCH');
+
+        if (!witch) {
+          return;
+        }
+
+        yield* deathManager.addPendingDeath(witch, 'WEREWOLVES');
+        yield* game.processPendingDeaths;
+
+        const canHeal = yield* game.canWitchHeal;
+        const canPoison = yield* game.canWitchPoison;
+
+        expect(canHeal).toBe(false);
+        expect(canPoison).toBe(false);
+
+        const victim = players.find((p) => p.role === 'VILLAGER');
+
+        if (victim) {
+          yield* deathManager.addPendingDeath(victim, 'WEREWOLVES');
+          yield* game.healWerewolfVictim;
+
+          const pendingDeaths = yield* deathManager.getPendingDeaths;
+          expect(pendingDeaths).toHaveLength(1);
+        }
+      }).pipe(Effect.provide(TestLayer))
+    );
+  });
+});
+
 describe('Game - Lover Mechanics', () => {
   describe('setLovers', () => {
     it.effect('should set two players as lovers', () =>

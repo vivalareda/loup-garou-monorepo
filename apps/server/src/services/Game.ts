@@ -57,6 +57,8 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
     const lovers: Player[] = [];
     const werewolfVotes = new Map<string, string>();
     const dayVotes = new Map<string, string>();
+    let witchHasHealPotion = true;
+    let witchHasPoisonPotion = true;
 
     const setSpecialRolePlayer = (player: Player, role: Role) => {
       if (role !== 'WEREWOLF' && role !== 'VILLAGER') {
@@ -397,6 +399,11 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
           deathInfos.push(deathInfo);
           player.setIsAlive(false);
 
+          if (player.role === 'WITCH') {
+            witchHasHealPotion = false;
+            witchHasPoisonPotion = false;
+          }
+
           yield* deathManager.removePendingDeath(pendingDeath.playerId);
         }
 
@@ -405,6 +412,27 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
 
       checkIfWinner: Effect.sync(() => {
         return null;
+      }),
+
+      healWerewolfVictim: Effect.gen(function* () {
+        const deathManager = yield* DeathManager;
+        yield* deathManager.healWerewolvesVictim;
+        witchHasHealPotion = false;
+      }),
+
+      witchKill: (playerSid: string) =>
+        Effect.gen(function* () {
+          const deathManager = yield* DeathManager;
+          yield* deathManager.addWitchPoison(playerSid);
+          witchHasPoisonPotion = false;
+        }),
+
+      canWitchHeal: Effect.sync(() => {
+        return witchHasHealPotion;
+      }),
+
+      canWitchPoison: Effect.sync(() => {
+        return witchHasPoisonPotion;
       }),
     };
   }),

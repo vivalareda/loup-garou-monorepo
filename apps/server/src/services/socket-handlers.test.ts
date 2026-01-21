@@ -4,12 +4,14 @@ import { DeathManager } from './death-manager.js';
 import { Game } from './game.js';
 import { GameActions } from './game-actions.js';
 import { Lobby } from './lobby.js';
+import { LobbyConfig } from './lobby-config.js';
 import { MockScenario } from './mock-scenario.js';
 import { SegmentExecution } from './segment-execution.js';
 import { SocketHandlers } from './socket-handlers.js';
 import { SocketServer } from './socket-server.js';
 
 const TestLayer = Layer.mergeAll(
+  LobbyConfig.Live,
   SocketServer.Default,
   Lobby.Default,
   Game.Default,
@@ -48,7 +50,9 @@ describe('SocketHandlers', () => {
   describe('promptCupid', () => {
     it('should emit cupid:pick-required to cupid player', async () => {
       const program = Effect.gen(function* () {
+        const game = yield* Game;
         const handlers = yield* SocketHandlers;
+        yield* game.startGame;
         yield* handlers.promptCupid;
       });
 
@@ -97,6 +101,7 @@ describe('SocketHandlers', () => {
       const program = Effect.gen(function* () {
         const game = yield* Game;
         const handlers = yield* SocketHandlers;
+        yield* game.startGame;
         yield* handlers.promptCupid;
       });
 
@@ -110,7 +115,9 @@ describe('SocketHandlers', () => {
     it('should integrate with GameActions service', async () => {
       const program = Effect.gen(function* () {
         const gameActions = yield* GameActions;
+        const game = yield* Game;
         const handlers = yield* SocketHandlers;
+        yield* game.startGame;
         yield* handlers.promptCupid;
       });
 
@@ -124,7 +131,9 @@ describe('SocketHandlers', () => {
     it('should integrate with SegmentExecution service', async () => {
       const program = Effect.gen(function* () {
         const segmentExecution = yield* SegmentExecution;
+        const game = yield* Game;
         const handlers = yield* SocketHandlers;
+        yield* game.startGame;
         yield* handlers.promptCupid;
       });
 
@@ -139,7 +148,9 @@ describe('SocketHandlers', () => {
       const program = Effect.gen(function* () {
         const deathManager = yield* DeathManager;
         const segmentExecution = yield* SegmentExecution;
+        const game = yield* Game;
         const handlers = yield* SocketHandlers;
+        yield* game.startGame;
         yield* handlers.promptCupid;
       });
 

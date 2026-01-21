@@ -2,10 +2,14 @@ export class LobbyPlayer {
   readonly type = 'lobby' as const;
 
   readonly name: string;
-  readonly sid: string;
+  readonly socketId: string;
 
-  constructor(name: string, sid: string) {
+  constructor(name: string, socketId: string) {
     this.name = name;
-    this.sid = sid;
+    this.socketId = socketId;
+  }
+
+  get sid() {
+    return this.socketId;
   }
 }

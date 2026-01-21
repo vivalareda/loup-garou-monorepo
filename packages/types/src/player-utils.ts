@@ -1,12 +1,15 @@
-import type { PlayerListItem, Role, WaitingRoomPlayer } from './';
+import type { LobbyPlayer, Player, PlayerIdentity } from './player';
+import type { Role } from './role';
 
-export type PlayerIdentity = {
-  readonly name: string;
-  readonly socketId: string;
+export type PlayerListItem = {
+  name: string;
+  socketId: string;
 };
 
-export type LobbyPlayer = PlayerIdentity & {
-  readonly type: 'lobby';
+export type WaitingRoomPlayer = {
+  type: 'waiting';
+  name: string;
+  socketId: string;
 };
 
 export type GamePlayer = PlayerIdentity & {
@@ -14,14 +17,6 @@ export type GamePlayer = PlayerIdentity & {
   role: Role;
   isAlive: boolean;
 };
-
-export type Player = LobbyPlayer | GamePlayer;
-
-export const isLobbyPlayer = (player: Player): player is LobbyPlayer =>
-  player.type === 'lobby';
-
-export const isGamePlayer = (player: Player): player is GamePlayer =>
-  player.type === 'game';
 
 export const createLobbyPlayer = (
   name: string,

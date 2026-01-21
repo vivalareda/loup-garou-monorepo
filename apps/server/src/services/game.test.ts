@@ -1,9 +1,14 @@
 import { describe, expect } from '@effect/vitest';
 import { Effect, Either, Layer } from 'effect';
-import { Game } from './game.js';
 import { DeathManager } from './death-manager.js';
+import { Game } from './game.js';
+import { LobbyConfig } from './lobby-config.js';
 
-const TestLayer = Layer.merge(DeathManager.Default, Game.Default);
+const TestLayer = Layer.mergeAll(
+  LobbyConfig.Test,
+  DeathManager.Default,
+  Game.Default
+);
 
 describe('Game - Werewolf Voting', () => {
   describe('handleWerewolfVote', () => {
@@ -898,7 +903,9 @@ describe('Game - Death Processing Workflow', () => {
         const deathManager = yield* DeathManager;
         const players = yield* game.startGame;
 
-        const victims = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+        const victims = players
+          .filter((p) => p.role === 'VILLAGER')
+          .slice(0, 2);
 
         if (victims.length < 2) {
           return;
@@ -936,8 +943,12 @@ describe('Game - Death Processing Workflow', () => {
         const deaths = yield* game.processPendingDeaths;
 
         expect(deaths).toHaveLength(2);
-        expect(deaths.some((d) => d.playerId === lovers[0].socketId)).toBe(true);
-        expect(deaths.some((d) => d.playerId === lovers[1].socketId)).toBe(true);
+        expect(deaths.some((d) => d.playerId === lovers[0].socketId)).toBe(
+          true
+        );
+        expect(deaths.some((d) => d.playerId === lovers[1].socketId)).toBe(
+          true
+        );
         expect(
           deaths.find((d) => d.playerId === lovers[1].socketId)?.cause
         ).toBe('PARTNER_SUICIDE');
@@ -946,29 +957,33 @@ describe('Game - Death Processing Workflow', () => {
       }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('should not cascade partner suicide if partner already dead', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
+    it.effect(
+      'should not cascade partner suicide if partner already dead',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
 
-        const lovers = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+          const lovers = players
+            .filter((p) => p.role === 'VILLAGER')
+            .slice(0, 2);
 
-        if (lovers.length < 2) {
-          return;
-        }
+          if (lovers.length < 2) {
+            return;
+          }
 
-        lovers[1].setIsAlive(false);
+          lovers[1].setIsAlive(false);
 
-        yield* deathManager.addPendingDeath(lovers[0], 'WEREWOLVES');
+          yield* deathManager.addPendingDeath(lovers[0], 'WEREWOLVES');
 
-        const deaths = yield* game.processPendingDeaths;
+          const deaths = yield* game.processPendingDeaths;
 
-        expect(deaths).toHaveLength(1);
-        expect(deaths[0].playerId).toBe(lovers[0].socketId);
-        expect(lovers[0].isAlive).toBe(false);
-        expect(lovers[1].isAlive).toBe(false);
-      }).pipe(Effect.provide(TestLayer))
+          expect(deaths).toHaveLength(1);
+          expect(deaths[0].playerId).toBe(lovers[0].socketId);
+          expect(lovers[0].isAlive).toBe(false);
+          expect(lovers[1].isAlive).toBe(false);
+        }).pipe(Effect.provide(TestLayer))
     );
 
     it.effect('should not cascade if death cause is PARTNER_SUICIDE', () =>
@@ -983,10 +998,7 @@ describe('Game - Death Processing Workflow', () => {
           return;
         }
 
-        yield* deathManager.addPendingDeath(
-          lovers[0],
-          'PARTNER_SUICIDE'
-        );
+        yield* deathManager.addPendingDeath(lovers[0], 'PARTNER_SUICIDE');
 
         const deaths = yield* game.processPendingDeaths;
 
@@ -1158,35 +1170,39 @@ describe('Game - Death Processing Workflow', () => {
       }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('should verify two-pass processing: cascade then all deaths', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
+    it.effect(
+      'should verify two-pass processing: cascade then all deaths',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
 
-        const lovers = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
-        const hunter = players.find((p) => p.role === 'HUNTER');
+          const lovers = players
+            .filter((p) => p.role === 'VILLAGER')
+            .slice(0, 2);
+          const hunter = players.find((p) => p.role === 'HUNTER');
 
-        if (lovers.length < 2 || !hunter) {
-          return;
-        }
+          if (lovers.length < 2 || !hunter) {
+            return;
+          }
 
-        yield* deathManager.addPendingDeath(lovers[0], 'WEREWOLVES');
-        yield* deathManager.addPendingDeath(hunter, 'DAY_VOTE');
+          yield* deathManager.addPendingDeath(lovers[0], 'WEREWOLVES');
+          yield* deathManager.addPendingDeath(hunter, 'DAY_VOTE');
 
-        const deaths = yield* game.processPendingDeaths;
+          const deaths = yield* game.processPendingDeaths;
 
-        expect(deaths).toHaveLength(3);
-        expect(
-          deaths.filter((d) => d.playerId === lovers[0].socketId)
-        ).toHaveLength(1);
-        expect(
-          deaths.filter((d) => d.playerId === lovers[1].socketId)
-        ).toHaveLength(1);
-        expect(
-          deaths.filter((d) => d.playerId === hunter.socketId)
-        ).toHaveLength(1);
-      }).pipe(Effect.provide(TestLayer))
+          expect(deaths).toHaveLength(3);
+          expect(
+            deaths.filter((d) => d.playerId === lovers[0].socketId)
+          ).toHaveLength(1);
+          expect(
+            deaths.filter((d) => d.playerId === lovers[1].socketId)
+          ).toHaveLength(1);
+          expect(
+            deaths.filter((d) => d.playerId === hunter.socketId)
+          ).toHaveLength(1);
+        }).pipe(Effect.provide(TestLayer))
     );
   });
 
@@ -1275,7 +1291,7 @@ describe('Game - Death Processing Workflow', () => {
   });
 });
 
-  describe('Game - Winner Detection Logic', () => {
+describe('Game - Winner Detection Logic', () => {
   describe('checkIfWinner', () => {
     it.effect('should return null when game starts with werewolves', () =>
       Effect.gen(function* () {
@@ -1316,32 +1332,39 @@ describe('Game - Death Processing Workflow', () => {
       }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('should return werewolves when only 1 werewolf and 1 villager left', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const players = yield* game.startGame;
+    it.effect(
+      'should return werewolves when only 1 werewolf and 1 villager left',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const players = yield* game.startGame;
 
-        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
-        const villagers = players.filter(
-          (p) => p.role === 'VILLAGER' || p.role === 'WITCH' || p.role === 'HUNTER' || p.role === 'CUPID' || p.role === 'SEER'
-        );
+          const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+          const villagers = players.filter(
+            (p) =>
+              p.role === 'VILLAGER' ||
+              p.role === 'WITCH' ||
+              p.role === 'HUNTER' ||
+              p.role === 'CUPID' ||
+              p.role === 'SEER'
+          );
 
-        if (werewolves.length < 2 || villagers.length < 2) {
-          return;
-        }
+          if (werewolves.length < 2 || villagers.length < 2) {
+            return;
+          }
 
-        for (let i = 1; i < werewolves.length; i++) {
-          werewolves[i].setIsAlive(false);
-        }
+          for (let i = 1; i < werewolves.length; i++) {
+            werewolves[i].setIsAlive(false);
+          }
 
-        for (let i = 1; i < villagers.length; i++) {
-          villagers[i].setIsAlive(false);
-        }
+          for (let i = 1; i < villagers.length; i++) {
+            villagers[i].setIsAlive(false);
+          }
 
-        const winner = yield* game.checkIfWinner;
+          const winner = yield* game.checkIfWinner;
 
-        expect(winner).toBe('werewolves');
-      }).pipe(Effect.provide(TestLayer))
+          expect(winner).toBe('werewolves');
+        }).pipe(Effect.provide(TestLayer))
     );
 
     it.effect('should return null when witch has potions in 1v1 scenario', () =>
@@ -1372,125 +1395,145 @@ describe('Game - Death Processing Workflow', () => {
       }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('should return werewolves when witch has no potions in 1v1 scenario', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
+    it.effect(
+      'should return werewolves when witch has no potions in 1v1 scenario',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
 
-        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
-        const witches = players.filter((p) => p.role === 'WITCH');
+          const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+          const witches = players.filter((p) => p.role === 'WITCH');
 
-        if (werewolves.length < 2 || witches.length === 0) {
-          return;
-        }
-
-        for (let i = 1; i < werewolves.length; i++) {
-          werewolves[i].setIsAlive(false);
-        }
-
-        for (const player of players) {
-          if (player.role !== 'WEREWOLF' && player.role !== 'WITCH') {
-            player.setIsAlive(false);
+          if (werewolves.length < 2 || witches.length === 0) {
+            return;
           }
-        }
 
-        const witch = witches[0];
-        yield* deathManager.addPendingDeath(witch, 'WEREWOLVES');
-        yield* game.processPendingDeaths;
+          for (let i = 1; i < werewolves.length; i++) {
+            werewolves[i].setIsAlive(false);
+          }
 
-        const winner = yield* game.checkIfWinner;
+          for (const player of players) {
+            if (player.role !== 'WEREWOLF' && player.role !== 'WITCH') {
+              player.setIsAlive(false);
+            }
+          }
 
-        expect(winner).toBe('werewolves');
-      }).pipe(Effect.provide(TestLayer))
-    );
-
-    it.effect('should return null when multiple werewolves and villagers alive', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const players = yield* game.startGame;
-
-        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
-        const villagers = players.filter(
-          (p) => p.role === 'VILLAGER' || p.role === 'WITCH' || p.role === 'HUNTER' || p.role === 'CUPID' || p.role === 'SEER'
-        );
-
-        if (werewolves.length < 2 || villagers.length < 2) {
-          return;
-        }
-
-        const winner = yield* game.checkIfWinner;
-
-        expect(winner).toBeNull();
-      }).pipe(Effect.provide(TestLayer))
-    );
-
-    it.effect('should return null when werewolves outnumber villagers but more than 1 werewolf', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const players = yield* game.startGame;
-
-        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
-        const villagers = players.filter(
-          (p) => p.role === 'VILLAGER' || p.role === 'WITCH' || p.role === 'HUNTER' || p.role === 'CUPID' || p.role === 'SEER'
-        );
-
-        if (werewolves.length < 3 || villagers.length < 2) {
-          return;
-        }
-
-        for (let i = 2; i < villagers.length; i++) {
-          villagers[i].setIsAlive(false);
-        }
-
-        const winner = yield* game.checkIfWinner;
-
-        expect(winner).toBeNull();
-      }).pipe(Effect.provide(TestLayer))
-    );
-
-    it.effect('should return villagers after killing all werewolves in sequence', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
-
-        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
-
-        if (werewolves.length === 0) {
-          return;
-        }
-
-        for (const werewolf of werewolves) {
-          yield* deathManager.addPendingDeath(werewolf, 'DAY_VOTE');
+          const witch = witches[0];
+          yield* deathManager.addPendingDeath(witch, 'WEREWOLVES');
           yield* game.processPendingDeaths;
-        }
 
-        const winner = yield* game.checkIfWinner;
+          const winner = yield* game.checkIfWinner;
 
-        expect(winner).toBe('villagers');
-      }).pipe(Effect.provide(TestLayer))
+          expect(winner).toBe('werewolves');
+        }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('should handle edge case with single werewolf killed immediately', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
+    it.effect(
+      'should return null when multiple werewolves and villagers alive',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const players = yield* game.startGame;
 
-        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+          const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+          const villagers = players.filter(
+            (p) =>
+              p.role === 'VILLAGER' ||
+              p.role === 'WITCH' ||
+              p.role === 'HUNTER' ||
+              p.role === 'CUPID' ||
+              p.role === 'SEER'
+          );
 
-        if (werewolves.length !== 1) {
-          return;
-        }
+          if (werewolves.length < 2 || villagers.length < 2) {
+            return;
+          }
 
-        yield* deathManager.addPendingDeath(werewolves[0], 'DAY_VOTE');
-        yield* game.processPendingDeaths;
+          const winner = yield* game.checkIfWinner;
 
-        const winner = yield* game.checkIfWinner;
+          expect(winner).toBeNull();
+        }).pipe(Effect.provide(TestLayer))
+    );
 
-        expect(winner).toBe('villagers');
-      }).pipe(Effect.provide(TestLayer))
+    it.effect(
+      'should return null when werewolves outnumber villagers but more than 1 werewolf',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const players = yield* game.startGame;
+
+          const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+          const villagers = players.filter(
+            (p) =>
+              p.role === 'VILLAGER' ||
+              p.role === 'WITCH' ||
+              p.role === 'HUNTER' ||
+              p.role === 'CUPID' ||
+              p.role === 'SEER'
+          );
+
+          if (werewolves.length < 3 || villagers.length < 2) {
+            return;
+          }
+
+          for (let i = 2; i < villagers.length; i++) {
+            villagers[i].setIsAlive(false);
+          }
+
+          const winner = yield* game.checkIfWinner;
+
+          expect(winner).toBeNull();
+        }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect(
+      'should return villagers after killing all werewolves in sequence',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
+
+          const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+
+          if (werewolves.length === 0) {
+            return;
+          }
+
+          for (const werewolf of werewolves) {
+            yield* deathManager.addPendingDeath(werewolf, 'DAY_VOTE');
+            yield* game.processPendingDeaths;
+          }
+
+          const winner = yield* game.checkIfWinner;
+
+          expect(winner).toBe('villagers');
+        }).pipe(Effect.provide(TestLayer))
+    );
+
+    it.effect(
+      'should handle edge case with single werewolf killed immediately',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
+
+          const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+
+          if (werewolves.length !== 1) {
+            return;
+          }
+
+          yield* deathManager.addPendingDeath(werewolves[0], 'DAY_VOTE');
+          yield* game.processPendingDeaths;
+
+          const winner = yield* game.checkIfWinner;
+
+          expect(winner).toBe('villagers');
+        }).pipe(Effect.provide(TestLayer))
     );
 
     it.effect('should handle lovers scenario with winner detection', () =>
@@ -1519,27 +1562,29 @@ describe('Game - Death Processing Workflow', () => {
       }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('should return null after lover suicide in non-winning state', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
+    it.effect(
+      'should return null after lover suicide in non-winning state',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
 
-        const werewolves = players.filter((p) => p.role === 'WEREWOLF');
-        const villagers = players.filter((p) => p.role === 'VILLAGER');
+          const werewolves = players.filter((p) => p.role === 'WEREWOLF');
+          const villagers = players.filter((p) => p.role === 'VILLAGER');
 
-        if (werewolves.length < 2 || villagers.length < 2) {
-          return;
-        }
+          if (werewolves.length < 2 || villagers.length < 2) {
+            return;
+          }
 
-        yield* game.setLovers([villagers[0].socketId, villagers[1].socketId]);
-        yield* deathManager.addPendingDeath(villagers[0], 'WEREWOLVES');
-        yield* game.processPendingDeaths;
+          yield* game.setLovers([villagers[0].socketId, villagers[1].socketId]);
+          yield* deathManager.addPendingDeath(villagers[0], 'WEREWOLVES');
+          yield* game.processPendingDeaths;
 
-        const winner = yield* game.checkIfWinner;
+          const winner = yield* game.checkIfWinner;
 
-        expect(winner).toBeNull();
-      }).pipe(Effect.provide(TestLayer))
+          expect(winner).toBeNull();
+        }).pipe(Effect.provide(TestLayer))
     );
 
     it.effect('should correctly identify werewolf win with hunter', () =>
@@ -1577,7 +1622,12 @@ describe('Game - Death Processing Workflow', () => {
 
         const werewolves = players.filter((p) => p.role === 'WEREWOLF');
         const villagers = players.filter(
-          (p) => p.role === 'VILLAGER' || p.role === 'WITCH' || p.role === 'HUNTER' || p.role === 'CUPID' || p.role === 'SEER'
+          (p) =>
+            p.role === 'VILLAGER' ||
+            p.role === 'WITCH' ||
+            p.role === 'HUNTER' ||
+            p.role === 'CUPID' ||
+            p.role === 'SEER'
         );
 
         if (werewolves.length < 1 || villagers.length < 2) {
@@ -1815,7 +1865,8 @@ describe('Game - Witch Potion Mechanics', () => {
 
         const werewolfVictim = players.find((p) => p.role === 'VILLAGER');
         const witchVictim = players.find(
-          (p) => p.role === 'VILLAGER' && p.socketId !== werewolfVictim?.socketId
+          (p) =>
+            p.role === 'VILLAGER' && p.socketId !== werewolfVictim?.socketId
         );
 
         if (!(werewolfVictim && witchVictim)) {
@@ -1902,7 +1953,9 @@ describe('Game - Witch Potion Mechanics', () => {
         const deathManager = yield* DeathManager;
         const players = yield* game.startGame;
 
-        const victims = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+        const victims = players
+          .filter((p) => p.role === 'VILLAGER')
+          .slice(0, 2);
 
         if (victims.length < 2) {
           return;
@@ -1992,7 +2045,8 @@ describe('Game - Witch Potion Mechanics', () => {
 
         const werewolfVictim = players.find((p) => p.role === 'VILLAGER');
         const poisonVictim = players.find(
-          (p) => p.role === 'VILLAGER' && p.socketId !== werewolfVictim?.socketId
+          (p) =>
+            p.role === 'VILLAGER' && p.socketId !== werewolfVictim?.socketId
         );
 
         if (!(werewolfVictim && poisonVictim)) {
@@ -2056,7 +2110,8 @@ describe('Game - Witch Potion Mechanics', () => {
 
         const werewolfVictim = players.find((p) => p.role === 'VILLAGER');
         const poisonVictim = players.find(
-          (p) => p.role === 'VILLAGER' && p.socketId !== werewolfVictim?.socketId
+          (p) =>
+            p.role === 'VILLAGER' && p.socketId !== werewolfVictim?.socketId
         );
 
         if (!(werewolfVictim && poisonVictim)) {
@@ -2204,26 +2259,28 @@ describe('Game - Lover Mechanics', () => {
       }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('should fail when setting lover with non-existent socket id', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const players = yield* game.startGame;
+    it.effect(
+      'should fail when setting lover with non-existent socket id',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const players = yield* game.startGame;
 
-        if (players.length < 1) {
-          return;
-        }
+          if (players.length < 1) {
+            return;
+          }
 
-        const lover1 = players[0];
+          const lover1 = players[0];
 
-        const result = yield* Effect.either(
-          game.setLovers([lover1.socketId, 'non-existent-sid'])
-        );
+          const result = yield* Effect.either(
+            game.setLovers([lover1.socketId, 'non-existent-sid'])
+          );
 
-        expect(Either.isLeft(result)).toBe(true);
-        if (Either.isLeft(result)) {
-          expect(result.left.message).toContain('not found');
-        }
-      }).pipe(Effect.provide(TestLayer))
+          expect(Either.isLeft(result)).toBe(true);
+          if (Either.isLeft(result)) {
+            expect(result.left.message).toContain('not found');
+          }
+        }).pipe(Effect.provide(TestLayer))
     );
 
     it.effect('should add lovers to existing lovers list', () =>
@@ -2438,26 +2495,28 @@ describe('Game - Lover Mechanics', () => {
       }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('should return true when non-lover in death queue but lover not', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
+    it.effect(
+      'should return true when non-lover in death queue but lover not',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
 
-        if (players.length < 2) {
-          return;
-        }
+          if (players.length < 2) {
+            return;
+          }
 
-        const lover = players[0];
-        const nonLover = players[1];
+          const lover = players[0];
+          const nonLover = players[1];
 
-        yield* game.setLovers([lover.socketId]);
-        yield* deathManager.addPendingDeath(nonLover, 'WEREWOLVES');
+          yield* game.setLovers([lover.socketId]);
+          yield* deathManager.addPendingDeath(nonLover, 'WEREWOLVES');
 
-        const isInQueue = yield* game.isOneOfLoversInDeathQueue;
+          const isInQueue = yield* game.isOneOfLoversInDeathQueue;
 
-        expect(isInQueue).toBe(false);
-      }).pipe(Effect.provide(TestLayer))
+          expect(isInQueue).toBe(false);
+        }).pipe(Effect.provide(TestLayer))
     );
   });
 
@@ -2487,7 +2546,9 @@ describe('Game - Lover Mechanics', () => {
         const game = yield* Game;
         const players = yield* game.startGame;
 
-        const villagers = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+        const villagers = players
+          .filter((p) => p.role === 'VILLAGER')
+          .slice(0, 2);
 
         if (villagers.length < 2) {
           return;
@@ -2532,24 +2593,26 @@ describe('Game - Lover Mechanics', () => {
       }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('should return false for player who does not have a partner', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const players = yield* game.startGame;
+    it.effect(
+      'should return false for player who does not have a partner',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const players = yield* game.startGame;
 
-        if (players.length < 2) {
-          return;
-        }
+          if (players.length < 2) {
+            return;
+          }
 
-        const lover = players[0];
-        const nonLover = players[1];
+          const lover = players[0];
+          const nonLover = players[1];
 
-        yield* game.setLovers([lover.socketId]);
+          yield* game.setLovers([lover.socketId]);
 
-        const hasPartner = yield* game.hasPartner(nonLover.socketId);
+          const hasPartner = yield* game.hasPartner(nonLover.socketId);
 
-        expect(hasPartner).toBe(false);
-      }).pipe(Effect.provide(TestLayer))
+          expect(hasPartner).toBe(false);
+        }).pipe(Effect.provide(TestLayer))
     );
 
     it.effect('should return false when no lovers set', () =>
@@ -2678,7 +2741,9 @@ describe('Game - Lover Mechanics', () => {
           return;
         }
 
-        const result = yield* Effect.either(game.killHunterRevenge(victim.socketId));
+        const result = yield* Effect.either(
+          game.killHunterRevenge(victim.socketId)
+        );
 
         expect(Either.isRight(result)).toBe(true);
       }).pipe(Effect.provide(TestLayer))
@@ -2703,29 +2768,31 @@ describe('Game - Lover Mechanics', () => {
       }).pipe(Effect.provide(TestLayer), Effect.provide(Layer.empty))
     );
 
-    it.effect('isHunterInLove should add partner suicide when hunter has lover', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
+    it.effect(
+      'isHunterInLove should add partner suicide when hunter has lover',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
 
-        const hunter = players.find((p) => p.role === 'HUNTER');
-        const lover = players.find((p) => p.role !== 'HUNTER');
+          const hunter = players.find((p) => p.role === 'HUNTER');
+          const lover = players.find((p) => p.role !== 'HUNTER');
 
-        if (!(hunter && lover)) {
-          return;
-        }
+          if (!(hunter && lover)) {
+            return;
+          }
 
-        yield* game.setLovers([hunter.socketId, lover.socketId]);
-        yield* game.isHunterInLove;
+          yield* game.setLovers([hunter.socketId, lover.socketId]);
+          yield* game.isHunterInLove;
 
-        const pendingDeaths = yield* deathManager.getPendingDeaths;
+          const pendingDeaths = yield* deathManager.getPendingDeaths;
 
-        expect(pendingDeaths).toHaveLength(1);
-        expect(pendingDeaths[0].playerId).toBe(lover.socketId);
-        expect(pendingDeaths[0].cause).toBe('PARTNER_SUICIDE');
-        expect(pendingDeaths[0].metadata?.loverId).toBe(hunter.socketId);
-      }).pipe(Effect.provide(TestLayer))
+          expect(pendingDeaths).toHaveLength(1);
+          expect(pendingDeaths[0].playerId).toBe(lover.socketId);
+          expect(pendingDeaths[0].cause).toBe('PARTNER_SUICIDE');
+          expect(pendingDeaths[0].metadata?.loverId).toBe(hunter.socketId);
+        }).pipe(Effect.provide(TestLayer))
     );
 
     it.effect('isHunterInLove should do nothing when hunter has no lover', () =>
@@ -2748,149 +2815,163 @@ describe('Game - Lover Mechanics', () => {
       }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('isHunterInLove should not add suicide if partner already in queue', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
+    it.effect(
+      'isHunterInLove should not add suicide if partner already in queue',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
 
-        const hunter = players.find((p) => p.role === 'HUNTER');
-        const lover = players.find((p) => p.role !== 'HUNTER');
+          const hunter = players.find((p) => p.role === 'HUNTER');
+          const lover = players.find((p) => p.role !== 'HUNTER');
 
-        if (!(hunter && lover)) {
-          return;
-        }
+          if (!(hunter && lover)) {
+            return;
+          }
 
-        yield* game.setLovers([hunter.socketId, lover.socketId]);
-        yield* deathManager.addPendingDeath(lover, 'WEREWOLVES');
-        yield* game.isHunterInLove;
+          yield* game.setLovers([hunter.socketId, lover.socketId]);
+          yield* deathManager.addPendingDeath(lover, 'WEREWOLVES');
+          yield* game.isHunterInLove;
 
-        const pendingDeaths = yield* deathManager.getPendingDeaths;
+          const pendingDeaths = yield* deathManager.getPendingDeaths;
 
-        expect(pendingDeaths).toHaveLength(1);
-        expect(pendingDeaths[0].cause).toBe('WEREWOLVES');
-      }).pipe(Effect.provide(TestLayer))
+          expect(pendingDeaths).toHaveLength(1);
+          expect(pendingDeaths[0].cause).toBe('WEREWOLVES');
+        }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('hunterIsInDeathQueue should return true when hunter is in queue', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
+    it.effect(
+      'hunterIsInDeathQueue should return true when hunter is in queue',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
 
-        const hunter = players.find((p) => p.role === 'HUNTER');
+          const hunter = players.find((p) => p.role === 'HUNTER');
 
-        if (!hunter) {
-          return;
-        }
+          if (!hunter) {
+            return;
+          }
 
-        yield* deathManager.addPendingDeath(hunter, 'WEREWOLVES');
+          yield* deathManager.addPendingDeath(hunter, 'WEREWOLVES');
 
-        const isInQueue = yield* game.hunterIsInDeathQueue;
+          const isInQueue = yield* game.hunterIsInDeathQueue;
 
-        expect(isInQueue).toBe(true);
-      }).pipe(Effect.provide(TestLayer))
+          expect(isInQueue).toBe(true);
+        }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('hunterIsInDeathQueue should return false when hunter not in queue', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const players = yield* game.startGame;
+    it.effect(
+      'hunterIsInDeathQueue should return false when hunter not in queue',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const players = yield* game.startGame;
 
-        const hunter = players.find((p) => p.role === 'HUNTER');
+          const hunter = players.find((p) => p.role === 'HUNTER');
 
-        if (!hunter) {
-          return;
-        }
+          if (!hunter) {
+            return;
+          }
 
-        const isInQueue = yield* game.hunterIsInDeathQueue;
+          const isInQueue = yield* game.hunterIsInDeathQueue;
 
-        expect(isInQueue).toBe(false);
-      }).pipe(Effect.provide(TestLayer))
+          expect(isInQueue).toBe(false);
+        }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('hunterIsInDeathQueue should return false when hunter not found', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const players = yield* game.startGame;
+    it.effect(
+      'hunterIsInDeathQueue should return false when hunter not found',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const players = yield* game.startGame;
 
-        yield* game.startGame;
+          yield* game.startGame;
 
-        const isInQueue = yield* game.hunterIsInDeathQueue;
+          const isInQueue = yield* game.hunterIsInDeathQueue;
 
-        expect(isInQueue).toBe(false);
-      }).pipe(Effect.provide(TestLayer))
+          expect(isInQueue).toBe(false);
+        }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('isPartnerHunter should return true when surviving lover is hunter', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
+    it.effect(
+      'isPartnerHunter should return true when surviving lover is hunter',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
 
-        const hunter = players.find((p) => p.role === 'HUNTER');
-        const lover = players.find((p) => p.role !== 'HUNTER');
+          const hunter = players.find((p) => p.role === 'HUNTER');
+          const lover = players.find((p) => p.role !== 'HUNTER');
 
-        if (!(hunter && lover)) {
-          return;
-        }
+          if (!(hunter && lover)) {
+            return;
+          }
 
-        yield* game.setLovers([hunter.socketId, lover.socketId]);
-        yield* deathManager.addPendingDeath(lover, 'WEREWOLVES');
+          yield* game.setLovers([hunter.socketId, lover.socketId]);
+          yield* deathManager.addPendingDeath(lover, 'WEREWOLVES');
 
-        const isPartnerHunter = yield* game.isPartnerHunter;
+          const isPartnerHunter = yield* game.isPartnerHunter;
 
-        expect(isPartnerHunter).toBe(true);
-      }).pipe(Effect.provide(TestLayer))
+          expect(isPartnerHunter).toBe(true);
+        }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('isPartnerHunter should return false when surviving lover not hunter', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
+    it.effect(
+      'isPartnerHunter should return false when surviving lover not hunter',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
 
-        const lover1 = players.find((p) => p.role === 'VILLAGER');
-        const lover2 = players.find(
-          (p) => p.role === 'VILLAGER' && p !== lover1
-        );
+          const lover1 = players.find((p) => p.role === 'VILLAGER');
+          const lover2 = players.find(
+            (p) => p.role === 'VILLAGER' && p !== lover1
+          );
 
-        if (!(lover1 && lover2)) {
-          return;
-        }
+          if (!(lover1 && lover2)) {
+            return;
+          }
 
-        yield* game.setLovers([lover1.socketId, lover2.socketId]);
-        yield* deathManager.addPendingDeath(lover1, 'WEREWOLVES');
+          yield* game.setLovers([lover1.socketId, lover2.socketId]);
+          yield* deathManager.addPendingDeath(lover1, 'WEREWOLVES');
 
-        const isPartnerHunter = yield* game.isPartnerHunter;
+          const isPartnerHunter = yield* game.isPartnerHunter;
 
-        expect(isPartnerHunter).toBe(false);
-      }).pipe(Effect.provide(TestLayer))
+          expect(isPartnerHunter).toBe(false);
+        }).pipe(Effect.provide(TestLayer))
     );
 
-    it.effect('isPartnerHunter should return false when no surviving lover', () =>
-      Effect.gen(function* () {
-        const game = yield* Game;
-        const deathManager = yield* DeathManager;
-        const players = yield* game.startGame;
+    it.effect(
+      'isPartnerHunter should return false when no surviving lover',
+      () =>
+        Effect.gen(function* () {
+          const game = yield* Game;
+          const deathManager = yield* DeathManager;
+          const players = yield* game.startGame;
 
-        const lover1 = players.find((p) => p.role === 'VILLAGER');
-        const lover2 = players.find(
-          (p) => p.role === 'VILLAGER' && p !== lover1
-        );
+          const lover1 = players.find((p) => p.role === 'VILLAGER');
+          const lover2 = players.find(
+            (p) => p.role === 'VILLAGER' && p !== lover1
+          );
 
-        if (!(lover1 && lover2)) {
-          return;
-        }
+          if (!(lover1 && lover2)) {
+            return;
+          }
 
-        yield* game.setLovers([lover1.socketId, lover2.socketId]);
-        yield* deathManager.addPendingDeath(lover1, 'WEREWOLVES');
-        yield* deathManager.addPendingDeath(lover2, 'WEREWOLVES');
+          yield* game.setLovers([lover1.socketId, lover2.socketId]);
+          yield* deathManager.addPendingDeath(lover1, 'WEREWOLVES');
+          yield* deathManager.addPendingDeath(lover2, 'WEREWOLVES');
 
-        const isPartnerHunter = yield* game.isPartnerHunter;
+          const isPartnerHunter = yield* game.isPartnerHunter;
 
-        expect(isPartnerHunter).toBe(false);
-      }).pipe(Effect.provide(TestLayer))
+          expect(isPartnerHunter).toBe(false);
+        }).pipe(Effect.provide(TestLayer))
     );
 
     it.effect('isPartnerHunter should return false when no lovers set', () =>

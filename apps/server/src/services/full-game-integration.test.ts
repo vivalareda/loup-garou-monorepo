@@ -5,11 +5,13 @@ import { DeathManager } from './death-manager.js';
 import { EventsActions } from './events-actions.js';
 import { Game } from './game.js';
 import { GameActions } from './game-actions.js';
+import { LobbyConfig } from './lobby-config.js';
 import { SegmentExecution } from './segment-execution.js';
 import { SegmentManager } from './segment-manager.js';
 import { SpecialScenarios } from './special-scenarios.js';
 
 const FullGameTestLayer = Layer.mergeAll(
+  LobbyConfig.Test,
   AudioManager.Default,
   DeathManager.Default,
   Game.Default,

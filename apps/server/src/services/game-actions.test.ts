@@ -1,11 +1,13 @@
 import { describe, expect } from '@effect/vitest';
 import { Effect, Either, Layer } from 'effect';
+import { DeathManager } from './death-manager.js';
 import { Game } from './game.js';
 import { GameActions } from './game-actions.js';
-import { DeathManager } from './death-manager.js';
+import { LobbyConfig } from './lobby-config.js';
 
-const TestLayer = GameActions.Default;
+const TestLayer = Layer.mergeAll(LobbyConfig.Test, GameActions.Default);
 const GameTestLayer = Layer.mergeAll(
+  LobbyConfig.Test,
   Game.Default,
   GameActions.Default,
   DeathManager.Default
@@ -307,7 +309,9 @@ describe('GameActions', () => {
           return yield* Effect.void;
         }
 
-        const victims = players.filter((p) => p.role === 'VILLAGER').slice(0, 2);
+        const victims = players
+          .filter((p) => p.role === 'VILLAGER')
+          .slice(0, 2);
         if (victims.length < 2) {
           return yield* Effect.void;
         }
@@ -702,8 +706,12 @@ describe('GameActions', () => {
         const pendingDeaths = yield* deathManager.getPendingDeaths;
 
         expect(pendingDeaths).toHaveLength(2);
-        expect(pendingDeaths.some((d) => d.cause === 'HUNTER_REVENGE')).toBe(true);
-        expect(pendingDeaths.some((d) => d.cause === 'PARTNER_SUICIDE')).toBe(true);
+        expect(pendingDeaths.some((d) => d.cause === 'HUNTER_REVENGE')).toBe(
+          true
+        );
+        expect(pendingDeaths.some((d) => d.cause === 'PARTNER_SUICIDE')).toBe(
+          true
+        );
       }).pipe(Effect.provide(GameTestLayer))
     );
 

@@ -11,9 +11,11 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "noEmitOnError": true,
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
+    "types": ["vitest/globals", "@vitest/expect"],
     "paths": {
       "@/*": ["./src/*"]
     },
@@ -21,7 +23,7 @@
       {
         "name": "@effect/language-service"
       }
-    ],
+    ]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

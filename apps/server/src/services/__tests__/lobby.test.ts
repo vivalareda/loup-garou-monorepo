@@ -1,8 +1,8 @@
 import { describe, expect, it } from '@effect/vitest';
 import { Effect, Layer } from 'effect';
 import { LobbyFullError, NameExistsError } from '../errors.js';
-import { Lobby } from '../Lobby.js';
-import { LobbyConfig } from '../LobbyConfig.js';
+import { Lobby } from '../lobby.js';
+import { LobbyConfig } from '../lobby-config.js';
 
 describe('Lobby Service', () => {
   const TestLayer = Lobby.Default.pipe(Layer.provide(LobbyConfig.Test));

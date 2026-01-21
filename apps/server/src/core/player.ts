@@ -16,7 +16,7 @@ export class Player {
   getIdentity() {
     const identity: PlayerIdentity = {
       name: this.name,
-      sid: this.socketId,
+      socketId: this.socketId,
     };
 
     return identity;

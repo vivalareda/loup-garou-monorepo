@@ -9,8 +9,7 @@ export class Lobby extends Effect.Service<Lobby>()('@app/Lobby', {
     const players: LobbyPlayer[] = [];
 
     const isLobbyFull = () => players.length >= config.maxPlayers;
-    const isNameTaken = (name: string) =>
-      Array.from(players.values()).some((p) => p.name === name);
+    const isNameTaken = (name: string) => players.some((p) => p.name === name);
 
     return {
       addPlayer: (name: string, sid: string) =>
@@ -37,5 +36,5 @@ export class Lobby extends Effect.Service<Lobby>()('@app/Lobby', {
       }),
     };
   }),
-  dependencies: [],
+  dependencies: [LobbyConfig.Live, LobbyConfig.Test],
 }) {}

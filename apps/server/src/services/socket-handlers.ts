@@ -35,8 +35,6 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
 
                 socket.emit('lobby:player-data', player);
                 socket.broadcast.emit('lobby:update-players-list', player);
-
-                const count = yield* lobby.getPlayerCount;
               })
                 .pipe(
                   Effect.catchTags({
@@ -370,7 +368,6 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
     dependencies: [
       SocketServer.Default,
       Lobby.Default,
-      LobbyConfig.Live,
       Game.Default,
       GameActions.Default,
       SegmentExecution.Default,

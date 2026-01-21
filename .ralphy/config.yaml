@@ -1,0 +1,22 @@
+project:
+  name: loup-garou
+  language: TypeScript
+  framework: ""
+  description: ""
+commands:
+  test: ""
+  lint: npm run lint
+  build: npm run build
+rules:
+  - Follow the detailed specifications in PRD_DETAILED.md
+  - Each task must include comprehensive tests as specified in PRD
+  - Use Effect TS patterns as documented in PRD appendix
+  - Maintain >90% test coverage per task
+  - Every migrated service MUST have comprehensive tests in
+    [ServiceName].test.ts using @effect/vitest. Test ALL methods, ALL edge
+    cases, >90% coverage. Tests must prove functionality matches server.bk
+    exactly.
+  - If you see a task already completed, you can mark it as completed and move
+    on to the next one
+boundaries:
+  never_touch: []

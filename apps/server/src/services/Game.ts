@@ -1,6 +1,7 @@
-import type { Role } from '@repo/types';
+import type { DeathInfo, Role } from '@repo/types';
 import { Effect } from 'effect';
 import { Player } from '@/core/player.js';
+import { DeathManager } from './DeathManager.js';
 import { PlayerNotFoundError, SpecialPlayerNotFoundError } from './errors.js';
 import { Lobby } from './Lobby.js';
 
@@ -49,9 +50,11 @@ function shuffleArray<T>(array: T[]): T[] {
 export class Game extends Effect.Service<Game>()('@app/Game', {
   effect: Effect.gen(function* () {
     const lobby = yield* Lobby;
+    const deathManager = yield* DeathManager;
 
     const players = new Map<string, Player>();
     const specialRolePlayers = new Map<Role, Player>();
+    const lovers: Player[] = [];
 
     const setSpecialRolePlayer = (player: Player, role: Role) => {
       if (role !== 'WEREWOLF' && role !== 'VILLAGER') {
@@ -95,7 +98,28 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
             (yield* Effect.fail(new PlayerNotFoundError({ socketId })))
           );
         }),
+
+      getLovers: Effect.sync(() => lovers),
+
+      getWerewolfList: Effect.sync(() => {
+        return Array.from(players.values()).filter(
+          (player) => player.role === 'WEREWOLF'
+        );
+      }),
+
+      getWerewolfTarget: Effect.sync(() => {
+        return null;
+      }),
+
+      processPendingDeaths: Effect.sync(() => {
+        const deaths: DeathInfo[] = [];
+        return deaths;
+      }),
+
+      checkIfWinner: Effect.sync(() => {
+        return null;
+      }),
     };
   }),
-  dependencies: [Lobby.Default],
-}) { }
+  dependencies: [Lobby.Default, DeathManager.Default],
+}) {}

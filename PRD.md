@@ -1,6 +1,6 @@
 ## Phase 1: Core Game Logic Migration
 
-- [ ] Task 1.1: DeathManager Service - Migrate death queue and team management
+- [x] Task 1.1: DeathManager Service - Migrate death queue and team management
 - [ ] Task 1.2: GameActions Service (Part 1) - Migrate non-voting segment actions
 - [ ] Task 1.3: Voting Logic - Werewolf Voting - Implement werewolf consensus voting
 - [ ] Task 1.4: Voting Logic - Day Voting - Implement day phase voting with tie handling

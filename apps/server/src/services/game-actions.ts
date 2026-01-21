@@ -3,7 +3,7 @@ import { Effect, Either } from 'effect';
 import { AudioManager } from './audio-manager.js';
 import { DeathManager } from './death-manager.js';
 import { WerewolfVictimNotFoundError } from './errors.js';
-import { Game } from './Game.js';
+import { Game } from './game.js';
 import { SocketServer } from './socket-server.js';
 
 export class GameActions extends Effect.Service<GameActions>()(

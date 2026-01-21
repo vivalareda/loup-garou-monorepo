@@ -2,7 +2,7 @@ import type { Server } from 'node:http';
 import type { ClientToServerEvents, ServerToClientEvents } from '@repo/types';
 import { Effect } from 'effect';
 import { Server as SocketIOServer } from 'socket.io';
-import { HttpServer } from './HttpServer.js';
+import { HttpServer } from './http-server.js';
 
 export type SocketIOInstance = SocketIOServer<
   ClientToServerEvents,

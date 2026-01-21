@@ -1,8 +1,8 @@
 import { Effect } from 'effect';
 import { DeathManager } from './death-manager.js';
-import { Game } from './Game.js';
-import { GameActions } from './GameActions.js';
-import { SegmentExecution } from './SegmentExecution.js';
+import { Game } from './game.js';
+import { GameActions } from './game-actions.js';
+import { SegmentExecution } from './segment-execution.js';
 import { WerewolfVictimNotFoundError } from './errors.js';
 
 export class EventsActions extends Effect.Service<EventsActions>()(

@@ -12,7 +12,7 @@ import {
   TargetPlayerNotFoundError,
   VoteMismatchError,
 } from './errors.js';
-import { Lobby } from './Lobby.js';
+import { Lobby } from './lobby.js';
 
 function initRolesList(playerCount: number): Role[] {
   const roles: Role[] = [];

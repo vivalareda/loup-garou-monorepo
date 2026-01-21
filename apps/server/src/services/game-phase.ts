@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import { Game } from './Game.js';
+import { Game } from './game.js';
 
 export class GamePhase extends Effect.Service<GamePhase>()('GamePhase', {
   effect: Effect.gen(function* () {

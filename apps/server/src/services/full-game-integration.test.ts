@@ -3,10 +3,10 @@ import { Effect, Either, Layer } from 'effect';
 import { AudioManager } from './audio-manager.js';
 import { DeathManager } from './death-manager.js';
 import { EventsActions } from './events-actions.js';
-import { Game } from './Game.js';
-import { GameActions } from './GameActions.js';
-import { SegmentExecution } from './SegmentExecution.js';
-import { SegmentManager } from './SegmentManager.js';
+import { Game } from './game.js';
+import { GameActions } from './game-actions.js';
+import { SegmentExecution } from './segment-execution.js';
+import { SegmentManager } from './segment-manager.js';
 import { SpecialScenarios } from './special-scenarios.js';
 
 const FullGameTestLayer = Layer.mergeAll(

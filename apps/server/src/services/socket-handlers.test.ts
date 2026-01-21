@@ -1,12 +1,12 @@
 import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 import { DeathManager } from './death-manager.js';
-import { Game } from './Game.js';
-import { GameActions } from './GameActions.js';
-import { Lobby } from './Lobby.js';
-import { LobbyConfig } from './LobbyConfig.js';
-import { MockScenario } from './MockScenario.js';
-import { SegmentExecution } from './SegmentExecution.js';
+import { Game } from './game.js';
+import { GameActions } from './game-actions.js';
+import { Lobby } from './lobby.js';
+import { LobbyConfig } from './lobby-config.js';
+import { MockScenario } from './mock-scenario.js';
+import { SegmentExecution } from './segment-execution.js';
 import { SocketHandlers } from './socket-handlers.js';
 import { SocketServer } from './socket-server.js';
 

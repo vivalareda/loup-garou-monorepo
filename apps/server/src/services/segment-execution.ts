@@ -3,9 +3,9 @@ import { Effect, Either } from 'effect';
 import { AudioManager } from './audio-manager.js';
 import { DeathManager } from './death-manager.js';
 import { HunterNotFoundError, SegmentExecutionError } from './errors.js';
-import { Game } from './Game.js';
-import { GameActions } from './GameActions.js';
-import { SegmentManager } from './SegmentManager.js';
+import { Game } from './game.js';
+import { GameActions } from './game-actions.js';
+import { SegmentManager } from './segment-manager.js';
 import { SpecialScenarios } from './special-scenarios.js';
 
 export class SegmentExecution extends Effect.Service<SegmentExecution>()(

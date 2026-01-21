@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import { LobbyPlayer } from '@/core/lobby-player.js';
 import { LobbyFullError, NameExistsError } from './errors.js';
-import { LobbyConfig } from './LobbyConfig.js';
+import { LobbyConfig } from './lobby-config.js';
 
 export class Lobby extends Effect.Service<Lobby>()('@app/Lobby', {
   effect: Effect.gen(function* () {

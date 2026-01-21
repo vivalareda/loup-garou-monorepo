@@ -1,8 +1,8 @@
 import { Effect } from 'effect';
 import { DeathManager } from './death-manager.js';
-import { Game } from './Game.js';
-import { SegmentExecution } from './SegmentExecution.js';
-import { SegmentManager } from './SegmentManager.js';
+import { Game } from './game.js';
+import { SegmentExecution } from './segment-execution.js';
+import { SegmentManager } from './segment-manager.js';
 import {
   InvalidRoleError,
   NoPlayersAvailableError,

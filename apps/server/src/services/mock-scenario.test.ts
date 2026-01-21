@@ -1,10 +1,10 @@
 import { describe, expect } from '@effect/vitest';
 import { Effect, Layer } from 'effect';
 import { DeathManager } from './death-manager.js';
-import { Game } from './Game.js';
-import { MockScenario } from './MockScenario.js';
-import { SegmentManager } from './SegmentManager.js';
-import { SegmentExecution } from './SegmentExecution.js';
+import { Game } from './game.js';
+import { MockScenario } from './mock-scenario.js';
+import { SegmentManager } from './segment-manager.js';
+import { SegmentExecution } from './segment-execution.js';
 
 const TestLayer = Layer.mergeAll(
   Game.Default,

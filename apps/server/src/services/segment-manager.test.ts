@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@effect/vitest';
 import { Effect } from 'effect';
 import type { SegmentType } from '@repo/types';
-import { SegmentNotFound, SegmentManager } from './SegmentManager.js';
+import { SegmentNotFound, SegmentManager } from './segment-manager.js';
 
 describe('SegmentManager', () => {
   test('should initialize segments correctly', () =>

@@ -2,9 +2,9 @@ import { describe, expect } from '@effect/vitest';
 import { Effect, Either, Layer } from 'effect';
 import { DeathManager } from './death-manager.js';
 import { EventsActions } from './events-actions.js';
-import { Game } from './Game.js';
-import { GameActions } from './GameActions.js';
-import { SegmentExecution } from './SegmentExecution.js';
+import { Game } from './game.js';
+import { GameActions } from './game-actions.js';
+import { SegmentExecution } from './segment-execution.js';
 
 const TestLayer = Layer.mergeAll(
   Game.Default,

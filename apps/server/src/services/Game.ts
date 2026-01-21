@@ -1,7 +1,7 @@
 import type { DeathInfo, Role, WerewolvesVoteState } from '@repo/types';
 import { Effect } from 'effect';
 import { Player } from '@/core/player.js';
-import { DeathManager } from './DeathManager.js';
+import { DeathManager } from './death-manager.js';
 import {
   HunterPlayerNotFoundError,
   InvalidWerewolfTargetError,

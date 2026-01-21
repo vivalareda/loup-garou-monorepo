@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@effect/vitest';
 import { Effect, Either, Layer } from 'effect';
-import { AudioManager } from './AudioManager.js';
-import { DeathManager } from './DeathManager.js';
+import { AudioManager } from './audio-manager.js';
+import { DeathManager } from './death-manager.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
 import { HunterNotFoundError, SegmentExecution } from './SegmentExecution.js';

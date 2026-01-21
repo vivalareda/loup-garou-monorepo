@@ -1,7 +1,7 @@
 import type { SegmentType } from '@repo/types';
 import { Effect, Either } from 'effect';
-import { AudioManager } from './AudioManager.js';
-import { DeathManager } from './DeathManager.js';
+import { AudioManager } from './audio-manager.js';
+import { DeathManager } from './death-manager.js';
 import { HunterNotFoundError, SegmentExecutionError } from './errors.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';

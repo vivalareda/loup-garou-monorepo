@@ -1,7 +1,7 @@
 import { describe, expect } from '@effect/vitest';
 import { Effect, Either, Layer } from 'effect';
-import { DeathManager } from './DeathManager.js';
-import { EventsActions } from './EventsActions.js';
+import { DeathManager } from './death-manager.js';
+import { EventsActions } from './events-actions.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
 import { SegmentExecution } from './SegmentExecution.js';

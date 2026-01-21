@@ -1,6 +1,6 @@
 import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
-import { DeathManager } from './DeathManager.js';
+import { DeathManager } from './death-manager.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
 import { Lobby } from './Lobby.js';

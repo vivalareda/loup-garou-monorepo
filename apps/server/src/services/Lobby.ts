@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import { LobbyPlayer } from '@/core/LobbyPlayer.js';
+import { LobbyPlayer } from '@/core/lobby-player.js';
 import { LobbyFullError, NameExistsError } from './errors.js';
 import { LobbyConfig } from './LobbyConfig.js';
 

@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import { AudioManager } from './AudioManager.js';
+import { AudioManager } from './audio-manager.js';
 
 export class SpecialScenarios extends Effect.Service<SpecialScenarios>()(
   '@app/SpecialScenarios',

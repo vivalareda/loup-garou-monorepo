@@ -2,7 +2,7 @@ import { describe, expect } from '@effect/vitest';
 import { Effect, Either, Layer } from 'effect';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
-import { DeathManager } from './DeathManager.js';
+import { DeathManager } from './death-manager.js';
 
 const TestLayer = GameActions.Default;
 const GameTestLayer = Layer.mergeAll(

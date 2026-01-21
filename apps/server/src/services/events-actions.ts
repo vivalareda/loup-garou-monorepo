@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import { DeathManager } from './DeathManager.js';
+import { DeathManager } from './death-manager.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
 import { SegmentExecution } from './SegmentExecution.js';

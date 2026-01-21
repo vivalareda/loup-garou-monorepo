@@ -1,7 +1,7 @@
 import type { ServerToClientEvents } from '@repo/types';
 import { Effect, Either } from 'effect';
-import { AudioManager } from './AudioManager.js';
-import { DeathManager } from './DeathManager.js';
+import { AudioManager } from './audio-manager.js';
+import { DeathManager } from './death-manager.js';
 import { WerewolfVictimNotFoundError } from './errors.js';
 import { Game } from './Game.js';
 import { SocketServer } from './socket-server.js';

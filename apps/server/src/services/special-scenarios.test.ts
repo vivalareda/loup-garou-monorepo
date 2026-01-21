@@ -1,6 +1,6 @@
 import { describe, expect } from '@effect/vitest';
 import { Effect, Either, Layer } from 'effect';
-import { AudioManager } from './AudioManager.js';
+import { AudioManager } from './audio-manager.js';
 import { SpecialScenarios } from './special-scenarios.js';
 
 const TestLayer = Layer.merge(AudioManager.Default, SpecialScenarios.Default);

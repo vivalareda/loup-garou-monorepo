@@ -2,7 +2,16 @@ import type { DeathInfo, Role, WerewolvesVoteState } from '@repo/types';
 import { Effect } from 'effect';
 import { Player } from '@/core/player.js';
 import { DeathManager } from './DeathManager.js';
-import { PlayerNotFoundError, SpecialPlayerNotFoundError } from './errors.js';
+import {
+  HunterPlayerNotFoundError,
+  InvalidWerewolfTargetError,
+  NotAWerewolfError,
+  PlayerNotFoundError,
+  PlayerNotFoundErrorInQueue,
+  SpecialPlayerNotFoundError,
+  TargetPlayerNotFoundError,
+  VoteMismatchError,
+} from './errors.js';
 import { Lobby } from './Lobby.js';
 
 function initRolesList(playerCount: number): Role[] {
@@ -127,9 +136,7 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
           for (const sid of selectedPlayers) {
             const player = players.get(sid);
             if (!player) {
-              return yield* Effect.fail(
-                new Error(`Player with sid ${sid} not found`)
-              );
+              return yield* Effect.fail(new PlayerNotFoundError({ socketId: sid }));
             }
             lovers.push(player);
           }
@@ -178,11 +185,7 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
       handleWerewolfVote: (voterSid: string, targetSid: string) =>
         Effect.gen(function* () {
           if (!isWerewolf(voterSid)) {
-            return yield* Effect.fail(
-              new Error(
-                `Player ${voterSid} is not a werewolf and cannot vote during werewolf phase`
-              )
-            );
+            return yield* Effect.fail(new NotAWerewolfError({ socketId: voterSid }));
           }
 
           werewolfVotes.set(voterSid, targetSid);
@@ -195,27 +198,22 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
       ) =>
         Effect.gen(function* () {
           if (!isWerewolf(voterSid)) {
-            return yield* Effect.fail(
-              new Error(
-                `Player ${voterSid} is not a werewolf and cannot update vote during werewolf phase`
-              )
-            );
+            return yield* Effect.fail(new NotAWerewolfError({ socketId: voterSid }));
           }
 
           if (!isValidTarget(newTargetSid)) {
             return yield* Effect.fail(
-              new Error(
-                `Target ${newTargetSid} is not a valid target (cannot vote for werewolves)`
-              )
+              new InvalidWerewolfTargetError({
+                targetSid: newTargetSid,
+                reason: 'cannot vote for werewolves',
+              })
             );
           }
 
           const currentVote = werewolfVotes.get(voterSid);
           if (currentVote !== oldTargetSid) {
             return yield* Effect.fail(
-              new Error(
-                `Vote mismatch: expected ${oldTargetSid}, but current vote is ${currentVote}`
-              )
+              new VoteMismatchError({ expected: oldTargetSid, actual: currentVote })
             );
           }
 
@@ -356,11 +354,7 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
           const player = players.get(pendingDeath.playerId);
 
           if (!player) {
-            return yield* Effect.fail(
-              new Error(
-                `Player ${pendingDeath.playerId} not found in processPendingDeaths`
-              )
-            );
+            return yield* Effect.fail(new PlayerNotFoundErrorInQueue({ playerId: pendingDeath.playerId }));
           }
 
           const isLover = lovers.some(
@@ -390,11 +384,7 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
           const player = players.get(pendingDeath.playerId);
 
           if (!player) {
-            return yield* Effect.fail(
-              new Error(
-                `Player ${pendingDeath.playerId} not found in processPendingDeaths`
-              )
-            );
+            return yield* Effect.fail(new PlayerNotFoundErrorInQueue({ playerId: pendingDeath.playerId }));
           }
 
           const deathInfo: DeathInfo = {
@@ -473,16 +463,12 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
 
           const hunter = specialRolePlayers.get('HUNTER');
           if (!hunter) {
-            return yield* Effect.fail(
-              new Error('Tried to kill hunter target but hunter player not found')
-            );
+            return yield* Effect.fail(new HunterPlayerNotFoundError());
           }
 
           const target = players.get(targetSid);
           if (!target) {
-            return yield* Effect.fail(
-              new Error(`Player with sid ${targetSid} not found`)
-            );
+            return yield* Effect.fail(new TargetPlayerNotFoundError({ targetSid }));
           }
 
           yield* deathManager.addHunterRevenge(targetSid, hunter.socketId);

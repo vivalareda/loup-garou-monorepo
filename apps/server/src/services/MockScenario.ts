@@ -3,6 +3,11 @@ import { DeathManager } from './DeathManager.js';
 import { Game } from './Game.js';
 import { SegmentExecution } from './SegmentExecution.js';
 import { SegmentManager } from './SegmentManager.js';
+import {
+  InvalidRoleError,
+  NoPlayersAvailableError,
+  NotEnoughPlayersError,
+} from './errors.js';
 
 export class MockScenario extends Effect.Service<MockScenario>()(
   '@app/MockScenario',
@@ -26,16 +31,17 @@ export class MockScenario extends Effect.Service<MockScenario>()(
           const players = yield* game.getPlayers;
 
           if (players.length === 0) {
-            return yield* Effect.fail(
-              new Error('No players available for mock scenario')
-            );
+            return yield* Effect.fail(new NoPlayersAvailableError());
           }
 
           const hunter = players[0];
 
           if (hunter.role !== 'HUNTER') {
             return yield* Effect.fail(
-              new Error('First player must be HUNTER for this scenario')
+              new InvalidRoleError({
+                expected: 'HUNTER',
+                actual: hunter.role,
+              })
             );
           }
 
@@ -49,7 +55,10 @@ export class MockScenario extends Effect.Service<MockScenario>()(
 
           if (players.length < 2) {
             return yield* Effect.fail(
-              new Error('Need at least 2 players for mock scenario')
+              new NotEnoughPlayersError({
+                required: 2,
+                available: players.length,
+              })
             );
           }
 
@@ -66,7 +75,10 @@ export class MockScenario extends Effect.Service<MockScenario>()(
 
           if (players.length < 5) {
             return yield* Effect.fail(
-              new Error('Need at least 5 players for mock scenario')
+              new NotEnoughPlayersError({
+                required: 5,
+                available: players.length,
+              })
             );
           }
 
@@ -74,7 +86,10 @@ export class MockScenario extends Effect.Service<MockScenario>()(
 
           if (players[1].role !== 'HUNTER') {
             return yield* Effect.fail(
-              new Error('Second lover must be HUNTER for this scenario')
+              new InvalidRoleError({
+                expected: 'HUNTER',
+                actual: players[1].role,
+              })
             );
           }
 
@@ -89,7 +104,10 @@ export class MockScenario extends Effect.Service<MockScenario>()(
 
           if (players.length < 2) {
             return yield* Effect.fail(
-              new Error('Need at least 2 players for mock scenario')
+              new NotEnoughPlayersError({
+                required: 2,
+                available: players.length,
+              })
             );
           }
 
@@ -97,7 +115,10 @@ export class MockScenario extends Effect.Service<MockScenario>()(
 
           if (players[0].role !== 'HUNTER') {
             return yield* Effect.fail(
-              new Error('First lover must be HUNTER for this scenario')
+              new InvalidRoleError({
+                expected: 'HUNTER',
+                actual: players[0].role,
+              })
             );
           }
 
@@ -111,16 +132,17 @@ export class MockScenario extends Effect.Service<MockScenario>()(
           const players = yield* game.getPlayers;
 
           if (players.length === 0) {
-            return yield* Effect.fail(
-              new Error('No players available for mock scenario')
-            );
+            return yield* Effect.fail(new NoPlayersAvailableError());
           }
 
           const hunter = players.find((p) => p.role === 'HUNTER');
 
           if (!hunter) {
             return yield* Effect.fail(
-              new Error('No HUNTER player found for mock scenario')
+              new InvalidRoleError({
+                expected: 'HUNTER',
+                actual: undefined,
+              })
             );
           }
 
@@ -134,7 +156,10 @@ export class MockScenario extends Effect.Service<MockScenario>()(
 
           if (players.length < 2) {
             return yield* Effect.fail(
-              new Error('Need at least 2 players for mock scenario')
+              new NotEnoughPlayersError({
+                required: 2,
+                available: players.length,
+              })
             );
           }
 
@@ -151,7 +176,10 @@ export class MockScenario extends Effect.Service<MockScenario>()(
 
           if (players.length < 2) {
             return yield* Effect.fail(
-              new Error('Need at least 2 players for mock scenario')
+              new NotEnoughPlayersError({
+                required: 2,
+                available: players.length,
+              })
             );
           }
 
@@ -159,7 +187,10 @@ export class MockScenario extends Effect.Service<MockScenario>()(
 
           if (players[0].role !== 'HUNTER') {
             return yield* Effect.fail(
-              new Error('First lover must be HUNTER for this scenario')
+              new InvalidRoleError({
+                expected: 'HUNTER',
+                actual: players[0].role,
+              })
             );
           }
 
@@ -174,7 +205,10 @@ export class MockScenario extends Effect.Service<MockScenario>()(
 
           if (players.length < 2) {
             return yield* Effect.fail(
-              new Error('Need at least 2 players for mock scenario')
+              new NotEnoughPlayersError({
+                required: 2,
+                available: players.length,
+              })
             );
           }
 
@@ -182,7 +216,10 @@ export class MockScenario extends Effect.Service<MockScenario>()(
 
           if (players[1].role !== 'HUNTER') {
             return yield* Effect.fail(
-              new Error('Second lover must be HUNTER for this scenario')
+              new InvalidRoleError({
+                expected: 'HUNTER',
+                actual: players[1].role,
+              })
             );
           }
 

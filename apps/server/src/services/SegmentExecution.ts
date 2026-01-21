@@ -6,22 +6,10 @@ import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
 import { SegmentManager } from './SegmentManager.js';
 import { SpecialScenarios } from './SpecialScenarios.js';
-
-export class SegmentExecutionError extends Error {
-  readonly _tag = 'SegmentExecutionError';
-  readonly segment: SegmentType;
-  constructor(segment: SegmentType, message: string) {
-    super(`Segment execution error in ${segment}: ${message}`);
-    this.segment = segment;
-  }
-}
-
-export class HunterNotFoundError extends Error {
-  readonly _tag = 'HunterNotFoundError';
-  constructor() {
-    super('Hunter player not found');
-  }
-}
+import {
+  HunterNotFoundError,
+  SegmentExecutionError,
+} from './errors.js';
 
 export class SegmentExecution extends Effect.Service<SegmentExecution>()(
   '@app/SegmentExecution',
@@ -102,7 +90,7 @@ export class SegmentExecution extends Effect.Service<SegmentExecution>()(
           const partner = yield* game.getPartner(hunter.socketId);
           if (!partner) {
             return yield* Effect.fail(
-              new SegmentExecutionError('HUNTER', 'lover could not be found')
+              new SegmentExecutionError({ segment: 'HUNTER', message: 'lover could not be found' })
             );
           }
           yield* deathManager.addPartnerSuicide(hunter.socketId, partner.socketId);

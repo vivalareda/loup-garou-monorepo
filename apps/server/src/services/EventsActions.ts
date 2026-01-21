@@ -3,6 +3,7 @@ import { DeathManager } from './DeathManager.js';
 import { Game } from './Game.js';
 import { GameActions } from './GameActions.js';
 import { SegmentExecution } from './SegmentExecution.js';
+import { WerewolfVictimNotFoundError } from './errors.js';
 
 export class EventsActions extends Effect.Service<EventsActions>()(
   '@app/EventsActions',
@@ -22,9 +23,9 @@ export class EventsActions extends Effect.Service<EventsActions>()(
               const targetSid = yield* game.getWerewolfTarget;
               if (!targetSid) {
                 return yield* Effect.fail(
-                  new Error(
-                    'No werewolf victim found - werewolves may not have reached agreement'
-                  )
+                  new WerewolfVictimNotFoundError({
+                    reason: 'werewolves may not have reached agreement',
+                  })
                 );
               }
               const targetPlayer = yield* game.getPlayerBySocketId(targetSid);
@@ -49,9 +50,9 @@ export class EventsActions extends Effect.Service<EventsActions>()(
               const targetSid = yield* game.getWerewolfTarget;
               if (!targetSid) {
                 return yield* Effect.fail(
-                  new Error(
-                    'No werewolf victim found - werewolves may not have reached agreement'
-                  )
+                  new WerewolfVictimNotFoundError({
+                    reason: 'werewolves may not have reached agreement',
+                  })
                 );
               }
               const targetPlayer = yield* game.getPlayerBySocketId(targetSid);

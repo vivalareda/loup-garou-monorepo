@@ -1,19 +1,9 @@
 import type { SegmentType } from '@repo/types';
 import { Effect } from 'effect';
-
-export class InvalidSegmentIndex extends Error {
-  readonly _tag = 'InvalidSegmentIndex';
-  constructor(readonly index: number, readonly maxIndex: number) {
-    super(`Invalid segment index: ${index} (max: ${maxIndex})`);
-  }
-}
-
-export class SegmentNotFound extends Error {
-  readonly _tag = 'SegmentNotFound';
-  constructor(readonly type: SegmentType) {
-    super(`Segment not found: ${type}`);
-  }
-}
+import {
+  InvalidSegmentIndex,
+  SegmentNotFound,
+} from './errors.js';
 
 type SegmentState = { type: SegmentType; skip: boolean };
 
@@ -44,7 +34,7 @@ export class SegmentManager extends Effect.Service<SegmentManager>()(
       const getCurrentSegment = Effect.gen(function* () {
         if (currentIndex >= segments.length) {
           return yield* Effect.fail(
-            new InvalidSegmentIndex(currentIndex, segments.length - 1)
+            new InvalidSegmentIndex({ index: currentIndex, maxIndex: segments.length - 1 })
           );
         }
 
@@ -61,7 +51,7 @@ export class SegmentManager extends Effect.Service<SegmentManager>()(
           const segment = segments.find((s) => s.type === type);
 
           if (!segment) {
-            return yield* Effect.fail(new SegmentNotFound(type));
+            return yield* Effect.fail(new SegmentNotFound({ type }));
           }
 
           return segment;
@@ -144,7 +134,7 @@ export class SegmentManager extends Effect.Service<SegmentManager>()(
         Effect.gen(function* () {
           if (index < 0 || index >= segments.length) {
             return yield* Effect.fail(
-              new InvalidSegmentIndex(index, segments.length - 1)
+              new InvalidSegmentIndex({ index, maxIndex: segments.length - 1 })
             );
           }
           currentIndex = index;

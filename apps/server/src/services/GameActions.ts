@@ -4,6 +4,7 @@ import { AudioManager } from './AudioManager.js';
 import { DeathManager } from './DeathManager.js';
 import { Game } from './Game.js';
 import { SocketServer } from './SocketServer.js';
+import { WerewolfVictimNotFoundError } from './errors.js';
 
 export class GameActions extends Effect.Service<GameActions>()(
   '@app/GameActions',
@@ -107,9 +108,9 @@ export class GameActions extends Effect.Service<GameActions>()(
 
           if (!werewolfTarget) {
             return yield* Effect.fail(
-              new Error(
-                'No werewolf victim found - werewolves may not have reached agreement'
-              )
+              new WerewolfVictimNotFoundError({
+                reason: 'werewolves may not have reached agreement',
+              })
             );
           }
 

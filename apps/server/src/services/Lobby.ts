@@ -37,5 +37,5 @@ export class Lobby extends Effect.Service<Lobby>()('@app/Lobby', {
       }),
     };
   }),
-  dependencies: [LobbyConfig.Live],
+  dependencies: [],
 }) { }

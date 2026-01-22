@@ -13,6 +13,15 @@ export class Lobby extends Effect.Service<Lobby>()('@app/Lobby', {
       Array.from(players.values()).some((p) => p.name === name);
 
     return {
+      /**
+       * Adds a new player to the lobby.
+       * @param name - The player's display name.
+       * @param sid - The socket ID of the player.
+       * @returns Effect containing the created LobbyPlayer.
+       * @throws NameExistsError - If a player with the given name already exists.
+       * @throws LobbyFullError - If the lobby has reached the maximum player count.
+       * @dependencies Depends on LobbyConfig for maxPlayers limit.
+       */
       addPlayer: (name: string, sid: string) =>
         Effect.gen(function* () {
           if (isNameTaken(name)) {
@@ -29,9 +38,29 @@ export class Lobby extends Effect.Service<Lobby>()('@app/Lobby', {
           return player;
         }),
 
+      /**
+       * Retrieves all players currently in the lobby.
+       * @returns Effect containing an array of all LobbyPlayer instances.
+       */
       getAllPlayers: Effect.sync(() => players),
+
+      /**
+       * Gets the current number of players in the lobby.
+       * @returns Effect containing the player count.
+       */
       getPlayerCount: Effect.sync(() => players.length),
+
+      /**
+       * Checks if the lobby has reached the maximum player capacity.
+       * @returns Effect containing true if the lobby is full, false otherwise.
+       * @dependencies Depends on LobbyConfig for maxPlayers limit.
+       */
       isLobbyFull: Effect.sync(() => players.length >= config.maxPlayers),
+
+      /**
+       * Removes all players from the lobby, resetting it to an empty state.
+       * @returns Effect that completes when the lobby is cleared.
+       */
       clear: Effect.sync(() => {
         players.length = 0;
       }),

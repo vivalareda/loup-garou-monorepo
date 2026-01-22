@@ -226,20 +226,99 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
     );
 
     return {
+      /**
+       * Retrieves all segments with their current skip states.
+       * @returns Effect containing an array of SegmentState objects.
+       */
       getSegments,
+
+      /**
+       * Retrieves a specific segment by type.
+       * @param type - The type of segment to retrieve.
+       * @returns Effect containing the SegmentState or undefined if not found.
+       */
       getSegmentByType,
+
+      /**
+       * Marks a segment to be skipped.
+       * @param type - The type of segment to skip.
+       * @returns Effect that completes when the segment is marked as skipped.
+       */
       skipSegment,
+
+      /**
+       * Marks a segment to not be skipped.
+       * @param type - The type of segment to unskip.
+       * @returns Effect that completes when the segment is marked as not skipped.
+       */
       unskipSegment,
+
+      /**
+       * Applies skip logic to all segments based on current game state.
+       * Skips Cupid/Lovers after first night, Witch segments when no potions, Hunter unless in death queue.
+       * @returns Effect that completes when skip logic is applied.
+       * @dependencies Depends on Game service for potion availability and death queue state.
+       */
       applySkipLogic,
+
+      /**
+       * Marks the first night as completed, triggering Cupid/Lovers skip in subsequent nights.
+       * @returns Effect that completes when the first night is marked as complete.
+       */
       markFirstNightComplete,
+
+      /**
+       * Determines if the Cupid segment should be skipped.
+       * @returns Effect containing true if Cupid should be skipped (after first night), false otherwise.
+       */
       shouldSkipCupid,
+
+      /**
+       * Determines if the Lovers segment should be skipped.
+       * @returns Effect containing true if Lovers should be skipped (after first night), false otherwise.
+       */
       shouldSkipLovers,
+
+      /**
+       * Determines if the Witch Heal segment should be skipped.
+       * @returns Effect containing true if Witch Heal should be skipped (no potion), false otherwise.
+       * @dependencies Depends on Game service for potion availability.
+       */
       shouldSkipWitchHeal,
+
+      /**
+       * Determines if the Witch Poison segment should be skipped.
+       * @returns Effect containing true if Witch Poison should be skipped (no potion), false otherwise.
+       * @dependencies Depends on Game service for potion availability.
+       */
       shouldSkipWitchPoison,
+
+      /**
+       * Determines if the Hunter segment should be skipped.
+       * @returns Effect containing true if Hunter should be skipped (not in death queue), false otherwise.
+       * @dependencies Depends on Game service for death queue state.
+       */
       shouldSkipHunter,
+
+      /**
+       * Checks for special scenarios that need handling after the night phase.
+       * @returns Effect containing the special scenario ('hunter-revenge', 'lover-suicide', 'hunter-lover') or null.
+       * @dependencies Depends on Game service for death queue and lovers state.
+       */
       checkPostNightScenarios,
+
+      /**
+       * Checks for special scenarios that need handling after the day vote.
+       * @returns Effect containing the special scenario ('hunter-revenge', 'lover-suicide', 'hunter-lover') or null.
+       * @dependencies Depends on Game service for vote target and lovers state.
+       */
       checkPostDayVoteScenarios,
 
+      /**
+       * Starts the game by initializing players, assigning roles, and notifying clients.
+       * @returns Effect that completes when the game is started.
+       * @dependencies Depends on Game, Lobby, SocketServer, and AudioManager services.
+       */
       startGame: Effect.gen(function* () {
         yield* game.startGame;
 
@@ -256,6 +335,11 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
         yield* audio.playIntro();
       }),
 
+      /**
+       * Runs the night phase by processing all non-skipped night segments.
+       * @returns Effect that completes when the night phase audio is played for all segments.
+       * @dependencies Depends on Game and AudioManager services.
+       */
       runNightPhase: Effect.gen(function* () {
         yield* applySkipLogic;
         const segments = yield* getSegments;
@@ -277,6 +361,11 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
         }
       }),
 
+      /**
+       * Runs the day phase by processing night deaths, checking special scenarios, and starting day voting.
+       * @returns Effect that completes when the day phase is initiated.
+       * @dependencies Depends on Game, SocketServer, and AudioManager services.
+       */
       runDayPhase: Effect.gen(function* () {
         const scenario = yield* checkPostNightScenarios;
 
@@ -311,7 +400,6 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
           return;
         }
 
-        // No special scenario
         const deaths = yield* game.processPendingDeaths;
         yield* audio.nightHasEndedAudio();
         yield* audio.playDeathAnnouncement(deaths.length > 0);
@@ -331,15 +419,30 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
         io.emit('day:voting-phase-start');
       }),
 
+      /**
+       * Handles continuation after the Cupid segment completes.
+       * @returns Effect that completes when Cupid segment cleanup is done.
+       * @dependencies Depends on AudioManager service.
+       */
       continueAfterCupid: Effect.gen(function* () {
         yield* audio.playSegmentEnd('CUPID');
         yield* markFirstNightComplete;
       }),
 
+      /**
+       * Handles continuation after the Lovers Reveal segment completes.
+       * @returns Effect that completes when Lovers Reveal segment cleanup is done.
+       * @dependencies Depends on AudioManager service.
+       */
       continueAfterLoversReveal: Effect.gen(function* () {
         yield* audio.playSegmentEnd('LOVERS_REVEAL');
       }),
 
+      /**
+       * Handles continuation after the werewolf vote segment completes.
+       * @returns Effect that completes when werewolf segment cleanup is done.
+       * @dependencies Depends on Game and AudioManager services.
+       */
       continueAfterWerewolfVote: Effect.gen(function* () {
         const targetSid = yield* game.getWerewolfTarget;
         if (targetSid) {
@@ -350,14 +453,29 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
         yield* game.clearWerewolfVotes;
       }),
 
+      /**
+       * Handles continuation after the Witch Heal segment completes.
+       * @returns Effect that completes when Witch Heal segment cleanup is done.
+       * @dependencies Depends on AudioManager service.
+       */
       continueAfterWitchHeal: Effect.gen(function* () {
         yield* audio.playSegmentEnd('WITCH-HEAL');
       }),
 
+      /**
+       * Handles continuation after the Witch Poison segment completes.
+       * @returns Effect that completes when Witch Poison segment cleanup is done.
+       * @dependencies Depends on AudioManager service.
+       */
       continueAfterWitchPoison: Effect.gen(function* () {
         yield* audio.playSegmentEnd('WITCH-POISON');
       }),
 
+      /**
+       * Handles continuation after the day vote segment completes, processing the vote result and checking scenarios.
+       * @returns Effect that completes when day vote segment cleanup is done.
+       * @dependencies Depends on Game, SocketServer, and AudioManager services.
+       */
       continueAfterDayVote: Effect.gen(function* () {
         const target = yield* game.getDayVoteTarget;
         yield* game.addPendingDeath(target.getSocketId(), 'DAY_VOTE');
@@ -390,7 +508,6 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
           return;
         }
 
-        // No special scenario
         yield* audio.playSegmentEnd('DAY_VOTE');
         yield* game.clearDayVotes;
 
@@ -403,6 +520,11 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
         }
       }),
 
+      /**
+       * Handles continuation after the hunter revenge segment completes.
+       * @returns Effect that completes when hunter revenge segment cleanup is done.
+       * @dependencies Depends on Game, SocketServer, and AudioManager services.
+       */
       continueAfterHunterRevenge: Effect.gen(function* () {
         yield* audio.playSegmentEnd('HUNTER');
 

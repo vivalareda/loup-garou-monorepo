@@ -9,25 +9,10 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isBatchAddModalOpen, setIsBatchAddModalOpen] = useState(false);
 
-  // Add debugging and prevent default browser behavior
   useHotkeys(
-    'cmd+u',
+    ['cmd+u', 'cmd+shift+u'],
     (event) => {
-      console.log('Hotkey triggered: cmd+u');
       event.preventDefault();
-      setIsBatchAddModalOpen(true);
-    },
-    {
-      preventDefault: true,
-      enableOnFormTags: true, // Enable even when focused on form elements
-    }
-  );
-
-  // Alternative hotkey that's less likely to conflict
-  useHotkeys(
-    'cmd+shift+u',
-    () => {
-      console.log('Alternative hotkey triggered: cmd+shift+u');
       setIsBatchAddModalOpen(true);
     },
     {

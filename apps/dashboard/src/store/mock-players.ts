@@ -13,7 +13,7 @@ import { create } from 'zustand';
 const BACKEND_URL =
   import.meta.env.VITE_PUBLIC_BACKEND_SERVER_URL || 'http://localhost:3000';
 
-type MockPlayer = {
+export type MockPlayer = {
   id: string;
   name: string;
   socket: Socket;

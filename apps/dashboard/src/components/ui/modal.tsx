@@ -14,7 +14,16 @@ export function Modal({ isOpen, onClose, children, title }: ModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <button
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            onClose();
+          }
+        }}
+        type="button"
+      />
       <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
         {title && (
           <div className="flex items-center justify-between mb-4">
@@ -22,6 +31,7 @@ export function Modal({ isOpen, onClose, children, title }: ModalProps) {
             <button
               className="text-gray-400 hover:text-gray-600"
               onClick={onClose}
+              type="button"
             >
               ✕
             </button>

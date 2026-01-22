@@ -12,6 +12,7 @@ import {
 import { Game } from '../Game.js';
 import { Lobby } from '../Lobby.js';
 import { LobbyConfig } from '../LobbyConfig.js';
+import { LobbyTest } from './test-utils.js';
 
 const playerNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'];
 const playerSocketIds = playerNames.map((_, index) => `socket-${index + 1}`);

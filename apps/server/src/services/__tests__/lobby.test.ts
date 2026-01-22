@@ -1,13 +1,11 @@
 import { describe, expect, it } from '@effect/vitest';
-import { Effect, Layer } from 'effect';
+import { Effect } from 'effect';
 import { LobbyFullError, NameExistsError } from '../errors.js';
 import { Lobby } from '../Lobby.js';
-import { LobbyConfig } from '../LobbyConfig.js';
+import { LobbyTest } from './test-utils.js';
 
 describe('Lobby Service', () => {
-  const TestLayer = Lobby.DefaultWithoutDependencies.pipe(
-    Layer.provide(LobbyConfig.Test)
-  );
+  const TestLayer = LobbyTest;
 
   it.effect('adds a player to the list correctly', () =>
     Effect.gen(function* () {

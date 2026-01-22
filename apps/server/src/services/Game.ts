@@ -1,4 +1,4 @@
-import type { Role } from '@repo/types';
+import type { DeathCause, DeathInfo, PendingDeath, Role } from '@repo/types';
 import { Effect } from 'effect';
 import { Player } from '@/core/player.js';
 import {
@@ -27,10 +27,74 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
     let lovers: [Player, Player] | null = null;
     const werewolfVotes = new Map<string, string>(); // voterSid → targetSid
     const dayVotes = new Map<string, string>(); // voterSid → targetSid
+    const pendingDeaths = new Map<string, PendingDeath>();
 
     const setSpecialRolePlayer = (player: Player, role: Role) => {
       if (role !== 'WEREWOLF' && role !== 'VILLAGER') {
         specialRolePlayers.set(role, player);
+      }
+    };
+
+    const getPartnerForPlayer = (player: Player) => {
+      if (!lovers) {
+        return null;
+      }
+      if (lovers[0] === player) {
+        return lovers[1];
+      }
+      if (lovers[1] === player) {
+        return lovers[0];
+      }
+      return null;
+    };
+
+    const isPlayerLover = (player: Player) => lovers?.includes(player) ?? false;
+
+    const getPlayerOrFail = (socketId: string) =>
+      Effect.gen(function* () {
+        return (
+          players.get(socketId) ??
+          (yield* Effect.fail(new PlayerNotFoundError({ socketId })))
+        );
+      });
+
+    const createDeathInfo = (pendingDeath: PendingDeath, player: Player) => {
+      const baseInfo = {
+        playerId: pendingDeath.playerId,
+        playerName: player.getName(),
+        cause: pendingDeath.cause,
+        timestamp: new Date(),
+      };
+
+      if (pendingDeath.metadata) {
+        return {
+          ...baseInfo,
+          metadata: pendingDeath.metadata,
+        } satisfies DeathInfo;
+      }
+
+      return baseInfo satisfies DeathInfo;
+    };
+
+    const enqueuePartnerSuicide = (
+      pendingDeath: PendingDeath,
+      player: Player
+    ) => {
+      if (pendingDeath.cause === 'PARTNER_SUICIDE') {
+        return;
+      }
+
+      const partner = getPartnerForPlayer(player);
+      if (!partner?.isAlive) {
+        return;
+      }
+
+      if (!pendingDeaths.has(partner.getSocketId())) {
+        pendingDeaths.set(partner.getSocketId(), {
+          playerId: partner.getSocketId(),
+          cause: 'PARTNER_SUICIDE',
+          metadata: { loverId: pendingDeath.playerId },
+        });
       }
     };
 
@@ -118,6 +182,65 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
         ),
 
       getLovers: () => Effect.sync(() => lovers),
+
+      addPendingDeath: (socketId: string, cause: DeathCause) =>
+        Effect.gen(function* () {
+          const player = players.get(socketId);
+          if (!player) {
+            return yield* Effect.fail(new PlayerNotFoundError({ socketId }));
+          }
+
+          const pendingDeath: PendingDeath = {
+            playerId: socketId,
+            cause,
+          };
+
+          pendingDeaths.set(socketId, pendingDeath);
+        }),
+
+      isInDeathQueue: (socketId: string) =>
+        Effect.sync(() => pendingDeaths.has(socketId)),
+
+      hunterIsInDeathQueue: Effect.sync(() => {
+        const hunter = specialRolePlayers.get('HUNTER');
+        if (!hunter) {
+          return false;
+        }
+        return pendingDeaths.has(hunter.getSocketId());
+      }),
+
+      killPlayer: (socketId: string) =>
+        Effect.gen(function* () {
+          const player = players.get(socketId);
+          if (!player) {
+            return yield* Effect.fail(new PlayerNotFoundError({ socketId }));
+          }
+          player.setIsAlive(false);
+        }),
+
+      processPendingDeaths: Effect.gen(function* () {
+        const initialDeaths = Array.from(pendingDeaths.values());
+
+        for (const pendingDeath of initialDeaths) {
+          const player = yield* getPlayerOrFail(pendingDeath.playerId);
+
+          if (isPlayerLover(player)) {
+            enqueuePartnerSuicide(pendingDeath, player);
+          }
+        }
+
+        const allDeaths = Array.from(pendingDeaths.values());
+        const deathInfos: DeathInfo[] = [];
+
+        for (const pendingDeath of allDeaths) {
+          const player = yield* getPlayerOrFail(pendingDeath.playerId);
+          deathInfos.push(createDeathInfo(pendingDeath, player));
+          player.setIsAlive(false);
+          pendingDeaths.delete(pendingDeath.playerId);
+        }
+
+        return deathInfos;
+      }),
 
       // Werewolf voting methods
       handleWerewolfVote: (voterSid: string, targetSid: string) =>

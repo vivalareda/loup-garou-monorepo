@@ -46,7 +46,7 @@ export class SocketServer extends Effect.Service<SocketServer>()(
 ) {
   static Test = Layer.succeed(
     this,
-    new SocketServer({
+    {
       to: () => ({ emit: () => Effect.void }),
       emit: () => {
         Effect.void;
@@ -54,6 +54,6 @@ export class SocketServer extends Effect.Service<SocketServer>()(
       on: () => {
         Effect.void;
       },
-    } as unknown as SocketIOInstance)
+    } as unknown as SocketIOInstance
   );
 }

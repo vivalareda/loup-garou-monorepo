@@ -1,7 +1,9 @@
 import { describe, expect, it } from '@effect/vitest';
 import { Effect } from 'effect';
+import { AudioManager } from '../AudioManager.js';
 import { Game } from '../Game.js';
 import { Lobby } from '../Lobby.js';
+import { SocketServer } from '../SocketServer.js';
 import {
   GameTest,
   LobbyTest,
@@ -49,11 +51,13 @@ describe('Test Utilities', () => {
       const { layer, emissions } = makeSocketCapture();
 
       const program = Effect.gen(function* () {
-        const socket = yield* Effect.serviceConstants;
+        const socketServer = yield* SocketServer;
 
-        // Simulate emissions
-        socket.SocketServer.to('socket-1').emit('test-event', { data: 'test' });
-        socket.SocketServer.emit('broadcast-event', { data: 'broadcast' });
+        // Simulate emissions using type assertions for testing
+        (socketServer.to('socket-1') as any).emit('test-event', {
+          data: 'test',
+        });
+        (socketServer as any).emit('broadcast-event', { data: 'broadcast' });
       });
 
       Effect.runSync(program.pipe(Effect.provide(layer)));
@@ -77,12 +81,12 @@ describe('Test Utilities', () => {
       const { layer, calls } = makeAudioCapture();
 
       const program = Effect.gen(function* () {
-        const audio = yield* Effect.serviceConstants;
+        const audioManager = yield* AudioManager;
 
-        yield* audio.AudioManager.playIntro();
-        yield* audio.AudioManager.playSegmentStart('CUPID');
-        yield* audio.AudioManager.playSegmentEnd('CUPID');
-        yield* audio.AudioManager.playWinnerAudio('villagers');
+        yield* audioManager.playIntro();
+        yield* audioManager.playSegmentStart('CUPID');
+        yield* audioManager.playSegmentEnd('CUPID');
+        yield* audioManager.playWinnerAudio('villagers');
       });
 
       Effect.runSync(program.pipe(Effect.provide(layer)));

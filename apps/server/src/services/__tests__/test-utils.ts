@@ -4,10 +4,7 @@ import { AudioManager } from '../AudioManager.js';
 import { Game } from '../Game.js';
 import { Lobby } from '../Lobby.js';
 import { LobbyConfig } from '../LobbyConfig.js';
-import {
-  SocketServer,
-  type SocketIOInstance,
-} from '../SocketServer.js';
+import { type SocketIOInstance, SocketServer } from '../SocketServer.js';
 
 /**
  * Test Layers
@@ -25,8 +22,9 @@ export const LobbyTest = Lobby.DefaultWithoutDependencies.pipe(
  * GameTest layer: Game + LobbyTest
  * Pre-configured game service with lobby (maxPlayers=2)
  */
-export const GameTest = Game.DefaultWithoutDependencies.pipe(
-  Layer.provide(LobbyTest)
+export const GameTest = Layer.mergeAll(
+  Game.DefaultWithoutDependencies.pipe(Layer.provide(LobbyTest)),
+  LobbyTest
 );
 
 /**
@@ -58,7 +56,7 @@ export const makeSocketCapture = () => {
     },
   } as unknown as SocketIOInstance;
 
-  const layer = Layer.succeed(SocketServer, mockSocketServer);
+  const layer = Layer.succeed(SocketServer, mockSocketServer as never);
 
   return { layer, emissions };
 };

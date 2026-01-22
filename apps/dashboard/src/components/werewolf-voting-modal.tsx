@@ -1,11 +1,11 @@
-import type { PlayerListItem, WerewolvesVoteState } from '@repo/types';
+import type { LobbyPlayer, WerewolvesVoteState } from '@repo/types';
 import { useCallback, useEffect, useState } from 'react';
 import { useMockPlayerStore } from '@/store/mock-players';
 
 type WerewolfVotingModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  playersList: PlayerListItem[];
+  playersList: LobbyPlayer[];
   currentPlayerName: string;
 };
 
@@ -113,14 +113,13 @@ export function WerewolfVotingModal({
   );
 
   const handleVote = (playerName: string) => {
-    // Find the target player's socket ID
     const targetPlayer = playersList.find((p) => p.name === playerName);
     if (!targetPlayer) {
       console.error(`Player ${playerName} not found in players list`);
       return;
     }
 
-    sendVote(targetPlayer.socketId);
+    sendVote(targetPlayer.sid);
   };
 
   const handleClose = () => {
@@ -174,7 +173,7 @@ export function WerewolfVotingModal({
                 <p className="text-sm text-yellow-800">
                   Your current vote:{' '}
                   <span className="font-bold">
-                    {playersList.find((p) => p.socketId === playerVote)?.name ||
+                    {playersList.find((p) => p.sid === playerVote)?.name ||
                       'Unknown'}
                   </span>
                 </p>
@@ -187,7 +186,7 @@ export function WerewolfVotingModal({
             <div className="mb-4 space-y-2">
               {availableTargets.map((player) => {
                 const voteCount = votes[player.name] || 0;
-                const isSelected = playerVote === player.socketId;
+                const isSelected = playerVote === player.sid;
 
                 return (
                   <button
@@ -196,7 +195,7 @@ export function WerewolfVotingModal({
                         ? 'bg-red-100 border-red-300 border-2'
                         : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                     }`}
-                    key={player.socketId}
+                    key={player.sid}
                     onClick={() => handleVote(player.name)}
                     type="button"
                   >

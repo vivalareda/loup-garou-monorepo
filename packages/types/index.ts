@@ -13,6 +13,7 @@ export {
   isGamePlayer,
   isLobbyPlayer,
   type LobbyPlayer,
+  type Player,
   type PlayerIdentity,
 } from './src/player';
 export { getRoleDescription, type Role } from './src/role';

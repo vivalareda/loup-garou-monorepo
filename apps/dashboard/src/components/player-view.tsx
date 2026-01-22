@@ -245,7 +245,7 @@ export function PlayerView() {
                               ? 'bg-pink-100 border-2 border-pink-300'
                               : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
                           }`}
-                          key={player.socketId}
+                          key={player.sid}
                           onClick={() =>
                             toggleLoverSelection(activePlayer.id, player.name)
                           }
@@ -385,7 +385,7 @@ export function PlayerView() {
                       className={`flex items-center gap-2 rounded p-2 ${
                         isPlayerAlive ? 'bg-gray-50' : 'bg-red-50 opacity-75'
                       }`}
-                      key={player.socketId}
+                      key={player.sid}
                     >
                       <span className="text-gray-600">
                         {isPlayerAlive ? '👤' : '💀'}
@@ -475,7 +475,7 @@ export function PlayerView() {
                   {activePlayer.playersList.map((player) => (
                     <Button
                       className="bg-orange-600 hover:bg-orange-700"
-                      key={player.socketId}
+                      key={player.sid}
                       onClick={() => simulateAllDayVotes(player.name)}
                       size="sm"
                     >

@@ -1,4 +1,4 @@
-import type { PlayerListItem } from '@repo/types';
+import type { LobbyPlayer } from '@repo/types';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/modal';
 type WerewolfSimulationModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  playersList: PlayerListItem[];
+  playersList: LobbyPlayer[];
   currentPlayerName: string;
   onSimulateVotes: (targetPlayerName: string) => void;
 };
@@ -70,7 +70,7 @@ export function WerewolfSimulationModal({
                       ? 'border-red-300 bg-red-50'
                       : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
                   }`}
-                  key={player.socketId}
+                  key={player.sid}
                   onClick={() => setSelectedTarget(player.name)}
                   type="button"
                 >

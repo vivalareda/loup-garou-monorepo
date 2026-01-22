@@ -50,9 +50,9 @@
 
 ## Phase 8: Cleanup & Documentation
 
-- [ ] Task 8.1: Create apps/server/src/services/__tests__/test-utils.ts with reusable test utilities. Include: LobbyTest layer (Lobby + LobbyConfig.Test), GameTest layer (Game + LobbyTest), makeSocketCapture() returning mock SocketServer with emission capture array, makeAudioCapture() returning mock AudioManager with call recording array. Refactor existing tests to use these utilities where applicable.
+- [x] Task 8.1: Create apps/server/src/services/__tests__/test-utils.ts with reusable test utilities. Include: LobbyTest layer (Lobby + LobbyConfig.Test), GameTest layer (Game + LobbyTest), makeSocketCapture() returning mock SocketServer with emission capture array, makeAudioCapture() returning mock AudioManager with call recording array. Refactor existing tests to use these utilities where applicable.
 
-- [ ] Task 8.2: Add comprehensive JSDoc comments to ALL public methods in Game.ts, GameFlow.ts, Lobby.ts interfaces. Document parameters, return types, thrown errors, service dependencies. Create apps/server/README.md documenting: architecture overview, service dependency graph, layer composition order, how to run tests, how to add new services. Include diagram from architecture document.
+- [x] Task 8.2: Add comprehensive JSDoc comments to ALL public methods in Game.ts, GameFlow.ts, Lobby.ts interfaces. Document parameters, return types, thrown errors, service dependencies. Create apps/server/README.md documenting: architecture overview, service dependency graph, layer composition order, how to run tests, how to add new services. Include diagram from architecture document.
 
 - [ ] Task 8.3: Remove apps/server.bk/ directory entirely after verifying all functionality migrated. Run full test suite: `bun test apps/server/src/services/` and verify >85% overall coverage. Run lint: `npm run lint` and fix all issues. Verify server starts and dashboard can connect. Create git commit: "feat: complete Effect TS migration".
 

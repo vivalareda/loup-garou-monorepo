@@ -1,3 +1,4 @@
+import { isGamePlayer } from '@repo/types';
 import { useState } from 'react';
 import { useMockPlayerStore } from '@/store/mock-players';
 import { DayVoteModal } from './day-vote-modal';
@@ -78,7 +79,11 @@ export function PlayerView() {
         />
 
         <TestSimulation
-          isAlive={activePlayer.player ? activePlayer.player.isAlive : true}
+          isAlive={
+            activePlayer.player && isGamePlayer(activePlayer.player)
+              ? activePlayer.player.isAlive
+              : true
+          }
           onOpenWerewolfSimulation={setIsWerewolfSimulationOpen}
           onSimulateDayVotes={simulateAllDayVotes}
           playersList={activePlayer.playersList}

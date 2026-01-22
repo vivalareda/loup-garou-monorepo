@@ -1,3 +1,4 @@
+import { isGamePlayer } from '@repo/types';
 import { Button } from '@/components/ui/button';
 import type { MockPlayer } from '@/store/mock-players';
 import { getStatusClassName } from '@/utils/status';
@@ -44,8 +45,8 @@ export function PlayerHeader({
               </span>
             )}
             {player.player &&
-              !player.player.isAlive &&
-              'role' in player.player && (
+              isGamePlayer(player.player) &&
+              !player.player.isAlive && (
                 <span className="rounded bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800">
                   💀 Dead
                 </span>

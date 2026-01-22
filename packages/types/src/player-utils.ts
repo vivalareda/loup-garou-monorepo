@@ -1,4 +1,15 @@
-import type { PlayerListItem, Role, WaitingRoomPlayer } from './';
+import type { Role } from './role';
+
+export type PlayerListItem = {
+  name: string;
+  socketId: string;
+};
+
+export type WaitingRoomPlayer = {
+  type: 'waiting';
+  name: string;
+  socketId: string;
+};
 
 export type PlayerIdentity = {
   readonly name: string;

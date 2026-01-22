@@ -10,6 +10,12 @@ export type SegmentState = {
   skip: boolean;
 };
 
+export type SpecialScenario =
+  | 'hunter-revenge'
+  | 'lover-suicide'
+  | 'hunter-lover'
+  | null;
+
 export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
   effect: Effect.gen(function* () {
     const game = yield* Game;
@@ -109,6 +115,116 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
       yield* Ref.set(firstNightCompletedRef, true);
     });
 
+    const checkPostNightScenarios = Effect.gen(
+      function* (): Effect.Effect<SpecialScenario> {
+        const hunterInDeathQueue = yield* game.hunterIsInDeathQueue;
+
+        if (hunterInDeathQueue) {
+          const hunter = yield* game.getSpecialRolePlayer('HUNTER');
+          const isLover = yield* game.isPlayerLover(hunter.getSocketId());
+
+          if (isLover) {
+            const partner = yield* game.getPartner(hunter.getSocketId());
+            if (partner && partner.getRole() === 'HUNTER') {
+              // Both lovers are hunters - complex scenario
+              return 'hunter-lover';
+            }
+            // Hunter died and is a lover (partner will commit suicide)
+            return 'hunter-lover';
+          }
+          // Hunter died but is not a lover
+          return 'hunter-revenge';
+        }
+
+        // Check if a lover died (not hunter)
+        const deaths = yield* game.processPendingDeaths;
+        const lovers = yield* game.getLovers();
+
+        if (lovers && deaths.length > 0) {
+          const isOneLoverInDeathQueue = deaths.some(
+            (d) =>
+              d.playerId === lovers[0].getSocketId() ||
+              d.playerId === lovers[1].getSocketId()
+          );
+
+          if (isOneLoverInDeathQueue) {
+            const deadLover = deaths.find(
+              (d) =>
+                d.playerId === lovers[0].getSocketId() ||
+                d.playerId === lovers[1].getSocketId()
+            );
+            const partner =
+              deadLover?.playerId === lovers[0].getSocketId()
+                ? lovers[1]
+                : lovers[0];
+
+            const isPartnerHunter = partner.getRole() === 'HUNTER';
+
+            if (isPartnerHunter) {
+              // Lover died, partner is hunter
+              return 'hunter-lover';
+            }
+
+            // Lover died, partner will commit suicide
+            return 'lover-suicide';
+          }
+        }
+
+        return null;
+      }
+    );
+
+    const checkPostDayVoteScenarios = Effect.gen(
+      function* (): Effect.Effect<SpecialScenario> {
+        const target = yield* game.getDayVoteTarget;
+        const deaths = yield* game.processPendingDeaths;
+
+        const hunterInDeathQueue = deaths.some(
+          (d) =>
+            d.playerId === target.getSocketId() && target.getRole() === 'HUNTER'
+        );
+
+        if (hunterInDeathQueue) {
+          const isLover = yield* game.isPlayerLover(target.getSocketId());
+          if (isLover) {
+            const partner = yield* game.getPartner(target.getSocketId());
+            if (partner && partner.getRole() === 'HUNTER') {
+              // Hunter voted out, partner is also hunter
+              return 'hunter-lover';
+            }
+            // Hunter voted out and is a lover
+            return 'hunter-lover';
+          }
+          // Hunter voted out but not a lover
+          return 'hunter-revenge';
+        }
+
+        const lovers = yield* game.getLovers();
+        if (lovers) {
+          const isTargetLover =
+            target.getSocketId() === lovers[0].getSocketId() ||
+            target.getSocketId() === lovers[1].getSocketId();
+
+          if (isTargetLover) {
+            const partner =
+              target.getSocketId() === lovers[0].getSocketId()
+                ? lovers[1]
+                : lovers[0];
+
+            if (partner.getRole() === 'HUNTER') {
+              // Lover voted out, partner is hunter
+              return 'hunter-lover';
+            }
+
+            // Lover voted out, partner will suicide
+            return 'lover-suicide';
+          }
+        }
+
+        return null;
+      }
+    );
+
     return {
       getSegments,
       getSegmentByType,
@@ -121,6 +237,8 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
       shouldSkipWitchHeal,
       shouldSkipWitchPoison,
       shouldSkipHunter,
+      checkPostNightScenarios,
+      checkPostDayVoteScenarios,
 
       startGame: Effect.gen(function* () {
         yield* game.startGame;
@@ -160,52 +278,41 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
       }),
 
       runDayPhase: Effect.gen(function* () {
-        const deaths = yield* game.processPendingDeaths;
+        const scenario = yield* checkPostNightScenarios;
 
-        const hunterInDeathQueue = yield* game.hunterIsInDeathQueue;
-        if (hunterInDeathQueue) {
-          const hunter = yield* game.getSpecialRolePlayer('HUNTER');
-          const isLover = yield* game.isPlayerLover(hunter.getSocketId());
-
-          if (isLover) {
-            yield* audio.playHunterWithLoverDeath();
-          } else {
-            yield* audio.playHunterDeath();
-          }
+        if (scenario === 'hunter-revenge') {
+          yield* audio.playHunterDeath();
+          io.emit('hunter:pick-required');
           return;
         }
 
-        const lovers = yield* game.getLovers();
-        if (lovers) {
-          const isOneLoverInDeathQueue = deaths.some(
-            (d) =>
-              d.playerId === lovers[0].getSocketId() ||
-              d.playerId === lovers[1].getSocketId()
-          );
-
-          if (isOneLoverInDeathQueue) {
-            const deadLover = deaths.find(
-              (d) =>
-                d.playerId === lovers[0].getSocketId() ||
-                d.playerId === lovers[1].getSocketId()
-            );
-            const partner =
-              deadLover?.playerId === lovers[0].getSocketId()
-                ? lovers[1]
-                : lovers[0];
-
-            const isPartnerHunter = partner.getRole() === 'HUNTER';
-
-            if (isPartnerHunter) {
-              yield* audio.playSecondLoverIsHunterAudio();
-              return;
-            }
-
-            yield* audio.playLoverDeath();
-            return;
-          }
+        if (scenario === 'hunter-lover') {
+          yield* audio.playHunterWithLoverDeath();
+          io.emit('hunter:pick-required');
+          return;
         }
 
+        if (scenario === 'lover-suicide') {
+          yield* audio.playLoverDeath();
+          const deaths = yield* game.processPendingDeaths;
+          io.emit('night:deaths-announced', deaths);
+
+          const winner = yield* game.checkWinner;
+          if (winner) {
+            yield* audio.playWinnerAudio(winner);
+            io.emit(
+              winner === 'werewolves' ? 'alert:player-lost' : 'alert:player-won'
+            );
+            return;
+          }
+
+          yield* audio.playDayVoteAudio();
+          io.emit('day:voting-phase-start');
+          return;
+        }
+
+        // No special scenario
+        const deaths = yield* game.processPendingDeaths;
         yield* audio.nightHasEndedAudio();
         yield* audio.playDeathAnnouncement(deaths.length > 0);
 
@@ -255,48 +362,35 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
         const target = yield* game.getDayVoteTarget;
         yield* game.addPendingDeath(target.getSocketId(), 'DAY_VOTE');
 
-        const deaths = yield* game.processPendingDeaths;
+        const scenario = yield* checkPostDayVoteScenarios;
 
-        const hunterInDeathQueue = deaths.some(
-          (d) => d.playerId === target.getSocketId() && target.getRole() === 'HUNTER'
-        );
-
-        if (hunterInDeathQueue) {
-          const isLover = yield* game.isPlayerLover(target.getSocketId());
-          if (isLover) {
-            const partner = yield* game.getPartner(target.getSocketId());
-            if (partner && partner.getRole() === 'HUNTER') {
-              yield* audio.playDayVoteHunterHasPartner();
-              return;
-            }
-          }
+        if (scenario === 'hunter-revenge') {
           yield* audio.playSegmentEnd('DAY_VOTE');
           io.emit('hunter:pick-required');
           return;
         }
 
-        const lovers = yield* game.getLovers();
-        if (lovers) {
-          const isTargetLover =
-            target.getSocketId() === lovers[0].getSocketId() ||
-            target.getSocketId() === lovers[1].getSocketId();
-
-          if (isTargetLover) {
-            const partner =
-              target.getSocketId() === lovers[0].getSocketId()
-                ? lovers[1]
-                : lovers[0];
-
-            if (partner.getRole() === 'HUNTER') {
-              yield* audio.playDayVoteHunterHasPartner();
-              return;
-            }
-
-            yield* audio.playDayVoteLoversDeath();
-            return;
-          }
+        if (scenario === 'hunter-lover') {
+          yield* audio.playDayVoteHunterHasPartner();
+          io.emit('hunter:pick-required');
+          return;
         }
 
+        if (scenario === 'lover-suicide') {
+          yield* audio.playDayVoteLoversDeath();
+          yield* game.clearDayVotes;
+
+          const winner = yield* game.checkWinner;
+          if (winner) {
+            yield* audio.playWinnerAudio(winner);
+            io.emit(
+              winner === 'werewolves' ? 'alert:player-lost' : 'alert:player-won'
+            );
+          }
+          return;
+        }
+
+        // No special scenario
         yield* audio.playSegmentEnd('DAY_VOTE');
         yield* game.clearDayVotes;
 

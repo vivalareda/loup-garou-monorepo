@@ -1028,6 +1028,689 @@ describe('GameFlow Service', () => {
     );
   });
 
+  describe('Special scenario detection - checkPostNightScenarios', () => {
+    it.effect(
+      'returns "hunter-revenge" when hunter dies at night and is not a lover',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const hunter = players.find((p) => p.getRole() === 'HUNTER');
+          if (!hunter) {
+            return; // Skip if no hunter
+          }
+
+          yield* game.addPendingDeath(hunter.getSocketId(), 'WEREWOLVES');
+
+          const scenario = yield* gameFlow.checkPostNightScenarios;
+          expect(scenario).toBe('hunter-revenge');
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'returns "hunter-lover" when hunter dies at night and is a lover',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const hunter = players.find((p) => p.getRole() === 'HUNTER');
+          const nonHunter = players.find((p) => p.getRole() !== 'HUNTER');
+
+          if (!(hunter && nonHunter)) {
+            return;
+          }
+
+          yield* game.setLovers(hunter.getSocketId(), nonHunter.getSocketId());
+          yield* game.addPendingDeath(hunter.getSocketId(), 'WEREWOLVES');
+
+          const scenario = yield* gameFlow.checkPostNightScenarios;
+          expect(scenario).toBe('hunter-lover');
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'returns "hunter-lover" when both lovers are hunters and one dies',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const hunters = players.filter((p) => p.getRole() === 'HUNTER');
+
+          if (hunters.length < 2) {
+            return; // Skip if less than 2 hunters
+          }
+
+          yield* game.setLovers(
+            hunters[0]!.getSocketId(),
+            hunters[1]!.getSocketId()
+          );
+          yield* game.addPendingDeath(hunters[0]!.getSocketId(), 'WEREWOLVES');
+
+          const scenario = yield* gameFlow.checkPostNightScenarios;
+          expect(scenario).toBe('hunter-lover');
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('returns "lover-suicide" when non-hunter lover dies', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const nonHunters = players.filter((p) => p.getRole() !== 'HUNTER');
+
+        if (nonHunters.length < 2) {
+          return;
+        }
+
+        yield* game.setLovers(
+          nonHunters[0]!.getSocketId(),
+          nonHunters[1]!.getSocketId()
+        );
+        yield* game.addPendingDeath(nonHunters[0]!.getSocketId(), 'WEREWOLVES');
+
+        const scenario = yield* gameFlow.checkPostNightScenarios;
+        expect(scenario).toBe('lover-suicide');
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'returns "hunter-lover" when lover dies and partner is hunter',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const hunter = players.find((p) => p.getRole() === 'HUNTER');
+          const nonHunter = players.find((p) => p.getRole() !== 'HUNTER');
+
+          if (!(hunter && nonHunter)) {
+            return;
+          }
+
+          yield* game.setLovers(hunter.getSocketId(), nonHunter.getSocketId());
+          yield* game.addPendingDeath(nonHunter.getSocketId(), 'WEREWOLVES');
+
+          const scenario = yield* gameFlow.checkPostNightScenarios;
+          expect(scenario).toBe('hunter-lover');
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('returns null when no special scenario occurs', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const nonHunter = players.find((p) => p.getRole() !== 'HUNTER');
+
+        if (!nonHunter) {
+          return;
+        }
+
+        yield* game.addPendingDeath(nonHunter.getSocketId(), 'WEREWOLVES');
+
+        const scenario = yield* gameFlow.checkPostNightScenarios;
+        expect(scenario).toBeNull();
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('returns null when no deaths occur', () =>
+      Effect.gen(function* () {
+        const { gameFlow } = yield* setupGameFlow;
+
+        const scenario = yield* gameFlow.checkPostNightScenarios;
+        expect(scenario).toBeNull();
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Special scenario detection - checkPostDayVoteScenarios', () => {
+    it.effect(
+      'returns "hunter-revenge" when hunter is voted out and is not a lover',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const hunter = players.find((p) => p.getRole() === 'HUNTER');
+          if (!hunter) {
+            return;
+          }
+
+          const alivePlayers = players.filter((p) => p.isAlive);
+
+          for (const player of alivePlayers) {
+            yield* game.handleDayVote(
+              player.getSocketId(),
+              hunter.getSocketId()
+            );
+          }
+
+          yield* game.addPendingDeath(hunter.getSocketId(), 'DAY_VOTE');
+
+          const scenario = yield* gameFlow.checkPostDayVoteScenarios;
+          expect(scenario).toBe('hunter-revenge');
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'returns "hunter-lover" when hunter is voted out and is a lover',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const hunter = players.find((p) => p.getRole() === 'HUNTER');
+          const nonHunter = players.find((p) => p.getRole() !== 'HUNTER');
+
+          if (!(hunter && nonHunter)) {
+            return;
+          }
+
+          yield* game.setLovers(hunter.getSocketId(), nonHunter.getSocketId());
+
+          const alivePlayers = players.filter((p) => p.isAlive);
+
+          for (const player of alivePlayers) {
+            yield* game.handleDayVote(
+              player.getSocketId(),
+              hunter.getSocketId()
+            );
+          }
+
+          yield* game.addPendingDeath(hunter.getSocketId(), 'DAY_VOTE');
+
+          const scenario = yield* gameFlow.checkPostDayVoteScenarios;
+          expect(scenario).toBe('hunter-lover');
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'returns "hunter-lover" when hunter is voted out and partner is also hunter',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const hunters = players.filter((p) => p.getRole() === 'HUNTER');
+
+          if (hunters.length < 2) {
+            return;
+          }
+
+          yield* game.setLovers(
+            hunters[0]!.getSocketId(),
+            hunters[1]!.getSocketId()
+          );
+
+          const alivePlayers = players.filter((p) => p.isAlive);
+
+          for (const player of alivePlayers) {
+            yield* game.handleDayVote(
+              player.getSocketId(),
+              hunters[0]!.getSocketId()
+            );
+          }
+
+          yield* game.addPendingDeath(hunters[0]!.getSocketId(), 'DAY_VOTE');
+
+          const scenario = yield* gameFlow.checkPostDayVoteScenarios;
+          expect(scenario).toBe('hunter-lover');
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'returns "lover-suicide" when non-hunter lover is voted out',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const nonHunters = players.filter((p) => p.getRole() !== 'HUNTER');
+
+          if (nonHunters.length < 2) {
+            return;
+          }
+
+          yield* game.setLovers(
+            nonHunters[0]!.getSocketId(),
+            nonHunters[1]!.getSocketId()
+          );
+
+          const alivePlayers = players.filter((p) => p.isAlive);
+
+          for (const player of alivePlayers) {
+            yield* game.handleDayVote(
+              player.getSocketId(),
+              nonHunters[0]!.getSocketId()
+            );
+          }
+
+          yield* game.addPendingDeath(nonHunters[0]!.getSocketId(), 'DAY_VOTE');
+
+          const scenario = yield* gameFlow.checkPostDayVoteScenarios;
+          expect(scenario).toBe('lover-suicide');
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'returns "hunter-lover" when lover is voted out and partner is hunter',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const hunter = players.find((p) => p.getRole() === 'HUNTER');
+          const nonHunter = players.find((p) => p.getRole() !== 'HUNTER');
+
+          if (!(hunter && nonHunter)) {
+            return;
+          }
+
+          yield* game.setLovers(hunter.getSocketId(), nonHunter.getSocketId());
+
+          const alivePlayers = players.filter((p) => p.isAlive);
+
+          for (const player of alivePlayers) {
+            yield* game.handleDayVote(
+              player.getSocketId(),
+              nonHunter.getSocketId()
+            );
+          }
+
+          yield* game.addPendingDeath(nonHunter.getSocketId(), 'DAY_VOTE');
+
+          const scenario = yield* gameFlow.checkPostDayVoteScenarios;
+          expect(scenario).toBe('hunter-lover');
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('returns null when non-lover, non-hunter is voted out', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const target = players.find((p) => p.getRole() !== 'HUNTER');
+
+        if (!target) {
+          return;
+        }
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+
+        for (const player of alivePlayers) {
+          yield* game.handleDayVote(player.getSocketId(), target.getSocketId());
+        }
+
+        yield* game.addPendingDeath(target.getSocketId(), 'DAY_VOTE');
+
+        const scenario = yield* gameFlow.checkPostDayVoteScenarios;
+        expect(scenario).toBeNull();
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Special scenario integration in runDayPhase', () => {
+    it.effect('triggers hunter revenge when hunter dies at night', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const hunter = players.find((p) => p.getRole() === 'HUNTER');
+        if (!hunter) {
+          return;
+        }
+
+        yield* game.addPendingDeath(hunter.getSocketId(), 'WEREWOLVES');
+        yield* gameFlow.runDayPhase;
+
+        expect(hunter.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('triggers lover suicide when lover dies at night', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const nonHunters = players.filter((p) => p.getRole() !== 'HUNTER');
+
+        if (nonHunters.length < 2) {
+          return;
+        }
+
+        yield* game.setLovers(
+          nonHunters[0]!.getSocketId(),
+          nonHunters[1]!.getSocketId()
+        );
+        yield* game.addPendingDeath(nonHunters[0]!.getSocketId(), 'WEREWOLVES');
+
+        yield* gameFlow.runDayPhase;
+
+        expect(nonHunters[0]!.isAlive).toBe(false);
+        expect(nonHunters[1]!.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'triggers hunter-lover scenario when hunter-lover dies at night',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const hunter = players.find((p) => p.getRole() === 'HUNTER');
+          const nonHunter = players.find((p) => p.getRole() !== 'HUNTER');
+
+          if (!(hunter && nonHunter)) {
+            return;
+          }
+
+          yield* game.setLovers(hunter.getSocketId(), nonHunter.getSocketId());
+          yield* game.addPendingDeath(hunter.getSocketId(), 'WEREWOLVES');
+
+          yield* gameFlow.runDayPhase;
+
+          expect(hunter.isAlive).toBe(false);
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Special scenario integration in continueAfterDayVote', () => {
+    it.effect(
+      'triggers hunter revenge when hunter is voted out (explicit role assignment)',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          // Explicitly assign a hunter role to ensure test runs
+          const targetPlayer = players[0];
+          if (!targetPlayer) {
+            return;
+          }
+          targetPlayer.assignRole('HUNTER');
+
+          const alivePlayers = players.filter((p) => p.isAlive);
+
+          for (const player of alivePlayers) {
+            yield* game.handleDayVote(
+              player.getSocketId(),
+              targetPlayer.getSocketId()
+            );
+          }
+
+          yield* gameFlow.continueAfterDayVote;
+
+          expect(targetPlayer.isAlive).toBe(false);
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('triggers hunter revenge when hunter is voted out', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const hunter = players.find((p) => p.getRole() === 'HUNTER');
+        if (!hunter) {
+          return;
+        }
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+
+        for (const player of alivePlayers) {
+          yield* game.handleDayVote(player.getSocketId(), hunter.getSocketId());
+        }
+
+        yield* gameFlow.continueAfterDayVote;
+
+        expect(hunter.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('triggers lover suicide when lover is voted out', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const nonHunters = players.filter((p) => p.getRole() !== 'HUNTER');
+
+        if (nonHunters.length < 2) {
+          return;
+        }
+
+        yield* game.setLovers(
+          nonHunters[0]!.getSocketId(),
+          nonHunters[1]!.getSocketId()
+        );
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+
+        for (const player of alivePlayers) {
+          yield* game.handleDayVote(
+            player.getSocketId(),
+            nonHunters[0]!.getSocketId()
+          );
+        }
+
+        yield* gameFlow.continueAfterDayVote;
+
+        expect(nonHunters[0]!.isAlive).toBe(false);
+        expect(nonHunters[1]!.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'triggers hunter-lover scenario when hunter-lover is voted out (explicit role)',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          // Explicitly set up hunter and lover
+          const hunter = players[0];
+          const nonHunter = players[1];
+
+          if (!(hunter && nonHunter)) {
+            return;
+          }
+
+          hunter.assignRole('HUNTER');
+
+          yield* game.setLovers(hunter.getSocketId(), nonHunter.getSocketId());
+
+          const alivePlayers = players.filter((p) => p.isAlive);
+
+          for (const player of alivePlayers) {
+            yield* game.handleDayVote(
+              player.getSocketId(),
+              hunter.getSocketId()
+            );
+          }
+
+          yield* gameFlow.continueAfterDayVote;
+
+          expect(hunter.isAlive).toBe(false);
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'triggers hunter-lover scenario when hunter-lover is voted out',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const hunter = players.find((p) => p.getRole() === 'HUNTER');
+          const nonHunter = players.find((p) => p.getRole() !== 'HUNTER');
+
+          if (!(hunter && nonHunter)) {
+            return;
+          }
+
+          yield* game.setLovers(hunter.getSocketId(), nonHunter.getSocketId());
+
+          const alivePlayers = players.filter((p) => p.isAlive);
+
+          for (const player of alivePlayers) {
+            yield* game.handleDayVote(
+              player.getSocketId(),
+              hunter.getSocketId()
+            );
+          }
+
+          yield* gameFlow.continueAfterDayVote;
+
+          expect(hunter.isAlive).toBe(false);
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('handles no special scenario in day vote', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const target = players.find((p) => p.getRole() !== 'HUNTER');
+
+        if (!target) {
+          return;
+        }
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+
+        for (const player of alivePlayers) {
+          yield* game.handleDayVote(player.getSocketId(), target.getSocketId());
+        }
+
+        yield* gameFlow.continueAfterDayVote;
+
+        expect(target.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Special scenario edge cases', () => {
+    it.effect('handles empty deaths in checkPostNightScenarios', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        yield* game.setLovers(
+          players[0]!.getSocketId(),
+          players[1]!.getSocketId()
+        );
+
+        // No deaths added
+        const scenario = yield* gameFlow.checkPostNightScenarios;
+        expect(scenario).toBeNull();
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'handles runDayPhase with no special scenario and no winner',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const target = players.find((p) => p.getRole() !== 'HUNTER');
+
+          if (!target) {
+            return;
+          }
+
+          yield* game.addPendingDeath(target.getSocketId(), 'WEREWOLVES');
+          yield* gameFlow.runDayPhase;
+
+          expect(target.isAlive).toBe(false);
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('handles lover suicide with winner check in day vote', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        // Kill all werewolves except the lovers
+        const werewolves = players.filter((p) => p.getRole() === 'WEREWOLF');
+        for (const wolf of werewolves) {
+          yield* game.killPlayer(wolf.getSocketId());
+        }
+
+        const nonHunters = players.filter(
+          (p) => p.getRole() !== 'HUNTER' && p.isAlive
+        );
+
+        if (nonHunters.length < 2) {
+          return;
+        }
+
+        yield* game.setLovers(
+          nonHunters[0]!.getSocketId(),
+          nonHunters[1]!.getSocketId()
+        );
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+
+        for (const player of alivePlayers) {
+          yield* game.handleDayVote(
+            player.getSocketId(),
+            nonHunters[0]!.getSocketId()
+          );
+        }
+
+        yield* gameFlow.continueAfterDayVote;
+
+        expect(nonHunters[0]!.isAlive).toBe(false);
+        expect(nonHunters[1]!.isAlive).toBe(false);
+
+        const winner = yield* game.checkWinner;
+        expect(winner).toBe('villagers');
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'verifies all special scenario branches are exercised in runDayPhase',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const hunter = players.find((p) => p.getRole() === 'HUNTER');
+          if (!hunter) {
+            return;
+          }
+
+          yield* game.addPendingDeath(hunter.getSocketId(), 'WEREWOLVES');
+
+          // This should trigger hunter-revenge path
+          yield* gameFlow.runDayPhase;
+
+          expect(hunter.isAlive).toBe(false);
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('exercises hunter-lover path in runDayPhase', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const hunter = players.find((p) => p.getRole() === 'HUNTER');
+        const nonHunter = players.find((p) => p.getRole() !== 'HUNTER');
+
+        if (!(hunter && nonHunter)) {
+          return;
+        }
+
+        yield* game.setLovers(hunter.getSocketId(), nonHunter.getSocketId());
+        yield* game.addPendingDeath(hunter.getSocketId(), 'WEREWOLVES');
+
+        yield* gameFlow.runDayPhase;
+
+        expect(hunter.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('exercises lover-suicide path in runDayPhase', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const nonHunters = players.filter((p) => p.getRole() !== 'HUNTER');
+
+        if (nonHunters.length < 2) {
+          return;
+        }
+
+        yield* game.setLovers(
+          nonHunters[0]!.getSocketId(),
+          nonHunters[1]!.getSocketId()
+        );
+        yield* game.addPendingDeath(nonHunters[0]!.getSocketId(), 'WEREWOLVES');
+
+        yield* gameFlow.runDayPhase;
+
+        expect(nonHunters[0]!.isAlive).toBe(false);
+        expect(nonHunters[1]!.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
   describe('Integration - Full game flow', () => {
     it.effect('orchestrates complete night to day cycle', () =>
       Effect.gen(function* () {

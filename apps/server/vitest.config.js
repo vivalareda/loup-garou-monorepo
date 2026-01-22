@@ -16,7 +16,6 @@ export default defineConfig({
         'src/**/__tests__/**',
         'src/index.ts',
         'src/services/AudioManager.ts',
-        'src/services/GameFlow.ts',
         'src/services/HttpServer.ts',
         'src/services/SocketServer.ts',
         'src/services/SocketHandlers.ts',

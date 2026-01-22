@@ -321,4 +321,93 @@ describe('Game Service', () => {
       }).pipe(Effect.provide(makeTestLayer()))
     );
   });
+
+  describe('Witch potions', () => {
+    it.effect('heals the werewolf victim and consumes potion', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+        const victim = players[0];
+
+        if (!victim) {
+          throw new Error('Expected victim to be defined');
+        }
+
+        expect(yield* game.canWitchHeal).toBe(true);
+
+        yield* game.addPendingDeath(victim.getSocketId(), 'WEREWOLVES');
+        expect(yield* game.isInDeathQueue(victim.getSocketId())).toBe(true);
+
+        yield* game.witchHeal;
+
+        expect(yield* game.isInDeathQueue(victim.getSocketId())).toBe(false);
+        expect(yield* game.canWitchHeal).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('poisons a player and consumes potion', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+        const target = players[0];
+
+        if (!target) {
+          throw new Error('Expected target to be defined');
+        }
+
+        yield* game.witchPoison(target.getSocketId());
+
+        expect(yield* game.isInDeathQueue(target.getSocketId())).toBe(true);
+        expect(yield* game.canWitchPoison).toBe(false);
+
+        const deaths = yield* game.processPendingDeaths;
+        const poisonDeath = deaths.find(
+          (death) => death.playerId === target.getSocketId()
+        );
+
+        expect(poisonDeath?.cause).toBe('WITCH_POISON');
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('prevents reusing heal potion', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+        const firstVictim = players[0];
+        const secondVictim = players[1];
+
+        if (!(firstVictim && secondVictim)) {
+          throw new Error('Expected victims to be defined');
+        }
+
+        yield* game.addPendingDeath(firstVictim.getSocketId(), 'WEREWOLVES');
+        yield* game.witchHeal;
+
+        yield* game.addPendingDeath(secondVictim.getSocketId(), 'WEREWOLVES');
+        yield* game.witchHeal;
+
+        expect(yield* game.isInDeathQueue(secondVictim.getSocketId())).toBe(
+          true
+        );
+        expect(yield* game.canWitchHeal).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('removes potions when the witch dies', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+        const witch = players.find((player) => player.getRole() === 'WITCH');
+
+        if (!witch) {
+          throw new Error('Expected witch to be defined');
+        }
+
+        expect(yield* game.canWitchHeal).toBe(true);
+        expect(yield* game.canWitchPoison).toBe(true);
+
+        yield* game.addPendingDeath(witch.getSocketId(), 'WITCH_POISON');
+        yield* game.processPendingDeaths;
+
+        expect(yield* game.canWitchHeal).toBe(false);
+        expect(yield* game.canWitchPoison).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
 });

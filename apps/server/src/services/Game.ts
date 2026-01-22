@@ -28,6 +28,8 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
     const werewolfVotes = new Map<string, string>(); // voterSid → targetSid
     const dayVotes = new Map<string, string>(); // voterSid → targetSid
     const pendingDeaths = new Map<string, PendingDeath>();
+    let witchHasHealPotion = true;
+    let witchHasPoisonPotion = true;
 
     const setSpecialRolePlayer = (player: Player, role: Role) => {
       if (role !== 'WEREWOLF' && role !== 'VILLAGER') {
@@ -216,6 +218,39 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
             return yield* Effect.fail(new PlayerNotFoundError({ socketId }));
           }
           player.setIsAlive(false);
+          if (player.getRole() === 'WITCH') {
+            witchHasHealPotion = false;
+            witchHasPoisonPotion = false;
+          }
+        }),
+
+      canWitchHeal: Effect.sync(() => witchHasHealPotion),
+
+      canWitchPoison: Effect.sync(() => witchHasPoisonPotion),
+
+      witchHeal: Effect.sync(() => {
+        if (!witchHasHealPotion) {
+          return;
+        }
+        for (const [playerId, pendingDeath] of pendingDeaths.entries()) {
+          if (pendingDeath.cause === 'WEREWOLVES') {
+            pendingDeaths.delete(playerId);
+          }
+        }
+        witchHasHealPotion = false;
+      }),
+
+      witchPoison: (socketId: string) =>
+        Effect.gen(function* () {
+          if (!witchHasPoisonPotion) {
+            return;
+          }
+          yield* getPlayerOrFail(socketId);
+          pendingDeaths.set(socketId, {
+            playerId: socketId,
+            cause: 'WITCH_POISON',
+          });
+          witchHasPoisonPotion = false;
         }),
 
       processPendingDeaths: Effect.gen(function* () {
@@ -236,6 +271,10 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
           const player = yield* getPlayerOrFail(pendingDeath.playerId);
           deathInfos.push(createDeathInfo(pendingDeath, player));
           player.setIsAlive(false);
+          if (player.getRole() === 'WITCH') {
+            witchHasHealPotion = false;
+            witchHasPoisonPotion = false;
+          }
           pendingDeaths.delete(pendingDeath.playerId);
         }
 

@@ -34,6 +34,12 @@ export class AudioManager extends Effect.Service<AudioManager>()(
               return;
             }
 
+            if (segment === 'DAY') {
+              yield* playAudio('Night-end/Wake-up-everyone');
+              Effect.runFork(playAudio(audioFile));
+              return;
+            }
+
             yield* playAudio(audioFile);
           }),
 
@@ -42,12 +48,24 @@ export class AudioManager extends Effect.Service<AudioManager>()(
             switch (segment) {
               case 'CUPID':
                 return yield* playAudio('Cupidon/Cupidon-2');
+              case 'LOVERS':
+              case 'LOVERS_REVEAL':
+                return yield* playAudio('Lovers/Lover-3');
               case 'WEREWOLF':
                 return yield* playAudio('Werewolves/Werewolves-2');
+              case 'WITCH':
+              case 'WITCH-POISON':
+                return yield* playAudio('Witch/Witch-end');
+              case 'DAY':
+                return yield* playAudio('Day-vote/Vote-Death');
               case 'DAY_VOTE':
                 return yield* playAudio('Day-vote/Vote-Death');
               case 'HUNTER':
                 return; // No end audio for hunter
+              case 'WITCH-HEAL':
+                return; // No end audio for witch heal
+              default:
+                return; // unknown segment types
             }
           }),
 
@@ -59,6 +77,47 @@ export class AudioManager extends Effect.Service<AudioManager>()(
           ),
 
         playIntro: () => playAudio('Intro'),
+
+        playHunterDeath: () =>
+          Effect.gen(function* () {
+            yield* playAudio('Night-end/Wake-up-everyone');
+            yield* playAudio('Night-end/Deaths');
+            yield* playAudio('Hunter/Hunter');
+          }),
+
+        playLoverDeath: () => playAudio('Special-death/pre-day-vote-lover-2'),
+
+        playHunterWithLoverDeath: () =>
+          playAudio('Special-death/pre-day-vote-hunter-has-lover'),
+
+        playDeathAnnouncement: (hasDeaths: boolean) =>
+          playAudio(
+            hasDeaths ? 'Night-end/Deaths' : 'Night-end/No-deaths-with-start'
+          ),
+
+        playDayVoteHunterHasPartner: () =>
+          Effect.gen(function* () {
+            yield* playAudio('Day-vote/Vote-Death');
+            yield* playAudio('Day-vote/Hunter');
+          }),
+
+        playDayVoteAudio: () => playAudio('day-vote-start-universal'),
+
+        playDayVoteLoversDeath: () =>
+          Effect.gen(function* () {
+            yield* playAudio('Day-vote/Vote-Death');
+            yield* playAudio('Day-vote/Lover');
+          }),
+
+        playSecondLoverIsHunterAudio: () =>
+          playAudio('Pre-day-vote/Second-lover-hunter'),
+
+        playPostHunterAudio: () => playAudio('Hunter/Hunter-start-vote'),
+
+        nightHasEndedAudio: () => playAudio('Night-end/Wake-up-everyone'),
+
+        playHunterIsLoverAudio: () =>
+          playAudio('Special-scenarios/hunter-is-lover'),
       };
     }),
     dependencies: [], // No dependencies, self-contained
@@ -71,6 +130,17 @@ export class AudioManager extends Effect.Service<AudioManager>()(
       playWinnerAudio: () => Effect.void,
       playSegmentEnd: () => Effect.void,
       playSegmentStart: () => Effect.void,
+      playHunterDeath: () => Effect.void,
+      playLoverDeath: () => Effect.void,
+      playHunterWithLoverDeath: () => Effect.void,
+      playDeathAnnouncement: () => Effect.void,
+      playDayVoteHunterHasPartner: () => Effect.void,
+      playDayVoteAudio: () => Effect.void,
+      playDayVoteLoversDeath: () => Effect.void,
+      playSecondLoverIsHunterAudio: () => Effect.void,
+      playPostHunterAudio: () => Effect.void,
+      nightHasEndedAudio: () => Effect.void,
+      playHunterIsLoverAudio: () => Effect.void,
     })
   );
 }
@@ -79,14 +149,22 @@ const getSegmentStartAudio = (segment: SegmentType): string => {
   switch (segment) {
     case 'CUPID':
       return 'Cupidon/Cupidon-1';
+    case 'LOVERS':
     case 'LOVERS_REVEAL':
       return 'Lovers/combined_lover';
     case 'WEREWOLF':
       return 'Werewolves/Werewolves-1';
     case 'WITCH':
+    case 'WITCH-HEAL':
       return 'Witch/Witch-wake-up';
+    case 'WITCH-POISON':
+      return 'Witch/Witch-poison';
     case 'DAY_VOTE':
       return 'Day-vote/Vote-Start';
+    case 'DAY':
+      return 'Night-end/Deaths'; // This will be handled specially in playSegmentStart
+    case 'HUNTER':
+      return 'not implemented yet';
     default:
       return 'problem';
   }

@@ -113,7 +113,16 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                 if (allAgreed) {
                   yield* gameFlow.continueAfterWerewolfVote;
                 }
-              }).pipe(Effect.runPromise);
+              })
+                .pipe(
+                  Effect.catchAll((error) =>
+                    Effect.sync(() => {
+                      console.error('Error handling werewolf vote:', error);
+                      socket.emit('error', 'Failed to process werewolf vote');
+                    })
+                  )
+                )
+                .pipe(Effect.runPromise);
             });
 
             socket.on(
@@ -127,7 +136,16 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                   if (allAgreed) {
                     yield* gameFlow.continueAfterWerewolfVote;
                   }
-                }).pipe(Effect.runPromise);
+                })
+                  .pipe(
+                    Effect.catchAll((error) =>
+                      Effect.sync(() => {
+                        console.error('Error updating werewolf vote:', error);
+                        socket.emit('error', 'Failed to update werewolf vote');
+                      })
+                    )
+                  )
+                  .pipe(Effect.runPromise);
               }
             );
 
@@ -136,14 +154,32 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
               Effect.gen(function* () {
                 yield* game.witchHeal;
                 yield* gameFlow.continueAfterWitchHeal;
-              }).pipe(Effect.runPromise);
+              })
+                .pipe(
+                  Effect.catchAll((error) =>
+                    Effect.sync(() => {
+                      console.error('Error handling witch heal:', error);
+                      socket.emit('error', 'Failed to process witch heal');
+                    })
+                  )
+                )
+                .pipe(Effect.runPromise);
             });
 
             socket.on('witch:poisoned-player', (playerSid: string) => {
               Effect.gen(function* () {
                 yield* game.witchPoison(playerSid);
                 yield* gameFlow.continueAfterWitchPoison;
-              }).pipe(Effect.runPromise);
+              })
+                .pipe(
+                  Effect.catchAll((error) =>
+                    Effect.sync(() => {
+                      console.error('Error handling witch poison:', error);
+                      socket.emit('error', 'Failed to process witch poison');
+                    })
+                  )
+                )
+                .pipe(Effect.runPromise);
             });
 
             socket.on('witch:skipped-heal', () => {
@@ -169,15 +205,33 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
                 if (allVoted) {
                   yield* gameFlow.continueAfterDayVote;
                 }
-              }).pipe(Effect.runPromise);
+              })
+                .pipe(
+                  Effect.catchAll((error) =>
+                    Effect.sync(() => {
+                      console.error('Error handling day vote:', error);
+                      socket.emit('error', 'Failed to process day vote');
+                    })
+                  )
+                )
+                .pipe(Effect.runPromise);
             });
 
             // Hunter events
             socket.on('hunter:killed-player', (targetSid: string) => {
               Effect.gen(function* () {
-                yield* game.addPendingDeath(targetSid, 'HUNTER_REVENGE');
+                yield* game.killPlayer(targetSid);
                 yield* gameFlow.continueAfterHunterRevenge;
-              }).pipe(Effect.runPromise);
+              })
+                .pipe(
+                  Effect.catchAll((error) =>
+                    Effect.sync(() => {
+                      console.error('Error handling hunter revenge:', error);
+                      socket.emit('error', 'Failed to process hunter revenge');
+                    })
+                  )
+                )
+                .pipe(Effect.runPromise);
             });
 
             // Admin mock/simulation events

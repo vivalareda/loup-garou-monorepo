@@ -137,6 +137,193 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
 
         yield* audio.playIntro();
       }),
+
+      runNightPhase: Effect.gen(function* () {
+        yield* applySkipLogic;
+        const segments = yield* getSegments;
+
+        for (const segment of segments) {
+          if (
+            segment.type === 'DAY' ||
+            segment.type === 'DAY_VOTE' ||
+            segment.type === 'HUNTER'
+          ) {
+            continue;
+          }
+
+          if (segment.skip) {
+            continue;
+          }
+
+          yield* audio.playSegmentStart(segment.type);
+        }
+      }),
+
+      runDayPhase: Effect.gen(function* () {
+        const deaths = yield* game.processPendingDeaths;
+
+        const hunterInDeathQueue = yield* game.hunterIsInDeathQueue;
+        if (hunterInDeathQueue) {
+          const hunter = yield* game.getSpecialRolePlayer('HUNTER');
+          const isLover = yield* game.isPlayerLover(hunter.getSocketId());
+
+          if (isLover) {
+            yield* audio.playHunterWithLoverDeath();
+          } else {
+            yield* audio.playHunterDeath();
+          }
+          return;
+        }
+
+        const lovers = yield* game.getLovers();
+        if (lovers) {
+          const isOneLoverInDeathQueue = deaths.some(
+            (d) =>
+              d.playerId === lovers[0].getSocketId() ||
+              d.playerId === lovers[1].getSocketId()
+          );
+
+          if (isOneLoverInDeathQueue) {
+            const deadLover = deaths.find(
+              (d) =>
+                d.playerId === lovers[0].getSocketId() ||
+                d.playerId === lovers[1].getSocketId()
+            );
+            const partner =
+              deadLover?.playerId === lovers[0].getSocketId()
+                ? lovers[1]
+                : lovers[0];
+
+            const isPartnerHunter = partner.getRole() === 'HUNTER';
+
+            if (isPartnerHunter) {
+              yield* audio.playSecondLoverIsHunterAudio();
+              return;
+            }
+
+            yield* audio.playLoverDeath();
+            return;
+          }
+        }
+
+        yield* audio.nightHasEndedAudio();
+        yield* audio.playDeathAnnouncement(deaths.length > 0);
+
+        io.emit('night:deaths-announced', deaths);
+
+        const winner = yield* game.checkWinner;
+        if (winner) {
+          yield* audio.playWinnerAudio(winner);
+          io.emit(
+            winner === 'werewolves' ? 'alert:player-lost' : 'alert:player-won'
+          );
+          return;
+        }
+
+        yield* audio.playDayVoteAudio();
+        io.emit('day:voting-phase-start');
+      }),
+
+      continueAfterCupid: Effect.gen(function* () {
+        yield* audio.playSegmentEnd('CUPID');
+        yield* markFirstNightComplete;
+      }),
+
+      continueAfterLoversReveal: Effect.gen(function* () {
+        yield* audio.playSegmentEnd('LOVERS_REVEAL');
+      }),
+
+      continueAfterWerewolfVote: Effect.gen(function* () {
+        const targetSid = yield* game.getWerewolfTarget;
+        if (targetSid) {
+          yield* game.addPendingDeath(targetSid, 'WEREWOLVES');
+        }
+
+        yield* audio.playSegmentEnd('WEREWOLF');
+        yield* game.clearWerewolfVotes;
+      }),
+
+      continueAfterWitchHeal: Effect.gen(function* () {
+        yield* audio.playSegmentEnd('WITCH-HEAL');
+      }),
+
+      continueAfterWitchPoison: Effect.gen(function* () {
+        yield* audio.playSegmentEnd('WITCH-POISON');
+      }),
+
+      continueAfterDayVote: Effect.gen(function* () {
+        const target = yield* game.getDayVoteTarget;
+        yield* game.addPendingDeath(target.getSocketId(), 'DAY_VOTE');
+
+        const deaths = yield* game.processPendingDeaths;
+
+        const hunterInDeathQueue = deaths.some(
+          (d) => d.playerId === target.getSocketId() && target.getRole() === 'HUNTER'
+        );
+
+        if (hunterInDeathQueue) {
+          const isLover = yield* game.isPlayerLover(target.getSocketId());
+          if (isLover) {
+            const partner = yield* game.getPartner(target.getSocketId());
+            if (partner && partner.getRole() === 'HUNTER') {
+              yield* audio.playDayVoteHunterHasPartner();
+              return;
+            }
+          }
+          yield* audio.playSegmentEnd('DAY_VOTE');
+          io.emit('hunter:pick-required');
+          return;
+        }
+
+        const lovers = yield* game.getLovers();
+        if (lovers) {
+          const isTargetLover =
+            target.getSocketId() === lovers[0].getSocketId() ||
+            target.getSocketId() === lovers[1].getSocketId();
+
+          if (isTargetLover) {
+            const partner =
+              target.getSocketId() === lovers[0].getSocketId()
+                ? lovers[1]
+                : lovers[0];
+
+            if (partner.getRole() === 'HUNTER') {
+              yield* audio.playDayVoteHunterHasPartner();
+              return;
+            }
+
+            yield* audio.playDayVoteLoversDeath();
+            return;
+          }
+        }
+
+        yield* audio.playSegmentEnd('DAY_VOTE');
+        yield* game.clearDayVotes;
+
+        const winner = yield* game.checkWinner;
+        if (winner) {
+          yield* audio.playWinnerAudio(winner);
+          io.emit(
+            winner === 'werewolves' ? 'alert:player-lost' : 'alert:player-won'
+          );
+        }
+      }),
+
+      continueAfterHunterRevenge: Effect.gen(function* () {
+        yield* audio.playSegmentEnd('HUNTER');
+
+        const winner = yield* game.checkWinner;
+        if (winner) {
+          yield* audio.playWinnerAudio(winner);
+          io.emit(
+            winner === 'werewolves' ? 'alert:player-lost' : 'alert:player-won'
+          );
+          return;
+        }
+
+        yield* audio.playPostHunterAudio();
+        io.emit('day:voting-phase-start');
+      }),
     };
   }),
   dependencies: [

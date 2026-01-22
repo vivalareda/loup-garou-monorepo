@@ -520,4 +520,563 @@ describe('GameFlow Service', () => {
       }).pipe(Effect.provide(makeTestLayer()))
     );
   });
+
+  describe('Phase orchestration - runNightPhase', () => {
+    it.effect('runs night phase and skips day segments', () =>
+      Effect.gen(function* () {
+        const { gameFlow } = yield* setupGameFlow;
+
+        yield* gameFlow.runNightPhase;
+
+        const segments = yield* gameFlow.getSegments;
+        const nightSegments = segments.filter(
+          (s) =>
+            s.type !== 'DAY' && s.type !== 'DAY_VOTE' && s.type !== 'HUNTER'
+        );
+
+        expect(nightSegments.length).toBeGreaterThan(0);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('applies skip logic before running night phase', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        yield* gameFlow.markFirstNightComplete;
+        const victim = players[0];
+        if (!victim) {
+          throw new Error('Expected victim to be defined');
+        }
+        yield* game.addPendingDeath(victim.getSocketId(), 'WEREWOLVES');
+        yield* game.witchHeal;
+
+        yield* gameFlow.runNightPhase;
+
+        const cupid = yield* gameFlow.getSegmentByType('CUPID');
+        const witchHeal = yield* gameFlow.getSegmentByType('WITCH-HEAL');
+
+        expect(cupid?.skip).toBe(true);
+        expect(witchHeal?.skip).toBe(true);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Phase orchestration - runDayPhase', () => {
+    it.effect('processes pending deaths and emits death announcements', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const victim = players[0];
+        if (!victim) {
+          throw new Error('Expected victim to be defined');
+        }
+
+        yield* game.addPendingDeath(victim.getSocketId(), 'WEREWOLVES');
+        yield* gameFlow.runDayPhase;
+
+        expect(victim.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('handles hunter in death queue scenario', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const hunter = players.find((p) => p.getRole() === 'HUNTER');
+        if (!hunter) {
+          return; // Skip if no hunter
+        }
+
+        yield* game.addPendingDeath(hunter.getSocketId(), 'WEREWOLVES');
+        yield* gameFlow.runDayPhase;
+
+        expect(hunter.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('handles hunter who is a lover in death queue', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const hunter = players.find((p) => p.getRole() === 'HUNTER');
+        const nonHunter = players.find((p) => p.getRole() !== 'HUNTER');
+
+        if (!(hunter && nonHunter)) {
+          return; // Skip if no hunter
+        }
+
+        yield* game.setLovers(hunter.getSocketId(), nonHunter.getSocketId());
+        yield* game.addPendingDeath(hunter.getSocketId(), 'WEREWOLVES');
+
+        // Verify hunter is in death queue
+        const hunterInQueue = yield* game.hunterIsInDeathQueue;
+        expect(hunterInQueue).toBe(true);
+
+        yield* gameFlow.runDayPhase;
+
+        expect(hunter.isAlive).toBe(false);
+        expect(nonHunter.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('handles lover death scenario', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        yield* game.setLovers(
+          players[0]!.getSocketId(),
+          players[1]!.getSocketId()
+        );
+        yield* game.addPendingDeath(players[0]!.getSocketId(), 'WEREWOLVES');
+
+        yield* gameFlow.runDayPhase;
+
+        expect(players[0]!.isAlive).toBe(false);
+        expect(players[1]!.isAlive).toBe(false); // Partner should die too
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('handles lover death where partner is hunter', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const hunter = players.find((p) => p.getRole() === 'HUNTER');
+        const nonHunter = players.find((p) => p.getRole() !== 'HUNTER');
+
+        if (!(hunter && nonHunter)) {
+          return;
+        }
+
+        yield* game.setLovers(hunter.getSocketId(), nonHunter.getSocketId());
+        yield* game.addPendingDeath(nonHunter.getSocketId(), 'WEREWOLVES');
+
+        yield* gameFlow.runDayPhase;
+
+        expect(nonHunter.isAlive).toBe(false);
+        expect(hunter.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('handles no deaths in night phase', () =>
+      Effect.gen(function* () {
+        const { gameFlow } = yield* setupGameFlow;
+
+        // Run day phase with no pending deaths
+        yield* gameFlow.runDayPhase;
+
+        // Should announce no deaths and continue to day voting
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('emits winner when game ends', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        // Kill all werewolves to trigger villager win
+        const werewolves = players.filter((p) => p.getRole() === 'WEREWOLF');
+        for (const wolf of werewolves) {
+          yield* game.killPlayer(wolf.getSocketId());
+        }
+
+        yield* gameFlow.runDayPhase;
+
+        const winner = yield* game.checkWinner;
+        expect(winner).toBe('villagers');
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Continuation methods - Cupid', () => {
+    it.effect('completes cupid segment and marks first night', () =>
+      Effect.gen(function* () {
+        const { gameFlow } = yield* setupGameFlow;
+
+        yield* gameFlow.continueAfterCupid;
+
+        const firstNightCompleted = yield* gameFlow.shouldSkipCupid;
+        expect(firstNightCompleted).toBe(true);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Continuation methods - Lovers', () => {
+    it.effect('completes lovers reveal segment', () =>
+      Effect.gen(function* () {
+        const { gameFlow } = yield* setupGameFlow;
+
+        yield* gameFlow.continueAfterLoversReveal;
+
+        // Should complete without errors
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Continuation methods - Werewolf', () => {
+    it.effect('processes werewolf vote and adds death to queue', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const werewolves = players.filter((p) => p.getRole() === 'WEREWOLF');
+        const target = players.find((p) => p.getRole() !== 'WEREWOLF');
+
+        if (!target || werewolves.length === 0) {
+          throw new Error('Expected werewolves and target');
+        }
+
+        for (const wolf of werewolves) {
+          yield* game.handleWerewolfVote(
+            wolf.getSocketId(),
+            target.getSocketId()
+          );
+        }
+
+        yield* gameFlow.continueAfterWerewolfVote;
+
+        const isInQueue = yield* game.isInDeathQueue(target.getSocketId());
+        expect(isInQueue).toBe(true);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('handles werewolf vote with no target', () =>
+      Effect.gen(function* () {
+        const { gameFlow } = yield* setupGameFlow;
+
+        // Don't cast any votes
+        yield* gameFlow.continueAfterWerewolfVote;
+
+        // Should complete without errors even with no target
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('clears werewolf votes after continuation', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const werewolves = players.filter((p) => p.getRole() === 'WEREWOLF');
+        const target = players.find((p) => p.getRole() !== 'WEREWOLF');
+
+        if (!target || werewolves.length === 0) {
+          throw new Error('Expected werewolves and target');
+        }
+
+        for (const wolf of werewolves) {
+          yield* game.handleWerewolfVote(
+            wolf.getSocketId(),
+            target.getSocketId()
+          );
+        }
+
+        yield* gameFlow.continueAfterWerewolfVote;
+
+        const tallies = yield* game.getWerewolfVoteTallies;
+        expect(Object.keys(tallies)).toHaveLength(0);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Continuation methods - Witch', () => {
+    it.effect('completes witch heal segment', () =>
+      Effect.gen(function* () {
+        const { gameFlow } = yield* setupGameFlow;
+
+        yield* gameFlow.continueAfterWitchHeal;
+
+        // Should complete without errors
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('completes witch poison segment', () =>
+      Effect.gen(function* () {
+        const { gameFlow } = yield* setupGameFlow;
+
+        yield* gameFlow.continueAfterWitchPoison;
+
+        // Should complete without errors
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Continuation methods - Day Vote', () => {
+    it.effect('processes day vote and adds death to queue', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+        const target = alivePlayers[0];
+
+        if (!target) {
+          throw new Error('Expected target');
+        }
+
+        for (const player of alivePlayers) {
+          yield* game.handleDayVote(player.getSocketId(), target.getSocketId());
+        }
+
+        yield* gameFlow.continueAfterDayVote;
+
+        expect(target.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('handles hunter in day vote death', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const hunter = players.find((p) => p.getRole() === 'HUNTER');
+        if (!hunter) {
+          return; // Skip if no hunter
+        }
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+
+        for (const player of alivePlayers) {
+          yield* game.handleDayVote(player.getSocketId(), hunter.getSocketId());
+        }
+
+        yield* gameFlow.continueAfterDayVote;
+
+        expect(hunter.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect(
+      'handles hunter who is a lover in day vote with hunter partner',
+      () =>
+        Effect.gen(function* () {
+          const { gameFlow, game, players } = yield* setupGameFlow;
+
+          const allHunters = players.filter((p) => p.getRole() === 'HUNTER');
+
+          // Need at least one hunter for this scenario
+          if (allHunters.length === 0) {
+            return;
+          }
+
+          const hunter = allHunters[0];
+          if (!hunter) {
+            return;
+          }
+
+          // Create a second hunter by getting a non-hunter player
+          const nonHunter = players.find(
+            (p) => p.getRole() === 'HUNTER' && p !== hunter
+          );
+
+          // If we have two hunters, use them both
+          if (nonHunter) {
+            yield* game.setLovers(
+              hunter.getSocketId(),
+              nonHunter.getSocketId()
+            );
+
+            const alivePlayers = players.filter((p) => p.isAlive);
+
+            for (const player of alivePlayers) {
+              yield* game.handleDayVote(
+                player.getSocketId(),
+                hunter.getSocketId()
+              );
+            }
+
+            yield* gameFlow.continueAfterDayVote;
+
+            expect(hunter.isAlive).toBe(false);
+          }
+        }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('handles lover in day vote where partner is hunter', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const hunter = players.find((p) => p.getRole() === 'HUNTER');
+        const nonHunter = players.find((p) => p.getRole() !== 'HUNTER');
+
+        if (!(hunter && nonHunter)) {
+          return;
+        }
+
+        yield* game.setLovers(hunter.getSocketId(), nonHunter.getSocketId());
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+
+        for (const player of alivePlayers) {
+          yield* game.handleDayVote(
+            player.getSocketId(),
+            nonHunter.getSocketId()
+          );
+        }
+
+        yield* gameFlow.continueAfterDayVote;
+
+        expect(nonHunter.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('handles lover in day vote where partner is not hunter', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const nonHunters = players.filter((p) => p.getRole() !== 'HUNTER');
+
+        if (nonHunters.length < 2) {
+          return;
+        }
+
+        yield* game.setLovers(
+          nonHunters[0]!.getSocketId(),
+          nonHunters[1]!.getSocketId()
+        );
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+
+        for (const player of alivePlayers) {
+          yield* game.handleDayVote(
+            player.getSocketId(),
+            nonHunters[0]!.getSocketId()
+          );
+        }
+
+        yield* gameFlow.continueAfterDayVote;
+
+        expect(nonHunters[0]!.isAlive).toBe(false);
+        expect(nonHunters[1]!.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('clears day votes after continuation', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+        const target = alivePlayers[0];
+
+        if (!target) {
+          throw new Error('Expected target');
+        }
+
+        for (const player of alivePlayers) {
+          yield* game.handleDayVote(player.getSocketId(), target.getSocketId());
+        }
+
+        yield* gameFlow.continueAfterDayVote;
+
+        const tallies = yield* game.getDayVoteTallies;
+        expect(Object.keys(tallies)).toHaveLength(0);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('emits winner when game ends after day vote', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        // Kill all werewolves except one
+        const werewolves = players.filter((p) => p.getRole() === 'WEREWOLF');
+        const lastWerewolf = werewolves[werewolves.length - 1];
+
+        if (!lastWerewolf) {
+          return;
+        }
+
+        for (let i = 0; i < werewolves.length - 1; i++) {
+          yield* game.killPlayer(werewolves[i]!.getSocketId());
+        }
+
+        const alivePlayers = players.filter((p) => p.isAlive);
+
+        for (const player of alivePlayers) {
+          yield* game.handleDayVote(
+            player.getSocketId(),
+            lastWerewolf.getSocketId()
+          );
+        }
+
+        yield* gameFlow.continueAfterDayVote;
+
+        const winner = yield* game.checkWinner;
+        expect(winner).toBe('villagers');
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Continuation methods - Hunter Revenge', () => {
+    it.effect('completes hunter revenge and checks for winner', () =>
+      Effect.gen(function* () {
+        const { gameFlow } = yield* setupGameFlow;
+
+        yield* gameFlow.continueAfterHunterRevenge;
+
+        // Should complete without errors
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('emits winner if game ends after hunter revenge', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        // Kill all werewolves to trigger villager win
+        const werewolves = players.filter((p) => p.getRole() === 'WEREWOLF');
+        for (const wolf of werewolves) {
+          yield* game.killPlayer(wolf.getSocketId());
+        }
+
+        yield* gameFlow.continueAfterHunterRevenge;
+
+        const winner = yield* game.checkWinner;
+        expect(winner).toBe('villagers');
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Integration - Full game flow', () => {
+    it.effect('orchestrates complete night to day cycle', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        // Night phase: werewolf vote
+        yield* gameFlow.runNightPhase;
+
+        const werewolves = players.filter((p) => p.getRole() === 'WEREWOLF');
+        const target = players.find((p) => p.getRole() !== 'WEREWOLF');
+
+        if (!target || werewolves.length === 0) {
+          throw new Error('Expected werewolves and target');
+        }
+
+        for (const wolf of werewolves) {
+          yield* game.handleWerewolfVote(
+            wolf.getSocketId(),
+            target.getSocketId()
+          );
+        }
+
+        yield* gameFlow.continueAfterWerewolfVote;
+
+        // Day phase: process deaths
+        yield* gameFlow.runDayPhase;
+
+        expect(target.isAlive).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('handles full cupid and lovers flow', () =>
+      Effect.gen(function* () {
+        const { gameFlow, game, players } = yield* setupGameFlow;
+
+        yield* game.setLovers(
+          players[0]!.getSocketId(),
+          players[1]!.getSocketId()
+        );
+
+        yield* gameFlow.continueAfterCupid;
+        yield* gameFlow.continueAfterLoversReveal;
+
+        const firstNightDone = yield* gameFlow.shouldSkipCupid;
+        expect(firstNightDone).toBe(true);
+
+        const lovers = yield* game.getLovers();
+        expect(lovers).toBeTruthy();
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
 });

@@ -25,31 +25,35 @@ export class AudioManager extends Effect.Service<AudioManager>()(
         });
 
       return {
-        playSegmentStart: (segment: SegmentType) =>
-          Effect.gen(function* () {
-            const audioFile = getSegmentStartAudio(segment);
+        playSegmentStart: Effect.fn('playSegmentStart')(function* (
+          segment: SegmentType
+        ) {
+          const audioFile = getSegmentStartAudio(segment);
 
-            if (segment === 'LOVERS' || segment === 'DAY_VOTE') {
-              Effect.runFork(playAudio(audioFile));
-              return;
-            }
-
+          if (segment === 'LOVERS' || segment === 'DAY_VOTE') {
             yield* playAudio(audioFile);
-          }),
+            return;
+          }
 
-        playSegmentEnd: (segment: SegmentType) =>
-          Effect.gen(function* () {
-            switch (segment) {
-              case 'CUPID':
-                return yield* playAudio('Cupidon/Cupidon-2');
-              case 'WEREWOLF':
-                return yield* playAudio('Werewolves/Werewolves-2');
-              case 'DAY_VOTE':
-                return yield* playAudio('Day-vote/Vote-Death');
-              case 'HUNTER':
-                return; // No end audio for hunter
-            }
-          }),
+          yield* playAudio(audioFile);
+        }),
+
+        playSegmentEnd: Effect.fn('playSegmentEnd')(function* (
+          segment: SegmentType
+        ) {
+          switch (segment) {
+            case 'CUPID':
+              return yield* playAudio('Cupidon/Cupidon-2');
+            case 'WEREWOLF':
+              return yield* playAudio('Werewolves/Werewolves-2');
+            case 'DAY_VOTE':
+              return yield* playAudio('Day-vote/Vote-Death');
+            case 'HUNTER':
+              return; // No end audio for hunter
+            default:
+              ('add default case');
+          }
+        }),
 
         playWinnerAudio: (winner: 'werewolves' | 'villagers') =>
           playAudio(
@@ -61,7 +65,6 @@ export class AudioManager extends Effect.Service<AudioManager>()(
         playIntro: () => playAudio('Intro'),
       };
     }),
-    dependencies: [], // No dependencies, self-contained
   }
 ) {
   static Test = Layer.succeed(
@@ -79,12 +82,12 @@ const getSegmentStartAudio = (segment: SegmentType): string => {
   switch (segment) {
     case 'CUPID':
       return 'Cupidon/Cupidon-1';
-    case 'LOVERS_REVEAL':
+    case 'LOVERS':
       return 'Lovers/combined_lover';
     case 'WEREWOLF':
       return 'Werewolves/Werewolves-1';
-    case 'WITCH':
-      return 'Witch/Witch-wake-up';
+    // case 'WITCH':
+    //   return 'Witch/Witch-wake-up';
     case 'DAY_VOTE':
       return 'Day-vote/Vote-Start';
     default:

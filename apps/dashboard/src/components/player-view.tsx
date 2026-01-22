@@ -9,12 +9,12 @@ import { WitchHealModal } from './witch-heal-modal';
 import { WitchPoisonModal } from './witch-poison-modal';
 
 function getStatusClassName(
-  status: 'waiting' | 'in-game' | 'disconnected'
+  status: 'lobby' | 'in-game' | 'disconnected'
 ): string {
   if (status === 'in-game') {
     return 'bg-green-100 text-green-800';
   }
-  if (status === 'waiting') {
+  if (status === 'lobby') {
     return 'bg-yellow-100 text-yellow-800';
   }
   return 'bg-gray-100 text-gray-600';
@@ -356,7 +356,7 @@ export function PlayerView() {
             <h2 className="mb-4 text-lg font-semibold text-gray-800">
               {activePlayer.status === 'in-game'
                 ? `Players in Game (${activePlayer.playersList.length})`
-                : `Players in Waiting Room (${activePlayer.playersList.length})`}
+                : `Players in Lobby (${activePlayer.playersList.length})`}
             </h2>
             {activePlayer.playersList.length === 0 ? (
               <div className="py-4 text-center text-gray-500">

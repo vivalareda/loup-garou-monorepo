@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import { Game } from './Game.js';
+import { GameFlow } from './GameFlow.js';
 import { Lobby } from './Lobby.js';
 import { LobbyConfig } from './LobbyConfig.js';
 import { SocketServer } from './SocketServer.js';
@@ -7,10 +8,11 @@ import { SocketServer } from './SocketServer.js';
 export class SocketHandlers extends Effect.Service<SocketHandlers>()(
   '@app/SocketHandlers',
   {
-    effect: Effect.gen(function* () {
+    scoped: Effect.gen(function* () {
       const lobby = yield* Lobby;
       const io = yield* SocketServer;
       const config = yield* LobbyConfig;
+      const gameFlow = yield* GameFlow;
       const game = yield* Game;
 
       const gameShouldStart = () =>
@@ -28,27 +30,28 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
             socket.on('player:join', (name: string) => {
               Effect.gen(function* () {
                 const player = yield* lobby.addPlayer(name, socket.id);
+                yield* Effect.log(`adding new player ${player.name}`);
 
                 socket.emit('lobby:player-data', player);
                 socket.broadcast.emit('lobby:update-players-list', player);
 
                 if (yield* gameShouldStart()) {
-                  yield* game.startGame;
+                  yield* Effect.log('starting game');
+                  yield* gameFlow.startGame;
                 }
-              })
-                .pipe(
-                  Effect.catchTags({
-                    NameExists: () =>
-                      Effect.sync(() => {
-                        socket.emit('error', 'Name taken');
-                      }),
-                    LobbyFull: () =>
-                      Effect.sync(() => {
-                        socket.emit('error', 'Lobby full');
-                      }),
-                  })
-                )
-                .pipe(Effect.runPromise);
+              }).pipe(
+                Effect.catchTags({
+                  NameExists: () =>
+                    Effect.sync(() => {
+                      socket.emit('error', 'Name taken');
+                    }),
+                  LobbyFull: () =>
+                    Effect.sync(() => {
+                      socket.emit('error', 'Lobby full');
+                    }),
+                }),
+                Effect.runPromise
+              );
             });
 
             socket.on('disconnect', () => {
@@ -62,6 +65,7 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       SocketServer.Default,
       Lobby.Default,
       LobbyConfig.Live,
+      GameFlow.Default,
       Game.Default,
     ],
   }

@@ -37,34 +37,36 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
         Array.from(players.values()).map((player) => player.getIdentity())
       ),
 
-      getSpecialRolePlayer: (role: Role) =>
-        Effect.gen(function* () {
-          return (
-            specialRolePlayers.get(role) ??
-            (yield* Effect.fail(new SpecialPlayerNotFoundError({ role })))
-          );
-        }),
-      getPlayerBySocketId: (socketId: string) =>
-        Effect.gen(function* () {
-          return (
-            players.get(socketId) ??
-            (yield* Effect.fail(new PlayerNotFoundError({ socketId })))
-          );
-        }),
+      getSpecialRolePlayer: Effect.fn('getSpecialRolePlayer')(function* (
+        role: Role
+      ) {
+        return (
+          specialRolePlayers.get(role) ??
+          (yield* new SpecialPlayerNotFoundError({ role }))
+        );
+      }),
+      getPlayerBySocketId: Effect.fn('getPlayerBySocketId')(function* (
+        socketId: string
+      ) {
+        return (
+          players.get(socketId) ??
+          (yield* new PlayerNotFoundError({ socketId }))
+        );
+      }),
 
-      setLovers: (firstSid: string, secondSid: string) =>
-        Effect.gen(function* () {
-          const first = players.get(firstSid);
-          const second = players.get(secondSid);
-          if (!(first && second)) {
-            return yield* Effect.fail(
-              new PlayerNotFoundError({
-                socketId: first ? secondSid : firstSid,
-              })
-            );
-          }
-          lovers = [first, second];
-        }),
+      setLovers: Effect.fn('setLovers')(function* (
+        firstSid: string,
+        secondSid: string
+      ) {
+        const first = players.get(firstSid);
+        const second = players.get(secondSid);
+        if (!(first && second)) {
+          return yield* new PlayerNotFoundError({
+            socketId: first ? secondSid : firstSid,
+          });
+        }
+        lovers = [first, second];
+      }),
 
       getPartner: (socketId: string) =>
         Effect.sync(() => {
@@ -105,4 +107,4 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
     };
   }),
   dependencies: [Lobby.Default],
-}) {}
+}) { }

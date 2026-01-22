@@ -13,21 +13,20 @@ export class Lobby extends Effect.Service<Lobby>()('@app/Lobby', {
       Array.from(players.values()).some((p) => p.name === name);
 
     return {
-      addPlayer: (name: string, sid: string) =>
-        Effect.gen(function* () {
-          if (isNameTaken(name)) {
-            return yield* Effect.fail(new NameExistsError());
-          }
+      addPlayer: Effect.fn('addPlayer')(function* (name: string, sid: string) {
+        if (isNameTaken(name)) {
+          return yield* new NameExistsError();
+        }
 
-          if (isLobbyFull()) {
-            return yield* Effect.fail(new LobbyFullError());
-          }
+        if (isLobbyFull()) {
+          return yield* new LobbyFullError();
+        }
 
-          const player = new LobbyPlayer(name, sid);
-          players.push(player);
+        const player = new LobbyPlayer(name, sid);
+        players.push(player);
 
-          return player;
-        }),
+        return player;
+      }),
 
       getAllPlayers: Effect.sync(() => players),
       getPlayerCount: Effect.sync(() => players.length),
@@ -38,4 +37,4 @@ export class Lobby extends Effect.Service<Lobby>()('@app/Lobby', {
     };
   }),
   dependencies: [LobbyConfig.Live],
-}) {}
+}) { }

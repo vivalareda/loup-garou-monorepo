@@ -20,7 +20,7 @@ type MockPlayer = {
   player: Player | null;
   playersList: PlayerListItem[];
   isConnected: boolean;
-  status: 'disconnected' | 'waiting' | 'in-game';
+  status: 'disconnected' | 'lobby' | 'in-game';
   isLover: boolean;
   loverName: string | null;
   canCloseLoverAlert: boolean;
@@ -86,7 +86,7 @@ function createPlayerSocket(
     console.log(`Player ${name} connected`);
     store.getState().updatePlayerData(id, {
       isConnected: true,
-      status: 'waiting',
+      status: 'lobby',
     });
   });
 
@@ -125,7 +125,7 @@ function createPlayerSocket(
   socket.on('player:role-assigned', (role: Role) => {
     console.log(`Player ${name} assigned role:`, role);
     const currentPlayer = store.getState().players.get(id);
-    if (currentPlayer?.player && currentPlayer.player.type === 'waiting') {
+    if (currentPlayer?.player && currentPlayer.player.type === 'lobby') {
       const gamePlayer: Player = {
         type: 'game',
         name: currentPlayer.player.name,

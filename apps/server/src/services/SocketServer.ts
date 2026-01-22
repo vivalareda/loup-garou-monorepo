@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import type { ClientToServerEvents, ServerToClientEvents } from '@repo/types';
-import { Effect, Layer } from 'effect';
+import { Context, Effect, Layer } from 'effect';
 import { Server as SocketIOServer } from 'socket.io';
 import { HttpServer } from './HttpServer.js';
 
@@ -34,26 +34,30 @@ const release = (io: SocketIOInstance) =>
     console.log('Socket.IO server closed');
   });
 
-export class SocketServer extends Effect.Service<SocketServer>()(
-  '@app/SocketServer',
-  {
-    scoped: Effect.gen(function* () {
+export class SocketServer extends Context.Tag('@app/SocketServer')<
+  SocketServer,
+  SocketIOInstance
+>() {
+  static readonly Live = Layer.scoped(
+    this,
+    Effect.gen(function* () {
       const httpServer = yield* HttpServer;
       return yield* Effect.acquireRelease(acquire(httpServer), release);
-    }),
-    dependencies: [HttpServer.Live],
-  }
-) {
-  static Test = Layer.succeed(
-    this,
-    new SocketServer({
-      to: () => ({ emit: () => Effect.void }),
-      emit: () => {
-        Effect.void;
-      },
-      on: () => {
-        Effect.void;
-      },
-    } as unknown as SocketIOInstance)
+    })
   );
+
+  static readonly Default = this.Live.pipe(Layer.provide(HttpServer.Live));
+  static readonly Test = Layer.succeed(this, {
+    to: () => ({
+      emit: () => {
+        () => Effect.void;
+      },
+    }),
+    emit: () => {
+      () => Effect.void;
+    },
+    on: () => {
+      () => Effect.void;
+    },
+  } as unknown as SocketIOInstance);
 }

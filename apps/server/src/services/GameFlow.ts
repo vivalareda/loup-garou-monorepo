@@ -26,6 +26,7 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
 
         const players = yield* game.getPlayers;
         for (const player of players) {
+          yield* Effect.log(`role ${player.role} assigned to ${player.name}`);
           io.to(player.socketId).emit('player:role-assigned', player.role);
         }
 

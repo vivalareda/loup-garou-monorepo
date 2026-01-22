@@ -18,6 +18,7 @@ import {
   hasAllVoted,
   hasAllWerewolvesAgreed as hasAllWerewolvesAgreedPure,
 } from './vote-tallying.js';
+import { checkWinner as checkWinnerPure } from './win-conditions.js';
 
 export class Game extends Effect.Service<Game>()('@app/Game', {
   effect: Effect.gen(function* () {
@@ -118,6 +119,26 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
       getClientPlayerList: Effect.sync(() =>
         Array.from(players.values()).map((player) => player.getIdentity())
       ),
+      checkWinner: Effect.sync(() => {
+        const alivePlayers = Array.from(players.values()).filter(
+          (player) => player.isAlive
+        );
+        const aliveWerewolves = alivePlayers.filter(
+          (player) => player.getRole() === 'WEREWOLF'
+        ).length;
+        const aliveVillagers = alivePlayers.filter(
+          (player) => player.getRole() !== 'WEREWOLF'
+        ).length;
+        const witchHasPotions = [witchHasHealPotion, witchHasPoisonPotion].some(
+          Boolean
+        );
+
+        return checkWinnerPure(
+          aliveWerewolves,
+          aliveVillagers,
+          witchHasPotions
+        );
+      }),
 
       getSpecialRolePlayer: (role: Role) =>
         Effect.gen(function* () {

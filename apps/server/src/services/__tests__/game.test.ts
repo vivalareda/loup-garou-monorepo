@@ -60,6 +60,24 @@ const setupGame = Effect.gen(function* () {
   return { game, players };
 });
 
+const setPlayerStates = (
+  players: Player[],
+  states: Array<{ role: Role; alive: boolean }>
+) => {
+  if (players.length !== states.length) {
+    throw new Error('Expected players and states to match in length');
+  }
+
+  for (const [index, player] of players.entries()) {
+    const state = states[index];
+    if (!state) {
+      throw new Error('Expected player state to be defined');
+    }
+    player.setRole(state.role);
+    player.setIsAlive(state.alive);
+  }
+};
+
 describe('Game Service', () => {
   it.effect('starts game with lobby players and assigns roles', () =>
     Effect.gen(function* () {
@@ -550,6 +568,110 @@ describe('Game Service', () => {
 
         expect(yield* game.canWitchHeal).toBe(false);
         expect(yield* game.canWitchPoison).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Win conditions', () => {
+    it.effect('reports villagers win when werewolves are gone', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+
+        setPlayerStates(players, [
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: true },
+        ]);
+
+        const winner = yield* game.checkWinner;
+
+        expect(winner).toBe('villagers');
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('reports werewolf win when they outnumber villagers', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+
+        setPlayerStates(players, [
+          { role: 'WEREWOLF', alive: true },
+          { role: 'WEREWOLF', alive: true },
+          { role: 'WEREWOLF', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: false },
+        ]);
+
+        const winner = yield* game.checkWinner;
+
+        expect(winner).toBe('werewolves');
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('continues when witch still has potions', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+
+        setPlayerStates(players, [
+          { role: 'WEREWOLF', alive: true },
+          { role: 'WEREWOLF', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: false },
+          { role: 'VILLAGER', alive: false },
+        ]);
+
+        const winner = yield* game.checkWinner;
+
+        expect(winner).toBeNull();
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('reports werewolf win when potions are gone', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+        const witch = players[4];
+
+        if (!witch) {
+          throw new Error('Expected witch to be defined');
+        }
+
+        setPlayerStates(players, [
+          { role: 'WEREWOLF', alive: true },
+          { role: 'WEREWOLF', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'WITCH', alive: true },
+          { role: 'VILLAGER', alive: false },
+        ]);
+
+        yield* game.killPlayer(witch.getSocketId());
+
+        const winner = yield* game.checkWinner;
+
+        expect(winner).toBe('werewolves');
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('continues when villagers outnumber werewolves', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+
+        setPlayerStates(players, [
+          { role: 'WEREWOLF', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: true },
+          { role: 'VILLAGER', alive: false },
+          { role: 'VILLAGER', alive: false },
+        ]);
+
+        const winner = yield* game.checkWinner;
+
+        expect(winner).toBeNull();
       }).pipe(Effect.provide(makeTestLayer()))
     );
   });

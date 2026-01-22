@@ -7,5 +7,11 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     fileParallelism: false,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/__tests__/**'],
+    },
   },
 });

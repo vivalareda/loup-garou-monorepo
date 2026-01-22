@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@effect/vitest';
 import type { Role } from '@repo/types';
-import { initRolesList } from '../role-assignment.js';
+import { initRolesList, shuffleArray } from '../role-assignment.js';
 
 const baseCounts: Record<Role, number> = {
   VILLAGER: 0,
@@ -110,5 +110,93 @@ describe('initRolesList', () => {
     const roles = initRolesList(4, rng);
 
     expect(roles).toEqual(['CUPID', 'VILLAGER', 'WEREWOLF', 'VILLAGER']);
+  });
+
+  it('produces deterministic results with same seeded rng', () => {
+    const makeSeedableRng = (seed: number) => {
+      let value = seed;
+      return () => {
+        value = (value * 9301 + 49_297) % 233_280;
+        return value / 233_280;
+      };
+    };
+
+    const roles1 = initRolesList(8, makeSeedableRng(12_345));
+    const roles2 = initRolesList(8, makeSeedableRng(12_345));
+    const roles3 = initRolesList(8, makeSeedableRng(54_321));
+
+    expect(roles1).toEqual(roles2);
+    expect(roles1).not.toEqual(roles3);
+  });
+});
+
+describe('shuffleArray', () => {
+  it('returns array with same length', () => {
+    const input = [1, 2, 3, 4, 5];
+    const output = shuffleArray(input, fixedRng);
+
+    expect(output).toHaveLength(input.length);
+  });
+
+  it('returns array with same elements', () => {
+    const input = [1, 2, 3, 4, 5];
+    const output = shuffleArray(input, fixedRng);
+
+    expect(output.sort()).toEqual(input.sort());
+  });
+
+  it('does not mutate original array', () => {
+    const input = [1, 2, 3, 4, 5];
+    const original = [...input];
+    shuffleArray(input, fixedRng);
+
+    expect(input).toEqual(original);
+  });
+
+  it('produces deterministic shuffle with seeded rng', () => {
+    const makeSeedableRng = (seed: number) => {
+      let value = seed;
+      return () => {
+        value = (value * 9301 + 49_297) % 233_280;
+        return value / 233_280;
+      };
+    };
+
+    const input = ['a', 'b', 'c', 'd', 'e'];
+    const shuffled1 = shuffleArray(input, makeSeedableRng(42));
+    const shuffled2 = shuffleArray(input, makeSeedableRng(42));
+    const shuffled3 = shuffleArray(input, makeSeedableRng(99));
+
+    expect(shuffled1).toEqual(shuffled2);
+    expect(shuffled1).not.toEqual(shuffled3);
+  });
+
+  it('shuffles with predictable rng values', () => {
+    const rngValues = [0.5, 0.25, 0.0];
+    const rng = () => {
+      const value = rngValues.shift();
+      if (value === undefined) {
+        throw new Error('rng was called too many times');
+      }
+      return value;
+    };
+
+    const result = shuffleArray(['a', 'b', 'c', 'd'], rng);
+
+    expect(result).toEqual(['b', 'd', 'a', 'c']);
+  });
+
+  it('handles single element array', () => {
+    const input = [42];
+    const output = shuffleArray(input, fixedRng);
+
+    expect(output).toEqual([42]);
+  });
+
+  it('handles empty array', () => {
+    const input: number[] = [];
+    const output = shuffleArray(input, fixedRng);
+
+    expect(output).toEqual([]);
   });
 });

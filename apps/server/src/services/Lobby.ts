@@ -19,8 +19,6 @@ export class Lobby extends Effect.Service<Lobby>()('@app/Lobby', {
             return yield* Effect.fail(new NameExistsError());
           }
 
-          console.log(isLobbyFull());
-          console.log(`max player count is ${config.maxPlayers}`);
           if (isLobbyFull()) {
             return yield* Effect.fail(new LobbyFullError());
           }
@@ -40,4 +38,4 @@ export class Lobby extends Effect.Service<Lobby>()('@app/Lobby', {
     };
   }),
   dependencies: [LobbyConfig.Live],
-}) { }
+}) {}

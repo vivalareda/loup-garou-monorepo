@@ -1,7 +1,12 @@
 import { describe, expect, it } from '@effect/vitest';
 import type { Role } from '@repo/types';
 import { Effect, Layer } from 'effect';
-import { PlayerNotFoundError, SpecialPlayerNotFoundError } from '../errors.js';
+import {
+  NoTargetError,
+  PlayerNotFoundError,
+  SpecialPlayerNotFoundError,
+  TieVoteError,
+} from '../errors.js';
 import { Game } from '../Game.js';
 import { Lobby } from '../Lobby.js';
 import { LobbyConfig } from '../LobbyConfig.js';
@@ -130,4 +135,190 @@ describe('Game Service', () => {
       expect(error).toBeInstanceOf(PlayerNotFoundError);
     }).pipe(Effect.provide(makeTestLayer()))
   );
+
+  describe('Day Voting', () => {
+    it.effect('records day votes and tallies them', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+
+        const voterOne = players[0];
+        const voterTwo = players[1];
+        const target = players[2];
+
+        if (!(voterOne && voterTwo && target)) {
+          throw new Error('Expected players to be defined');
+        }
+
+        yield* game.handleDayVote(voterOne.getSocketId(), target.getSocketId());
+        yield* game.handleDayVote(voterTwo.getSocketId(), target.getSocketId());
+
+        const tallies = yield* game.getDayVoteTallies;
+
+        expect(tallies[target.getSocketId()]).toBe(2);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('rejects day votes from missing players', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+
+        const target = players[0];
+        if (!target) {
+          throw new Error('Expected target player to be defined');
+        }
+
+        const error = yield* game
+          .handleDayVote('missing-socket', target.getSocketId())
+          .pipe(Effect.flip);
+
+        expect(error).toBeInstanceOf(PlayerNotFoundError);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('treats only alive players as voters', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+
+        const lastPlayer = players.at(-1);
+        if (!lastPlayer) {
+          throw new Error('Expected player to be defined');
+        }
+
+        lastPlayer.setIsAlive(false);
+
+        const alivePlayers = players.filter((player) => player.isAlive);
+        const target = alivePlayers[0];
+
+        if (!target) {
+          throw new Error('Expected target player to be defined');
+        }
+
+        for (const voter of alivePlayers) {
+          yield* game.handleDayVote(voter.getSocketId(), target.getSocketId());
+        }
+
+        const allVoted = yield* game.hasAllPlayersVoted;
+
+        expect(allVoted).toBe(true);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('detects when not all alive players have voted', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+
+        const target = players[0];
+        const voter = players[1];
+
+        if (!(target && voter)) {
+          throw new Error('Expected players to be defined');
+        }
+
+        yield* game.handleDayVote(voter.getSocketId(), target.getSocketId());
+
+        const allVoted = yield* game.hasAllPlayersVoted;
+
+        expect(allVoted).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('returns player with most votes', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+
+        const target = players[0];
+        const alternateTarget = players[1];
+        const voters = players.slice(2);
+
+        if (!(target && alternateTarget) || voters.length < 3) {
+          throw new Error('Expected players to be defined');
+        }
+
+        yield* game.handleDayVote(
+          voters[0].getSocketId(),
+          target.getSocketId()
+        );
+        yield* game.handleDayVote(
+          voters[1].getSocketId(),
+          target.getSocketId()
+        );
+        yield* game.handleDayVote(
+          voters[2].getSocketId(),
+          alternateTarget.getSocketId()
+        );
+
+        const votedOut = yield* game.getDayVoteTarget;
+
+        expect(votedOut.getSocketId()).toBe(target.getSocketId());
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('fails when a tie occurs', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+
+        const targetOne = players[0];
+        const targetTwo = players[1];
+        const voters = players.slice(2, 6);
+
+        if (!(targetOne && targetTwo) || voters.length < 4) {
+          throw new Error('Expected players to be defined');
+        }
+
+        yield* game.handleDayVote(
+          voters[0].getSocketId(),
+          targetOne.getSocketId()
+        );
+        yield* game.handleDayVote(
+          voters[1].getSocketId(),
+          targetOne.getSocketId()
+        );
+        yield* game.handleDayVote(
+          voters[2].getSocketId(),
+          targetTwo.getSocketId()
+        );
+        yield* game.handleDayVote(
+          voters[3].getSocketId(),
+          targetTwo.getSocketId()
+        );
+
+        const error = yield* game.getDayVoteTarget.pipe(Effect.flip);
+
+        expect(error).toBeInstanceOf(TieVoteError);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('fails when no votes are cast', () =>
+      Effect.gen(function* () {
+        const { game } = yield* setupGame;
+
+        const error = yield* game.getDayVoteTarget.pipe(Effect.flip);
+
+        expect(error).toBeInstanceOf(NoTargetError);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('clears day votes', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+
+        const voter = players[0];
+        const target = players[1];
+
+        if (!(voter && target)) {
+          throw new Error('Expected players to be defined');
+        }
+
+        yield* game.handleDayVote(voter.getSocketId(), target.getSocketId());
+
+        let tallies = yield* game.getDayVoteTallies;
+        expect(Object.keys(tallies).length).toBeGreaterThan(0);
+
+        yield* game.clearDayVotes;
+
+        tallies = yield* game.getDayVoteTallies;
+        expect(tallies).toEqual({});
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
 });

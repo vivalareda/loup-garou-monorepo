@@ -1,9 +1,23 @@
 import type { Role } from '@repo/types';
 import { Effect } from 'effect';
 import { Player } from '@/core/player.js';
-import { PlayerNotFoundError, SpecialPlayerNotFoundError } from './errors.js';
+import {
+  InvalidVoteError,
+  NoTargetError,
+  PlayerNotFoundError,
+  SpecialPlayerNotFoundError,
+  TieVoteError,
+} from './errors.js';
 import { Lobby } from './Lobby.js';
 import { initRolesList } from './role-assignment.js';
+import {
+  calculateTallies,
+  checkForTie,
+  getWerewolfTarget as getWerewolfTargetPure,
+  getWinningTarget,
+  hasAllVoted,
+  hasAllWerewolvesAgreed as hasAllWerewolvesAgreedPure,
+} from './vote-tallying.js';
 
 export class Game extends Effect.Service<Game>()('@app/Game', {
   effect: Effect.gen(function* () {
@@ -11,6 +25,8 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
     const players = new Map<string, Player>();
     const specialRolePlayers = new Map<Role, Player>();
     let lovers: [Player, Player] | null = null;
+    const werewolfVotes = new Map<string, string>(); // voterSid → targetSid
+    const dayVotes = new Map<string, string>(); // voterSid → targetSid
 
     const setSpecialRolePlayer = (player: Player, role: Role) => {
       if (role !== 'WEREWOLF' && role !== 'VILLAGER') {
@@ -102,6 +118,101 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
         ),
 
       getLovers: () => Effect.sync(() => lovers),
+
+      // Werewolf voting methods
+      handleWerewolfVote: (voterSid: string, targetSid: string) =>
+        Effect.gen(function* () {
+          const voter = players.get(voterSid);
+          if (!voter) {
+            return yield* Effect.fail(
+              new PlayerNotFoundError({ socketId: voterSid })
+            );
+          }
+
+          if (voter.getRole() !== 'WEREWOLF') {
+            return yield* Effect.fail(
+              new InvalidVoteError({
+                reason: `Player ${voterSid} is not a werewolf and cannot vote during werewolf phase`,
+              })
+            );
+          }
+
+          werewolfVotes.set(voterSid, targetSid);
+        }),
+
+      getWerewolfVoteTallies: Effect.sync(() =>
+        calculateTallies(werewolfVotes)
+      ),
+
+      hasAllWerewolvesAgreed: Effect.gen(function* () {
+        const werewolves = Array.from(players.values()).filter(
+          (p) => p.getRole() === 'WEREWOLF'
+        );
+        const werewolfSids = werewolves.map((w) => w.getSocketId());
+        return hasAllWerewolvesAgreedPure(werewolfVotes, werewolfSids);
+      }),
+
+      getWerewolfTarget: Effect.gen(function* () {
+        const werewolves = Array.from(players.values()).filter(
+          (p) => p.getRole() === 'WEREWOLF'
+        );
+        const werewolfSids = werewolves.map((w) => w.getSocketId());
+        return getWerewolfTargetPure(werewolfVotes, werewolfSids);
+      }),
+
+      clearWerewolfVotes: Effect.sync(() => {
+        werewolfVotes.clear();
+      }),
+
+      handleDayVote: (voterSid: string, targetSid: string) =>
+        Effect.gen(function* () {
+          const voter = players.get(voterSid);
+          if (!voter) {
+            return yield* Effect.fail(
+              new PlayerNotFoundError({ socketId: voterSid })
+            );
+          }
+
+          dayVotes.set(voterSid, targetSid);
+        }),
+
+      getDayVoteTallies: Effect.sync(() => calculateTallies(dayVotes)),
+
+      hasAllPlayersVoted: Effect.sync(() => {
+        const alivePlayers = Array.from(players.values()).filter(
+          (player) => player.isAlive
+        );
+        const aliveSids = alivePlayers.map((player) => player.getSocketId());
+        return hasAllVoted(aliveSids, dayVotes);
+      }),
+
+      getDayVoteTarget: Effect.gen(function* () {
+        const tallies = calculateTallies(dayVotes);
+
+        if (checkForTie(tallies)) {
+          return yield* Effect.fail(new TieVoteError());
+        }
+
+        const targetSid = getWinningTarget(tallies);
+
+        if (!targetSid) {
+          return yield* Effect.fail(new NoTargetError());
+        }
+
+        const target = players.get(targetSid);
+
+        if (!target) {
+          return yield* Effect.fail(
+            new PlayerNotFoundError({ socketId: targetSid })
+          );
+        }
+
+        return target;
+      }),
+
+      clearDayVotes: Effect.sync(() => {
+        dayVotes.clear();
+      }),
     };
   }),
   dependencies: [Lobby.Default],

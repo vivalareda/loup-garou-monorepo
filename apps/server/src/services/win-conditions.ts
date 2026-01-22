@@ -34,3 +34,39 @@ export const checkIfWinner = (
 
   return null;
 };
+
+/**
+ * Pure function to check win conditions based on alive player counts
+ * @param aliveWerewolves - Number of alive werewolves
+ * @param aliveVillagers - Number of alive villagers
+ * @param witchHasPotions - Whether the witch has any potions remaining
+ * @returns 'villagers' if villagers won, 'werewolves' if werewolves won, null if game continues
+ */
+export const checkWinner = (
+  aliveWerewolves: number,
+  aliveVillagers: number,
+  witchHasPotions: boolean
+): Winner => {
+  // Villagers win if all werewolves are dead
+  if (aliveWerewolves === 0) {
+    return 'villagers';
+  }
+
+  // Werewolves win if they outnumber villagers
+  if (aliveWerewolves > aliveVillagers) {
+    return 'werewolves';
+  }
+
+  // Equal numbers - check if witch can still influence the game
+  if (aliveWerewolves === aliveVillagers) {
+    // Game continues if witch has potions to tip the balance
+    if (witchHasPotions) {
+      return null;
+    }
+    // Werewolves win if no witch potions remain
+    return 'werewolves';
+  }
+
+  // Game continues if villagers outnumber werewolves
+  return null;
+};

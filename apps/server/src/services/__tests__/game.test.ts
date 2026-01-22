@@ -1,7 +1,9 @@
 import { describe, expect, it } from '@effect/vitest';
 import type { Role } from '@repo/types';
 import { Effect, Layer } from 'effect';
+import { Player } from '@/core/player.js';
 import {
+  InvalidVoteError,
   NoTargetError,
   PlayerNotFoundError,
   SpecialPlayerNotFoundError,
@@ -322,6 +324,147 @@ describe('Game Service', () => {
     );
   });
 
+  describe('Werewolf voting', () => {
+    it.effect('records werewolf votes and returns the target', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+        const werewolves = players.filter(
+          (player) => player.getRole() === 'WEREWOLF'
+        );
+        const target = players.find(
+          (player) => player.getRole() !== 'WEREWOLF'
+        );
+
+        if (werewolves.length < 2 || !target) {
+          throw new Error('Expected werewolves and target to be defined');
+        }
+
+        yield* game.handleWerewolfVote(
+          werewolves[0].getSocketId(),
+          target.getSocketId()
+        );
+        yield* game.handleWerewolfVote(
+          werewolves[1].getSocketId(),
+          target.getSocketId()
+        );
+
+        const tallies = yield* game.getWerewolfVoteTallies;
+        expect(tallies[target.getSocketId()]).toBe(2);
+        expect(yield* game.hasAllWerewolvesAgreed).toBe(true);
+        expect(yield* game.getWerewolfTarget).toBe(target.getSocketId());
+
+        yield* game.clearWerewolfVotes;
+
+        const clearedTallies = yield* game.getWerewolfVoteTallies;
+        expect(clearedTallies).toEqual({});
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('rejects votes from non-werewolves', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+        const villager = players.find(
+          (player) => player.getRole() !== 'WEREWOLF'
+        );
+        const target = players.find(
+          (player) => player.getRole() === 'WEREWOLF'
+        );
+
+        if (!(villager && target)) {
+          throw new Error('Expected villager and target to be defined');
+        }
+
+        const error = yield* game
+          .handleWerewolfVote(villager.getSocketId(), target.getSocketId())
+          .pipe(Effect.flip);
+
+        expect(error).toBeInstanceOf(InvalidVoteError);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('errors when werewolf voter is missing', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+        const target = players.find(
+          (player) => player.getRole() !== 'WEREWOLF'
+        );
+
+        if (!target) {
+          throw new Error('Expected target to be defined');
+        }
+
+        const error = yield* game
+          .handleWerewolfVote('missing-socket', target.getSocketId())
+          .pipe(Effect.flip);
+
+        expect(error).toBeInstanceOf(PlayerNotFoundError);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('returns undefined when werewolves disagree', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+        const werewolves = players.filter(
+          (player) => player.getRole() === 'WEREWOLF'
+        );
+        const targets = players.filter(
+          (player) => player.getRole() !== 'WEREWOLF'
+        );
+
+        if (werewolves.length < 2 || targets.length < 2) {
+          throw new Error('Expected werewolves and targets to be defined');
+        }
+
+        yield* game.handleWerewolfVote(
+          werewolves[0].getSocketId(),
+          targets[0].getSocketId()
+        );
+        yield* game.handleWerewolfVote(
+          werewolves[1].getSocketId(),
+          targets[1].getSocketId()
+        );
+
+        expect(yield* game.hasAllWerewolvesAgreed).toBe(false);
+        expect(yield* game.getWerewolfTarget).toBeUndefined();
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
+  describe('Player deaths', () => {
+    it.effect('kills a player and disables witch potions', () =>
+      Effect.gen(function* () {
+        const { game, players } = yield* setupGame;
+        const witch = players.find((player) => player.getRole() === 'WITCH');
+
+        if (!witch) {
+          throw new Error('Expected witch to be defined');
+        }
+
+        expect(witch.isAlive).toBe(true);
+        expect(yield* game.canWitchHeal).toBe(true);
+        expect(yield* game.canWitchPoison).toBe(true);
+
+        yield* game.killPlayer(witch.getSocketId());
+
+        expect(witch.isAlive).toBe(false);
+        expect(yield* game.canWitchHeal).toBe(false);
+        expect(yield* game.canWitchPoison).toBe(false);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+
+    it.effect('errors when killing a missing player', () =>
+      Effect.gen(function* () {
+        const { game } = yield* setupGame;
+
+        const error = yield* game
+          .killPlayer('missing-socket')
+          .pipe(Effect.flip);
+
+        expect(error).toBeInstanceOf(PlayerNotFoundError);
+      }).pipe(Effect.provide(makeTestLayer()))
+    );
+  });
+
   describe('Witch potions', () => {
     it.effect('heals the werewolf victim and consumes potion', () =>
       Effect.gen(function* () {
@@ -409,5 +552,26 @@ describe('Game Service', () => {
         expect(yield* game.canWitchPoison).toBe(false);
       }).pipe(Effect.provide(makeTestLayer()))
     );
+  });
+
+  describe('Player model', () => {
+    it('updates identity and state', () => {
+      const player = new Player('Casey', 'player-1', 'VILLAGER');
+
+      expect(player.getIdentity()).toEqual({ name: 'Casey', sid: 'player-1' });
+      expect(player.getRole()).toBe('VILLAGER');
+
+      player.setRole('WEREWOLF');
+      expect(player.getRole()).toBe('WEREWOLF');
+
+      player.kill();
+      expect(player.isAlive).toBe(false);
+
+      player.setIsAlive(true);
+      expect(player.isAlive).toBe(true);
+
+      player.assignRole('CUPID');
+      expect(player.getRole()).toBe('CUPID');
+    });
   });
 });

@@ -1,7 +1,11 @@
 import type { Role } from '@repo/types';
 import { Effect } from 'effect';
 import { Player } from '@/core/player.js';
-import { PlayerNotFoundError, SpecialPlayerNotFoundError } from './errors.js';
+import {
+  LoversNullError,
+  PlayerNotFoundError,
+  SpecialPlayerNotFoundError,
+} from './errors.js';
 import { Lobby } from './Lobby.js';
 import { initRolesList } from './role-assignment.js';
 
@@ -79,15 +83,23 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
     ) {
       const first = players.get(firstSid);
       const second = players.get(secondSid);
+
       if (!(first && second)) {
-        return yield* new PlayerNotFoundError({
-          socketId: first ? secondSid : firstSid,
-        });
+        return yield* Effect.fail(
+          new PlayerNotFoundError({
+            socketId: first ? secondSid : firstSid,
+          })
+        );
       }
+
       lovers = [first, second];
     });
 
-    const getLovers = Effect.sync(() => lovers);
+    const getLovers = Effect.sync(() => lovers).pipe(
+      Effect.flatMap((ls) =>
+        ls ? Effect.succeed(ls) : Effect.fail(new LoversNullError())
+      )
+    );
 
     const getPartner = (socketId: string) =>
       Effect.sync(() => {

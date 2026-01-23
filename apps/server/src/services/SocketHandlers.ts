@@ -57,8 +57,17 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
             );
           });
 
+          socket.on('cupid:lovers-pick', (selectedPlayers: string[]) => {
+            Effect.gen(function* () {
+              yield* Effect.log('received cupids picks');
+              yield* game.setLovers(selectedPlayers[0], selectedPlayers[1]);
+              yield* gameFlow.markSegmentAsSkipped('CUPID');
+              yield* gameFlow.finishSegment;
+            }).pipe(Effect.runPromise);
+          });
+
           socket.on('disconnect', () => {
-            console.log('Player disconnected:', socket.id);
+            Effect.log(`player disconnected ${socket.id}`).pipe(Effect.runSync);
           });
         });
       });

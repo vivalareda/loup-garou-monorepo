@@ -27,10 +27,14 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
         <h2 className="mb-3 text-lg font-semibold text-gray-800">
           Mock Players
         </h2>
-        <Button className="w-full" onClick={onAddPlayer} size="sm">
+        <Button className="w-full text-white" onClick={onAddPlayer} size="sm">
           + Add Player
         </Button>
-        <Button className="mt-2 w-full" onClick={onBatchAddPlayers} size="sm">
+        <Button
+          className="mt-2 w-full text-foreground"
+          onClick={onBatchAddPlayers}
+          size="sm"
+        >
           Batch Add Players
         </Button>
       </div>

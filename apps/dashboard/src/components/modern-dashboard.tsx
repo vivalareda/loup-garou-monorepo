@@ -97,12 +97,12 @@ export function ModernDashboard({
         </nav>
 
         <div className="space-y-3 mb-6">
-          <Button className="w-full gap-2" onClick={onAddPlayer}>
+          <Button className="w-full gap-2 text-white" onClick={onAddPlayer}>
             <Plus className="h-4 w-4" />
             Add Player
           </Button>
           <Button
-            className="w-full gap-2"
+            className="w-full gap-2 text-foreground"
             onClick={onBatchAddPlayers}
             variant="outline"
           >

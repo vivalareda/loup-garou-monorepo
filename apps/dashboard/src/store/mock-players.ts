@@ -409,6 +409,7 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
       console.log('Selected lovers (SIDs):', loversSid);
 
       player.socket.emit('cupid:lovers-pick', loversSid);
+      console.log('emitting event lovers pick');
       get().updatePlayerData(playerId, {
         canSelectLovers: false,
       });

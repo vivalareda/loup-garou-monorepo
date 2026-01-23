@@ -77,3 +77,19 @@ export type ClientToServerEvents = {
   'alert:hunter-died': () => void;
   'hunter:killed-player': (selectedPlayer: string) => void;
 };
+
+export type DebugServerToClientEvents = {
+  'debug:log': (message: string, data?: unknown) => void;
+  'debug:error': (error: string, data?: unknown) => void;
+  'debug:state': (state: Record<string, unknown>) => void;
+  'debug:players': (players: unknown[]) => void;
+  'debug:game-state': (gameState: unknown) => void;
+};
+
+export type DebugClientToServerEvents = {
+  'debug:get-state': () => void;
+  'debug:get-players': () => void;
+  'debug:get-game-state': () => void;
+  'debug:trigger-event': (eventName: string, data?: unknown) => void;
+  'debug:reset-game': () => void;
+};

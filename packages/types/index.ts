@@ -5,6 +5,8 @@ export type {
 } from './src/death';
 export type {
   ClientToServerEvents,
+  DebugClientToServerEvents,
+  DebugServerToClientEvents,
   ServerToClientEvents,
   WerewolvesVoteState,
 } from './src/event';

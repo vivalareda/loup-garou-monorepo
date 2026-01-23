@@ -1,5 +1,6 @@
 import { Activity, Cpu, Globe, Server, Users } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 type ServerStats = {
   uptime: string;
@@ -35,20 +36,20 @@ export function ServerDashboard() {
         </div>
 
         <nav className="space-y-2">
-          <a
+          <Link
             className="flex items-center gap-3 rounded-lg bg-primary px-4 py-3 text-primary-foreground"
-            href="/server"
+            to="/server"
           >
             <Globe className="h-5 w-5" />
             <span className="font-medium">Overview</span>
-          </a>
-          <a
+          </Link>
+          <Link
             className="flex items-center gap-3 rounded-lg px-4 py-3 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            href="/"
+            to="/"
           >
             <Users className="h-5 w-5" />
             <span className="font-medium">Players</span>
-          </a>
+          </Link>
         </nav>
       </aside>
 

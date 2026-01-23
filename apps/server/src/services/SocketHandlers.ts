@@ -20,45 +20,51 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
           Effect.map((count) => count >= config.maxPlayers)
         );
 
-      return {
-        promptCupid: Effect.gen(function* () {
-          const cupid = yield* game.getSpecialRolePlayer('CUPID');
-          io.to(cupid.getSocketId()).emit('cupid:pick-required');
-        }),
-        setupHandlers: Effect.sync(() => {
-          io.on('connection', (socket) => {
-            socket.on('player:join', (name: string) => {
-              Effect.gen(function* () {
-                const player = yield* lobby.addPlayer(name, socket.id);
-                yield* Effect.log(`adding new player ${player.name}`);
+      const setupHandlers = Effect.sync(() => {
+        io.on('connection', (socket) => {
+          socket.on('player:join', (name: string) => {
+            Effect.gen(function* () {
+              const player = yield* lobby.addPlayer(name, socket.id);
 
-                socket.emit('lobby:player-data', player);
-                socket.broadcast.emit('lobby:update-players-list', player);
+              socket.emit('lobby:player-data', player);
+              socket.broadcast.emit('lobby:update-players-list', player);
 
-                if (yield* gameShouldStart()) {
-                  yield* Effect.log('starting game');
-                  yield* gameFlow.startGame;
-                }
-              }).pipe(
-                Effect.catchTags({
-                  NameExists: () =>
-                    Effect.sync(() => {
-                      socket.emit('error', 'Name taken');
-                    }),
-                  LobbyFull: () =>
-                    Effect.sync(() => {
-                      socket.emit('error', 'Lobby full');
-                    }),
-                }),
-                Effect.runPromise
-              );
-            });
-
-            socket.on('disconnect', () => {
-              console.log('Player disconnected:', socket.id);
-            });
+              if (yield* gameShouldStart()) {
+                yield* Effect.log('starting game');
+                yield* gameFlow.startGame;
+              }
+            }).pipe(
+              Effect.catchTags({
+                NameExists: () =>
+                  Effect.sync(() => {
+                    socket.emit('error', 'Name taken');
+                  }),
+                LobbyFull: () =>
+                  Effect.sync(() => {
+                    socket.emit('error', 'Lobby full');
+                  }),
+              }),
+              Effect.runPromise
+            );
           });
-        }),
+
+          socket.on('lobby:get-players-list', () => {
+            game.getClientPlayerList.pipe(
+              Effect.andThen((players) => {
+                socket.emit('lobby:players-list', players);
+              }),
+              Effect.runPromise
+            );
+          });
+
+          socket.on('disconnect', () => {
+            console.log('Player disconnected:', socket.id);
+          });
+        });
+      });
+
+      return {
+        setupHandlers,
       };
     }),
     dependencies: [
@@ -69,4 +75,4 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       Game.Default,
     ],
   }
-) { }
+) {}

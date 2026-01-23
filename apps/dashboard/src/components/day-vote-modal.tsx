@@ -22,9 +22,9 @@ export const DayVoteModal = ({ playerId }: DayVoteModalProps) => {
   const handleVoteSubmit = (targetPlayer: {
     id: string;
     name: string;
-    socketId: string;
+    sid: string;
   }) => {
-    voteDayPlayer(playerId, targetPlayer.socketId);
+    voteDayPlayer(playerId, targetPlayer.sid);
   };
 
   return (
@@ -45,7 +45,7 @@ export const DayVoteModal = ({ playerId }: DayVoteModalProps) => {
                   handleVoteSubmit({
                     id: p.id,
                     name: p.name,
-                    socketId: p.player?.socketId || '',
+                    sid: p.player?.sid || '',
                   })
                 }
                 variant="outline"

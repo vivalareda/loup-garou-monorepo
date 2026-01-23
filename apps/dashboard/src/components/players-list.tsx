@@ -1,4 +1,4 @@
-import { isGamePlayer } from '@repo/types';
+import { isGamePlayer, type PlayerIdentity } from '@repo/types';
 import type { MockPlayer } from '@/store/mock-players';
 import { getRoleClassName } from '@/utils/status';
 
@@ -13,7 +13,7 @@ function PlayerListItem({
   players,
 }: {
   player: MockPlayer;
-  playerListItem: { socketId: string; name: string };
+  playerListItem: PlayerIdentity;
   players: Map<string, MockPlayer>;
 }) {
   const mockPlayerWithRole = Array.from(players.values()).find(
@@ -33,7 +33,7 @@ function PlayerListItem({
       className={`flex items-center gap-2 rounded p-2 ${
         isPlayerAlive ? 'bg-gray-50' : 'bg-red-50 opacity-75'
       }`}
-      key={playerListItem.socketId}
+      key={playerListItem.sid}
     >
       <span className="text-gray-600">{isPlayerAlive ? '👤' : '💀'}</span>
       <span
@@ -80,7 +80,7 @@ export function PlayersList({ player, players }: PlayersListProps) {
         <div className="space-y-2">
           {player.playersList.map((playerListItem) => (
             <PlayerListItem
-              key={playerListItem.socketId}
+              key={playerListItem.sid}
               player={player}
               playerListItem={playerListItem}
               players={players}

@@ -1,12 +1,12 @@
-import type { PlayerListItem, Role, WerewolvesVoteState } from '@repo/types';
+import type { PlayerIdentity, Role, WerewolvesVoteState } from '@repo/types';
 import { create } from 'zustand';
 import { usePlayerStore } from '@/hooks/use-player-store';
 import { socket } from '@/utils/sockets';
 
 type GameState = {
   // Existing state
-  playersList: PlayerListItem[];
-  villagersList: PlayerListItem[];
+  playersList: PlayerIdentity[];
+  villagersList: PlayerIdentity[];
   roleAssigned: Role | null;
 
   // Werewolf voting state
@@ -17,9 +17,9 @@ type GameState = {
 
   // Existing actions
   setRoleAssigned: (role: Role) => void;
-  setPlayersList: (players: PlayerListItem[]) => void;
-  addPlayer: (player: PlayerListItem) => void;
-  setVillagersList: (villagers: PlayerListItem[]) => void;
+  setPlayersList: (players: PlayerIdentity[]) => void;
+  addPlayer: (player: PlayerIdentity) => void;
+  setVillagersList: (villagers: PlayerIdentity[]) => void;
 
   // Werewolf voting actions
   setWerewolfVotes: (votes: WerewolvesVoteState) => void;
@@ -55,15 +55,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     set(() => ({
       roleAssigned: role,
     })),
-  setPlayersList: (players: PlayerListItem[]) =>
+  setPlayersList: (players: PlayerIdentity[]) =>
     set(() => ({
       playersList: players,
     })),
-  addPlayer: (player: PlayerListItem) =>
+  addPlayer: (player: PlayerIdentity) =>
     set((state) => ({
       playersList: [...state.playersList, player],
     })),
-  setVillagersList: (villagers: PlayerListItem[]) =>
+  setVillagersList: (villagers: PlayerIdentity[]) =>
     set(() => ({
       villagersList: villagers,
     })),
@@ -107,11 +107,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   // Socket management
   initializeSocketListeners: () => {
     // Existing socket listeners
-    socket.on('lobby:players-list', (players: PlayerListItem[]) => {
+    socket.on('lobby:players-list', (players: PlayerIdentity[]) => {
       set(() => {
         const { player } = usePlayerStore.getState();
         return {
-          playersList: players.filter((p) => p.socketId !== player?.socketId),
+          playersList: players.filter((p) => p.sid !== player?.sid),
         };
       });
     });
@@ -122,7 +122,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     socket.on('lobby:player-died', (playerSid) => {
       set((state) => ({
-        playersList: state.playersList.filter((p) => p.socketId !== playerSid),
+        playersList: state.playersList.filter((p) => p.sid !== playerSid),
       }));
     });
 
@@ -157,11 +157,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     socket.off('werewolf:voting-complete');
   },
 
-  getPlayerNameFromSid: (socketId: string) => {
+  getPlayerNameFromSid: (sid: string) => {
     const { playersList } = get();
-    const foundPlayer = playersList.find((p) => p.socketId === socketId);
+    const foundPlayer = playersList.find((p) => p.sid === sid);
     if (!foundPlayer) {
-      throw new Error(`player with socketId ${socketId} not found`);
+      throw new Error(`player with sid ${sid} not found`);
     }
     return foundPlayer.name;
   },

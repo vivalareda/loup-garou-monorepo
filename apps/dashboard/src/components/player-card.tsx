@@ -1,5 +1,5 @@
 import { isGamePlayer } from '@repo/types';
-import { Ghost, Power, PowerOff, Skull, Trash2, Zap } from 'lucide-react';
+import { Ghost, Heart, Power, PowerOff, Skull, Trash2, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { MockPlayer } from '@/store/mock-players';
 import { getRoleClassName } from '@/utils/status';
@@ -14,6 +14,7 @@ type PlayerCardProps = {
   onAssignWitchRole: () => void;
   onWerewolfVote: () => void;
   onWerewolfSimulate: () => void;
+  onCupidSelect: () => void;
 };
 
 function PlayerInfo({ player }: { player: MockPlayer }) {
@@ -70,6 +71,7 @@ function PlayerActions({
   onAssignWitchRole,
   onWerewolfVote,
   onWerewolfSimulate,
+  onCupidSelect,
 }: PlayerCardProps) {
   const playerRole =
     player.player && isGamePlayer(player.player) ? player.player.role : null;
@@ -158,6 +160,24 @@ function PlayerActions({
               Simulate
             </Button>
           </div>
+        </div>
+      )}
+
+      {playerRole === 'CUPID' && isAlive && (
+        <div className="space-y-1 pt-2">
+          <p className="text-xs font-medium text-muted-foreground">
+            💘 Cupid Actions:
+          </p>
+          <Button
+            className="flex-1 text-xs"
+            disabled={!player.canSelectLovers}
+            onClick={onCupidSelect}
+            size="sm"
+            variant="secondary"
+          >
+            <Heart className="h-3 w-3 mr-1" />
+            Select Lovers
+          </Button>
         </div>
       )}
 

@@ -16,7 +16,7 @@ export {
   type Player,
   type PlayerIdentity,
 } from './src/player';
-export type { PlayerListItem, WaitingRoomPlayer } from './src/player-utils';
+export type { WaitingRoomPlayer } from './src/player-utils';
 export { getRoleDescription, type Role } from './src/role';
 export type {
   Segment,

@@ -1,19 +1,12 @@
 import type { Role } from './role';
+import type { PlayerIdentity } from './player';
 
-export type PlayerListItem = {
-  name: string;
-  socketId: string;
-};
+export type { PlayerIdentity } from './player';
 
 export type WaitingRoomPlayer = {
   type: 'waiting';
   name: string;
-  socketId: string;
-};
-
-export type PlayerIdentity = {
-  readonly name: string;
-  readonly socketId: string;
+  sid: string;
 };
 
 export type LobbyPlayer = PlayerIdentity & {
@@ -36,11 +29,11 @@ export const isGamePlayer = (player: Player): player is GamePlayer =>
 
 export const createLobbyPlayer = (
   name: string,
-  socketId: string
+  sid: string
 ): LobbyPlayer => ({
   type: 'lobby',
   name,
-  socketId,
+  sid,
 });
 
 export const toGamePlayer = (
@@ -49,7 +42,7 @@ export const toGamePlayer = (
 ): GamePlayer => ({
   type: 'game',
   name: lobbyPlayer.name,
-  socketId: lobbyPlayer.socketId,
+  sid: lobbyPlayer.sid,
   role,
   isAlive: true,
 });
@@ -62,9 +55,9 @@ export const assignRole = (player: GamePlayer, role: Role): void => {
   player.role = role;
 };
 
-export const toPlayerListItem = (player: Player): PlayerListItem => ({
+export const toPlayerIdentity = (player: Player): PlayerIdentity => ({
   name: player.name,
-  socketId: player.socketId,
+  sid: player.sid,
 });
 
 export const toWaitingRoomPlayer = (
@@ -72,5 +65,5 @@ export const toWaitingRoomPlayer = (
 ): WaitingRoomPlayer => ({
   type: 'waiting',
   name: player.name,
-  socketId: player.socketId,
+  sid: player.sid,
 });

@@ -1,9 +1,9 @@
-import type { PlayerListItem } from '@repo/types';
+import type { PlayerIdentity } from '@repo/types';
 
 type WitchPoisonModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  playersList: PlayerListItem[];
+  playersList: PlayerIdentity[];
   currentPlayerName: string;
   onPoison: (targetPlayerId: string) => void;
   onSkip: () => void;
@@ -21,7 +21,6 @@ export function WitchPoisonModal({
     return null;
   }
 
-  // Filter out the witch themselves
   const availableTargets = playersList.filter(
     (player) => player.name !== currentPlayerName
   );
@@ -61,8 +60,8 @@ export function WitchPoisonModal({
           {availableTargets.map((player) => (
             <button
               className="w-full rounded border border-gray-200 bg-gray-50 p-3 text-left transition-colors hover:bg-purple-50 hover:border-purple-300"
-              key={player.socketId}
-              onClick={() => onPoison(player.socketId)}
+              key={player.sid}
+              onClick={() => onPoison(player.sid)}
               type="button"
             >
               <div className="flex items-center justify-between">

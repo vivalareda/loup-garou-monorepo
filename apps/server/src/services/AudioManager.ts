@@ -4,6 +4,45 @@ import { Config, Effect, Layer } from 'effect';
 import sound from 'sound-play';
 import { AudioPlaybackError } from './errors.js';
 
+const getSegmentStartAudio = (segment: SegmentType): string => {
+  switch (segment) {
+    case 'CUPID':
+      return 'Cupidon/Cupidon-1';
+    case 'LOVERS':
+      return 'Lovers/combined_lover';
+    case 'WEREWOLF':
+      return 'Werewolves/Werewolves-1';
+    case 'WITCH-HEAL':
+      return 'Witch/Witch-wake-up';
+    case 'WITCH-POISON':
+      return 'Witch/Witch-poison';
+    case 'DAY_VOTE':
+      return 'Day-vote/Vote-Start';
+    case 'HUNTER':
+      return 'Hunter/Hunter-wake-up';
+    default:
+      return 'problem';
+  }
+};
+
+const getSegmentEndAudio = (segment: SegmentType): string | null => {
+  switch (segment) {
+    case 'CUPID':
+      return 'Cupidon/Cupidon-2';
+    case 'WEREWOLF':
+      return 'Werewolves/Werewolves-2';
+    case 'DAY_VOTE':
+      return 'Day-vote/Vote-Death';
+    case 'HUNTER':
+    case 'LOVERS':
+    case 'WITCH-HEAL':
+    case 'WITCH-POISON':
+      return null;
+    default:
+      return null;
+  }
+};
+
 export class AudioManager extends Effect.Service<AudioManager>()(
   '@app/AudioManager',
   {
@@ -24,45 +63,41 @@ export class AudioManager extends Effect.Service<AudioManager>()(
           catch: (error) => new AudioPlaybackError({ file, error }),
         });
 
-      return {
-        playSegmentStart: Effect.fn('playSegmentStart')(function* (
-          segment: SegmentType
-        ) {
-          const audioFile = getSegmentStartAudio(segment);
+      const playSegmentStart = Effect.fn('playSegmentStart')(function* (
+        segment: SegmentType
+      ) {
+        const audioFile = getSegmentStartAudio(segment);
+        yield* playAudio(audioFile);
+      });
 
-          if (segment === 'LOVERS' || segment === 'DAY_VOTE') {
-            yield* playAudio(audioFile);
-            return;
-          }
-
+      const playSegmentEnd = Effect.fn('playSegmentEnd')(function* (
+        segment: SegmentType
+      ) {
+        const audioFile = getSegmentEndAudio(segment);
+        if (audioFile) {
           yield* playAudio(audioFile);
-        }),
+        }
+      });
 
-        playSegmentEnd: Effect.fn('playSegmentEnd')(function* (
-          segment: SegmentType
-        ) {
-          switch (segment) {
-            case 'CUPID':
-              return yield* playAudio('Cupidon/Cupidon-2');
-            case 'WEREWOLF':
-              return yield* playAudio('Werewolves/Werewolves-2');
-            case 'DAY_VOTE':
-              return yield* playAudio('Day-vote/Vote-Death');
-            case 'HUNTER':
-              return; // No end audio for hunter
-            default:
-              ('add default case');
-          }
-        }),
+      const playWinnerAudio = Effect.fn('playWinnerAudio')(function* (
+        winner: 'werewolves' | 'villagers'
+      ) {
+        yield* playAudio(
+          winner === 'werewolves'
+            ? 'End-game/Werewolves-won'
+            : 'End-game/Villagers-won'
+        );
+      });
 
-        playWinnerAudio: (winner: 'werewolves' | 'villagers') =>
-          playAudio(
-            winner === 'werewolves'
-              ? 'End-game/Werewolves-won'
-              : 'End-game/Villagers-won'
-          ),
+      const playIntro = Effect.gen(function* () {
+        yield* playAudio('Intro');
+      });
 
-        playIntro: () => playAudio('Intro'),
+      return {
+        playSegmentStart,
+        playSegmentEnd,
+        playWinnerAudio,
+        playIntro,
       };
     }),
   }
@@ -70,27 +105,10 @@ export class AudioManager extends Effect.Service<AudioManager>()(
   static Test = Layer.succeed(
     this,
     new AudioManager({
-      playIntro: () => Effect.void,
+      playIntro: Effect.void,
       playWinnerAudio: () => Effect.void,
       playSegmentEnd: () => Effect.void,
       playSegmentStart: () => Effect.void,
     })
   );
 }
-
-const getSegmentStartAudio = (segment: SegmentType): string => {
-  switch (segment) {
-    case 'CUPID':
-      return 'Cupidon/Cupidon-1';
-    case 'LOVERS':
-      return 'Lovers/combined_lover';
-    case 'WEREWOLF':
-      return 'Werewolves/Werewolves-1';
-    // case 'WITCH':
-    //   return 'Witch/Witch-wake-up';
-    case 'DAY_VOTE':
-      return 'Day-vote/Vote-Start';
-    default:
-      return 'problem';
-  }
-};

@@ -128,8 +128,8 @@ export default function GameInterface() {
         type: 'selection',
         title: 'Choisissez votre victime',
         data: playersList
-          .filter((p) => p.socketId !== player?.socketId) // Exclude the current player (Hunter)
-          .map((p) => p.socketId),
+          .filter((p) => p.sid !== player?.sid)
+          .map((p) => p.sid),
         selectionCount: 1,
         onConfirm: (selectedPlayerSid: string[]) => {
           console.log('selected data is', selectedPlayerSid);
@@ -143,8 +143,8 @@ export default function GameInterface() {
         type: 'selection',
         title: 'Choisissez les amoureux',
         data: playersList
-          .filter((p) => p.socketId !== player?.socketId) // Exclude Cupid from lover selection
-          .map((p) => p.socketId),
+          .filter((p) => p.sid !== player?.sid)
+          .map((p) => p.sid),
         selectionCount: 2,
         onConfirm: (selectedPlayers: string[]) => {
           socket.emit('cupid:lovers-pick', selectedPlayers);
@@ -171,7 +171,7 @@ export default function GameInterface() {
       openModal({
         type: 'selection',
         title: 'Choisissez votre victime',
-        data: villagersList.map((p) => p.socketId),
+        data: villagersList.map((p) => p.sid),
         werewolfModal: true,
         hideConfirmButton: true,
       });
@@ -182,8 +182,8 @@ export default function GameInterface() {
         type: 'selection',
         title: 'Choisissez une victime',
         data: playersList
-          .filter((p) => p.socketId !== player?.socketId) // Exclude the current player (Witch)
-          .map((p) => p.socketId),
+          .filter((p) => p.sid !== player?.sid)
+          .map((p) => p.sid),
         selectionCount: 1,
         onConfirm: (selectedPlayer: string) => {
           socket.emit('witch:poisoned-player', selectedPlayer);
@@ -196,8 +196,8 @@ export default function GameInterface() {
         type: 'selection',
         title: 'Qui voulez-vous éliminer?',
         data: playersList
-          .filter((p) => p.socketId !== player?.socketId) // Exclude the current player
-          .map((p) => p.socketId),
+          .filter((p) => p.sid !== player?.sid)
+          .map((p) => p.sid),
         selectionCount: 1,
         onConfirm: (selectedPlayer: string) => {
           socket.emit('day:player-voted', selectedPlayer);

@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
 
 type TestSimulationProps = {
-  playersList: Array<{ socketId: string; name: string }>;
+  playersList: Array<{ sid: string; name: string }>;
   isAlive?: boolean;
   onOpenWerewolfSimulation: Dispatch<SetStateAction<boolean>>;
   onSimulateDayVotes: (targetPlayerName: string) => void;
@@ -51,7 +51,7 @@ export function TestSimulation({
               {playersList.map((player) => (
                 <Button
                   className="bg-orange-600 hover:bg-orange-700"
-                  key={player.socketId}
+                  key={player.sid}
                   onClick={() => onSimulateDayVotes(player.name)}
                   size="sm"
                 >

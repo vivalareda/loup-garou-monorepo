@@ -122,7 +122,7 @@ export function PlayerInfo({
             </div>
             <div className="mt-2 space-y-2">
               {player.playersList
-                .filter((p) => p.name !== player.name)
+                .filter((p) => p.sid !== (player.player?.sid ?? player.socket.id))
                 .map((p) => (
                   <button
                     className={`flex cursor-pointer items-center gap-2 rounded p-2 transition-colors${
@@ -130,7 +130,7 @@ export function PlayerInfo({
                         ? 'bg-pink-100 border-2 border-pink-300'
                         : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
                     }`}
-                    key={p.socketId}
+                    key={p.sid}
                     onClick={() => onToggleLoverSelection(player.id, p.name)}
                     type="button"
                   >

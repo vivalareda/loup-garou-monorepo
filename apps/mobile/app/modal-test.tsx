@@ -13,13 +13,12 @@ export default function ModalTestScreen() {
     Array<{ timestamp: string; selection: string; playerName: string }>
   >([]);
 
-  // Mock players data - self contained for testing using realistic Socket.io ID format
   const mockPlayers = [
-    { name: 'Alice', socketId: 'ZjQxMjRmN2UtNmY2Ni00' },
-    { name: 'Bob', socketId: 'OGI3YWJkYzEtNzIyOC00' },
-    { name: 'Charlie', socketId: 'NWU4ZGZhNzItMzk5MS00' },
-    { name: 'Diana', socketId: 'MjA3YjQ5YjQtZGY5Mi00' },
-    { name: 'Eve', socketId: 'YTFiY2RlZjAtMjM4OS00' },
+    { name: 'Alice', sid: 'ZjQxMjRmN2UtNmY2Ni00' },
+    { name: 'Bob', sid: 'OGI3YWJkYzEtNzIyOC00' },
+    { name: 'Charlie', sid: 'NWU4ZGZhNzItMzk5MS00' },
+    { name: 'Diana', sid: 'MjA3YjQ5YjQtZGY5Mi00' },
+    { name: 'Eve', sid: 'YTFiY2RlZjAtMjM4OS00' },
   ];
 
   // Populate game store with mock data so GlobalModal can resolve socket IDs
@@ -56,11 +55,10 @@ export default function ModalTestScreen() {
     [getPlayerNameFromSid]
   );
 
-  // Get mock socket IDs for modal data
-  const getMockSocketIds = () => mockPlayers.map((p) => p.socketId);
+  const getMockSids = () => mockPlayers.map((p) => p.sid);
 
   const testWerewolfModal = () => {
-    const availableTargets = getMockSocketIds();
+    const availableTargets = getMockSids();
 
     console.log('🐺 Testing Werewolf Modal with socket IDs:', availableTargets);
 
@@ -76,7 +74,7 @@ export default function ModalTestScreen() {
   };
 
   const testWitchKillModal = () => {
-    const availablePlayers = getMockSocketIds();
+    const availablePlayers = getMockSids();
 
     console.log(
       '🧙 Testing Witch Poison Modal with socket IDs:',
@@ -176,7 +174,7 @@ export default function ModalTestScreen() {
   };
 
   const testCupidModal = () => {
-    const availablePlayers = getMockSocketIds();
+    const availablePlayers = getMockSids();
 
     console.log('💘 Testing Cupid Modal with socket IDs:', availablePlayers);
 
@@ -188,11 +186,11 @@ export default function ModalTestScreen() {
       onConfirm: (selections) => {
         try {
           const lovers = Array.isArray(selections) ? selections : [selections];
-          const loverNames = lovers.map((socketId) => {
+          const loverNames = lovers.map((sid) => {
             try {
-              return getPlayerNameFromSid(socketId);
+              return getPlayerNameFromSid(sid);
             } catch {
-              return `Unknown (${socketId})`;
+              return `Unknown (${sid})`;
             }
           });
 
@@ -228,8 +226,8 @@ export default function ModalTestScreen() {
               Mock Players ({mockPlayers.length})
             </Text>
             {mockPlayers.map((player) => (
-              <Text className="text-xs text-blue-600" key={player.socketId}>
-                {player.name}: {player.socketId}
+              <Text className="text-xs text-blue-600" key={player.sid}>
+                {player.name}: {player.sid}
               </Text>
             ))}
           </View>

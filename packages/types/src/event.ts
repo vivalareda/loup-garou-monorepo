@@ -1,16 +1,16 @@
 import type { DeathInfo } from './death';
-import type { LobbyPlayer } from './player';
+import type { Player, PlayerIdentity } from './player';
 import type { Role } from './role';
 
 export type WerewolvesVoteState = Record<string, number>;
 
 export type ServerToClientEvents = {
-  'lobby:player-data': (player: LobbyPlayer) => void;
+  'lobby:player-data': (player: Player) => void;
   'lobby:player-left': (playerName: string) => void;
   'lobby:player-died': (playerSid: string) => void;
-  'lobby:update-players-list': (player: LobbyPlayer) => void;
-  'lobby:players-list': (playersList: LobbyPlayer[]) => void;
-  'lobby:villagers-list': (villagers: LobbyPlayer[]) => void;
+  'lobby:update-players-list': (player: Player) => void;
+  'lobby:players-list': (playersList: PlayerIdentity[]) => void;
+  'lobby:villagers-list': (villagers: Player[]) => void;
 
   'player:role-assigned': (role: Role) => void;
   'cupid:pick-required': () => void;

@@ -1,9 +1,9 @@
-import type { PlayerListItem } from '@repo/types';
+import type { PlayerIdentity } from '@repo/types';
 
 type WitchHealModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  playersList: PlayerListItem[];
+  playersList: PlayerIdentity[];
   werewolfVictimId: string | null;
   onHeal: () => void;
   onSkip: () => void;
@@ -22,7 +22,7 @@ export function WitchHealModal({
   }
 
   const werewolfVictim = playersList.find(
-    (player) => player.socketId === werewolfVictimId
+    (player) => player.sid === werewolfVictimId
   );
 
   const handleClose = () => {

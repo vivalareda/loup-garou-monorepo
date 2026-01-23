@@ -2,7 +2,7 @@ import type { Role } from './role';
 
 export type PlayerIdentity = {
   readonly name: string;
-  readonly socketId: string;
+  readonly sid: string;
 };
 
 export type LobbyPlayer = PlayerIdentity & {

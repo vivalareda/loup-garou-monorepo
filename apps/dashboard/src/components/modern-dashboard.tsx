@@ -3,6 +3,7 @@ import { Moon, Plus, Sun, UserPlus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
+import { CupidSelectionModal } from './cupid-selection-modal';
 import { DayVoteModal } from './day-vote-modal';
 import { PlayerCard } from './player-card';
 import { PlayerDetailModal } from './player-detail-modal';
@@ -32,11 +33,14 @@ export function ModernDashboard({
     assignWerewolfRole,
     assignWitchRole,
     simulateAllWerewolfVotes,
+    toggleLoverSelection,
+    sendLoverSelection,
   } = useMockPlayerStore();
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [isWerewolfVotingOpen, setIsWerewolfVotingOpen] = useState(false);
   const [isWerewolfSimulationOpen, setIsWerewolfSimulationOpen] =
     useState(false);
+  const [isCupidSelectionOpen, setIsCupidSelectionOpen] = useState(false);
   const [actionPlayerId, setActionPlayerId] = useState<string | null>(null);
 
   const playersArray = Array.from(players.values());
@@ -171,24 +175,28 @@ export function ModernDashboard({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {playersArray.map((player) => (
-                <PlayerCard
-                  key={player.id}
-                  onAssignWerewolfRole={() => assignWerewolfRole(player.id)}
-                  onAssignWitchRole={() => assignWitchRole(player.id)}
-                  onConnect={() => connectPlayer(player.id)}
-                  onDisconnect={() => disconnectPlayer(player.id)}
-                  onRemove={() => removePlayer(player.id)}
-                  onSelect={() => setSelectedPlayerId(player.id)}
-                  onWerewolfSimulate={() => {
-                    setActionPlayerId(player.id);
-                    setIsWerewolfSimulationOpen(true);
-                  }}
-                  onWerewolfVote={() => {
-                    setActionPlayerId(player.id);
-                    setIsWerewolfVotingOpen(true);
-                  }}
-                  player={player}
-                />
+                  <PlayerCard
+                    key={player.id}
+                    onAssignWerewolfRole={() => assignWerewolfRole(player.id)}
+                    onAssignWitchRole={() => assignWitchRole(player.id)}
+                    onConnect={() => connectPlayer(player.id)}
+                    onCupidSelect={() => {
+                      setActionPlayerId(player.id);
+                      setIsCupidSelectionOpen(true);
+                    }}
+                    onDisconnect={() => disconnectPlayer(player.id)}
+                    onRemove={() => removePlayer(player.id)}
+                    onSelect={() => setSelectedPlayerId(player.id)}
+                    onWerewolfSimulate={() => {
+                      setActionPlayerId(player.id);
+                      setIsWerewolfSimulationOpen(true);
+                    }}
+                    onWerewolfVote={() => {
+                      setActionPlayerId(player.id);
+                      setIsWerewolfVotingOpen(true);
+                    }}
+                    player={player}
+                  />
               ))}
             </div>
           )}
@@ -207,6 +215,23 @@ export function ModernDashboard({
 
       {selectedPlayerForAction && (
         <>
+          <CupidSelectionModal
+            isOpen={isCupidSelectionOpen}
+            onClose={() => {
+              setIsCupidSelectionOpen(false);
+              setActionPlayerId(null);
+            }}
+            onConfirm={(playerId) => {
+              sendLoverSelection(playerId);
+              setIsCupidSelectionOpen(false);
+              setActionPlayerId(null);
+            }}
+            onToggleSelection={toggleLoverSelection}
+            player={selectedPlayerForAction}
+            playersList={selectedPlayerForAction.playersList}
+            selectedLovers={selectedPlayerForAction.selectedLovers}
+          />
+
           <WerewolfVotingModal
             currentPlayerName={selectedPlayerForAction.name}
             isOpen={isWerewolfVotingOpen}

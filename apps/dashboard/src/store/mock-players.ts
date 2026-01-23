@@ -1,7 +1,7 @@
 import type {
   ClientToServerEvents,
   Player,
-  PlayerListItem,
+  PlayerIdentity,
   Role,
   ServerToClientEvents,
 } from '@repo/types';
@@ -18,7 +18,7 @@ export type MockPlayer = {
   name: string;
   socket: Socket;
   player: Player | null;
-  playersList: PlayerListItem[];
+  playersList: PlayerIdentity[];
   isConnected: boolean;
   status: 'disconnected' | 'lobby' | 'in-game';
   isLover: boolean;
@@ -103,13 +103,13 @@ function createPlayerSocket(
     store.getState().updatePlayerData(id, { player: playerData });
   });
 
-  socket.on('lobby:update-players-list', (newPlayer: PlayerListItem) => {
+  socket.on('lobby:update-players-list', (newPlayer: PlayerIdentity) => {
     console.log(`Player ${name} received new player:`, newPlayer);
     const currentPlayer = store.getState().players.get(id);
     const currentList = currentPlayer?.playersList || [];
     if (
       !currentList.some(
-        (p: PlayerListItem) => p.socketId === newPlayer.socketId
+        (p: PlayerIdentity) => p.sid === newPlayer.sid
       )
     ) {
       const updatedList = [...currentList, newPlayer];
@@ -117,7 +117,7 @@ function createPlayerSocket(
     }
   });
 
-  socket.on('lobby:players-list', (playersList: PlayerListItem[]) => {
+  socket.on('lobby:players-list', (playersList: PlayerIdentity[]) => {
     console.log(`Player ${name} received full players list:`, playersList);
     store.getState().updatePlayerData(id, { playersList });
   });
@@ -129,7 +129,7 @@ function createPlayerSocket(
       const gamePlayer: Player = {
         type: 'game',
         name: currentPlayer.player.name,
-        socketId: currentPlayer.player.socketId,
+        sid: currentPlayer.player.sid,
         isAlive: true,
         role,
       };
@@ -138,6 +138,7 @@ function createPlayerSocket(
         status: 'in-game',
       });
     }
+    socket.emit('lobby:get-players-list');
   });
 
   socket.on('alert:player-is-lover', (loverName: string) => {
@@ -401,7 +402,7 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
         if (!foundPlayer) {
           throw new Error(`Player with name ${name} not found in players list`);
         }
-        return foundPlayer.socketId;
+        return foundPlayer.sid;
       });
 
       console.log('Selected lovers (names):', player.selectedLovers);
@@ -418,19 +419,19 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
   simulateAllWerewolfVotes: (targetPlayerName: string) => {
     const { players } = get();
 
-    // Find the target player's socket ID
-    let targetSocketId: string | null = null;
+    // Find the target player's sid
+    let targetSid: string | null = null;
     for (const player of players.values()) {
       const playerInList = player.playersList.find(
         (p) => p.name === targetPlayerName
       );
       if (playerInList) {
-        targetSocketId = playerInList.socketId;
+        targetSid = playerInList.sid;
         break;
       }
     }
 
-    if (!targetSocketId) {
+    if (!targetSid) {
       console.error(
         `Target player ${targetPlayerName} not found in any player list`
       );
@@ -453,13 +454,13 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
     }
 
     console.log(
-      `Simulating votes from ${werewolfPlayers.length} werewolves targeting ${targetPlayerName} (${targetSocketId})`
+      `Simulating votes from ${werewolfPlayers.length} werewolves targeting ${targetPlayerName} (${targetSid})`
     );
 
     // Send vote from each werewolf
     werewolfPlayers.forEach((werewolf, index) => {
       setTimeout(() => {
-        werewolf.socket.emit('werewolf:player-voted', targetSocketId);
+        werewolf.socket.emit('werewolf:player-voted', targetSid);
         console.log(`Werewolf ${werewolf.name} voted for ${targetPlayerName}`);
       }, index * 100); // Stagger the votes slightly to simulate real voting
     });
@@ -592,19 +593,19 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
   simulateAllDayVotes: (targetPlayerName: string) => {
     const { players } = get();
 
-    // Find the target player's socket ID
-    let targetSocketId: string | null = null;
+    // Find the target player's sid
+    let targetSid: string | null = null;
     for (const player of players.values()) {
       const playerInList = player.playersList.find(
         (p) => p.name === targetPlayerName
       );
       if (playerInList) {
-        targetSocketId = playerInList.socketId;
+        targetSid = playerInList.sid;
         break;
       }
     }
 
-    if (!targetSocketId) {
+    if (!targetSid) {
       console.error(
         `Target player ${targetPlayerName} not found in any player list`
       );
@@ -627,13 +628,13 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
     }
 
     console.log(
-      `Simulating day votes from ${alivePlayers.length} alive players targeting ${targetPlayerName} (${targetSocketId})`
+      `Simulating day votes from ${alivePlayers.length} alive players targeting ${targetPlayerName} (${targetSid})`
     );
 
     // Send vote from each alive player
     alivePlayers.forEach((player, index) => {
       setTimeout(() => {
-        player.socket.emit('day:player-voted', targetSocketId);
+        player.socket.emit('day:player-voted', targetSid);
         get().updatePlayerData(player.id, {
           dayVoteTarget: targetPlayerName,
           showDayVoteModal: false,
@@ -641,7 +642,7 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
         console.log(
           `Player ${player.name} voted to eliminate ${targetPlayerName}`
         );
-      }, index * 100); // Stagger the votes slightly to simulate real voting
+      }, index * 100);
     });
   },
 }));

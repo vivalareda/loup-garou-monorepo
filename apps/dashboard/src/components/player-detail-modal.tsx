@@ -121,14 +121,14 @@ function PlayersTab({ player }: { player: MockPlayer }) {
       {player.playersList.map((p) => (
         <div
           className="flex items-center justify-between p-3 rounded-lg bg-accent"
-          key={p.socketId}
+          key={p.sid}
         >
           <div className="flex items-center gap-2">
             <span className="text-lg">👤</span>
             <span className="font-medium text-foreground">{p.name}</span>
           </div>
           <span className="text-xs text-muted-foreground">
-            {p.socketId.slice(0, 8)}
+            {p.sid.slice(0, 8)}
           </span>
         </div>
       ))}

@@ -1,6 +1,7 @@
 import { isGamePlayer } from '@repo/types';
-import { Moon, Plus, Sun, UserPlus, Users } from 'lucide-react';
+import { Moon, Plus, Server, Sun, UserPlus, Users } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
 import { CupidSelectionModal } from './cupid-selection-modal';
@@ -77,6 +78,23 @@ export function ModernDashboard({
           </div>
           <p className="mt-2 text-sm text-muted-foreground">Admin Dashboard</p>
         </div>
+
+        <nav className="space-y-2 mb-6">
+          <Link
+            className="flex items-center gap-3 rounded-lg bg-primary px-4 py-3 text-primary-foreground"
+            to="/"
+          >
+            <Users className="h-5 w-5" />
+            <span className="font-medium">Players</span>
+          </Link>
+          <Link
+            className="flex items-center gap-3 rounded-lg px-4 py-3 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            to="/server"
+          >
+            <Server className="h-5 w-5" />
+            <span className="font-medium">Server</span>
+          </Link>
+        </nav>
 
         <div className="space-y-3 mb-6">
           <Button className="w-full gap-2" onClick={onAddPlayer}>

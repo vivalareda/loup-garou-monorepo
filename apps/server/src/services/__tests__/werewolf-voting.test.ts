@@ -2,6 +2,7 @@ import { describe, expect, it } from '@effect/vitest';
 import type { MockScenario } from '@repo/types';
 import { Effect, Layer } from 'effect';
 import { Game } from '../Game.js';
+import { GameFlow } from '../GameFlow.js';
 import { Lobby } from '../Lobby.js';
 import { LobbyConfig } from '../LobbyConfig.js';
 import { SharedState } from '../SharedState.js';
@@ -14,7 +15,27 @@ type Emission = {
   payload: unknown[];
 };
 
-const makeTestLayer = (ioStub: SocketIOInstance) => {
+const makeGameFlowStub = (onFinish?: () => void) => {
+  const segment = { type: 'WEREWOLF', skip: false } as const;
+
+  return {
+    startGame: Effect.void,
+    playSegment: Effect.void,
+    getCurrentSegment: Effect.succeed(segment),
+    setCurrentSegment: () => Effect.void,
+    markSegmentAsSkipped: () => Effect.succeed(segment),
+    finishSegment: Effect.sync(() => {
+      onFinish?.();
+    }),
+    loadMockScenario: () => Effect.void,
+  };
+};
+
+const makeTestLayer = (
+  ioStub: SocketIOInstance,
+  gameFlowLayer = Layer.succeed(GameFlow, makeGameFlowStub())
+) => {
+
   const configLayer = Layer.succeed(LobbyConfig, { maxPlayers: 6 });
   const lobbyLayer = Lobby.DefaultWithoutDependencies.pipe(
     Layer.provide(configLayer)
@@ -25,7 +46,9 @@ const makeTestLayer = (ioStub: SocketIOInstance) => {
   const sharedStateLayer = SharedState.Default;
   const socketLayer = Layer.succeed(SocketServer, ioStub);
   const werewolfVotingLayer = WerewolfVoting.DefaultWithoutDependencies.pipe(
-    Layer.provide(Layer.mergeAll(gameLayer, sharedStateLayer, socketLayer))
+    Layer.provide(
+      Layer.mergeAll(gameLayer, sharedStateLayer, socketLayer, gameFlowLayer)
+    )
   );
 
   return Layer.mergeAll(
@@ -33,6 +56,7 @@ const makeTestLayer = (ioStub: SocketIOInstance) => {
     gameLayer,
     sharedStateLayer,
     socketLayer,
+    gameFlowLayer,
     werewolfVotingLayer
   );
 };
@@ -207,5 +231,53 @@ describe('WerewolfVoting Service', () => {
         { playerId: 'villager-2', cause: 'WEREWOLVES' },
       ]);
     }).pipe(Effect.provide(makeTestLayer(ioStub)));
+  });
+
+  it.effect('finishes the WEREWOLF segment immediately after consensus', () => {
+    const ioStub: SocketIOInstance = {
+      to: () => ({
+        emit: () => {
+          // no-op
+        },
+      }),
+    } as SocketIOInstance;
+
+    let finishCount = 0;
+    const gameFlowLayer = Layer.succeed(
+      GameFlow,
+      makeGameFlowStub(() => {
+        finishCount += 1;
+      })
+    );
+
+    return Effect.gen(function* () {
+      const lobby = yield* Lobby;
+      const game = yield* Game;
+      const werewolfVoting = yield* WerewolfVoting;
+
+      yield* lobby.addPlayer('Wolf One', 'wolf-1');
+      yield* lobby.addPlayer('Wolf Two', 'wolf-2');
+      yield* lobby.addPlayer('Villager One', 'villager-1');
+      yield* lobby.addPlayer('Villager Two', 'villager-2');
+
+      const scenario: MockScenario = {
+        segment: 'WEREWOLF',
+        index: 2,
+        players: [
+          { role: 'WEREWOLF' },
+          { role: 'WEREWOLF' },
+          { role: 'VILLAGER' },
+          { role: 'VILLAGER' },
+        ],
+      };
+
+      yield* game.setPlayers(scenario);
+
+      yield* werewolfVoting.handleVote('wolf-1', 'villager-1');
+      expect(finishCount).toBe(0);
+
+      yield* werewolfVoting.handleVote('wolf-2', 'villager-1');
+      expect(finishCount).toBe(1);
+    }).pipe(Effect.provide(makeTestLayer(ioStub, gameFlowLayer)));
   });
 });

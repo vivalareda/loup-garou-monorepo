@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import { Game } from './Game.js';
+import { GameFlow } from './GameFlow.js';
 import { SharedState } from './SharedState.js';
 import { SocketServer } from './SocketServer.js';
 
@@ -8,9 +9,11 @@ export class WerewolfVoting extends Effect.Service<WerewolfVoting>()(
   {
     effect: Effect.gen(function* () {
       const game = yield* Game;
+      const gameFlow = yield* GameFlow;
       const sharedState = yield* SharedState;
       const io = yield* SocketServer;
       let lastConsensusTarget: string | null = null;
+      let hasFinishedSegment = false;
 
       const getPlayersMap = Effect.fn('getPlayersMap')(function* () {
         const players = yield* game.getPlayers;
@@ -49,6 +52,7 @@ export class WerewolfVoting extends Effect.Service<WerewolfVoting>()(
               }
               lastConsensusTarget = null;
             }
+            hasFinishedSegment = false;
             return;
           }
 
@@ -69,6 +73,14 @@ export class WerewolfVoting extends Effect.Service<WerewolfVoting>()(
 
           for (const werewolf of werewolves) {
             io.to(werewolf.getSocketId()).emit('werewolf:voting-complete');
+          }
+
+          if (!hasFinishedSegment) {
+            const currentSegment = yield* gameFlow.getCurrentSegment;
+            if (currentSegment.type === 'WEREWOLF') {
+              hasFinishedSegment = true;
+              yield* gameFlow.finishSegment;
+            }
           }
         }
       );
@@ -105,6 +117,11 @@ export class WerewolfVoting extends Effect.Service<WerewolfVoting>()(
         broadcastCurrentVotes,
       };
     }),
-    dependencies: [Game.Default, SharedState.Default, SocketServer.Default],
+    dependencies: [
+      Game.Default,
+      GameFlow.Default,
+      SharedState.Default,
+      SocketServer.Default,
+    ],
   }
 ) {}

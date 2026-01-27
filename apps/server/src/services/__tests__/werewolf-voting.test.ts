@@ -105,4 +105,55 @@ describe('WerewolfVoting Service', () => {
       }).pipe(Effect.provide(makeTestLayer(ioStub)));
     }
   );
+
+  it.effect('emits voting-complete once all werewolves agree on a target', () => {
+    const emissions: Emission[] = [];
+    const ioStub: SocketIOInstance = {
+      to: (room: string) => ({
+        emit: (event: string, ...payload: unknown[]) => {
+          emissions.push({ room, event, payload });
+        },
+      }),
+    } as SocketIOInstance;
+
+    return Effect.gen(function* () {
+      const lobby = yield* Lobby;
+      const game = yield* Game;
+      const werewolfVoting = yield* WerewolfVoting;
+
+      yield* lobby.addPlayer('Wolf One', 'wolf-1');
+      yield* lobby.addPlayer('Wolf Two', 'wolf-2');
+      yield* lobby.addPlayer('Villager One', 'villager-1');
+      yield* lobby.addPlayer('Villager Two', 'villager-2');
+
+      const scenario: MockScenario = {
+        segment: 'WEREWOLF',
+        index: 2,
+        players: [
+          { role: 'WEREWOLF' },
+          { role: 'WEREWOLF' },
+          { role: 'VILLAGER' },
+          { role: 'VILLAGER' },
+        ],
+      };
+
+      yield* game.setPlayers(scenario);
+
+      yield* werewolfVoting.handleVote('wolf-1', 'villager-1');
+      expect(
+        emissions.some((entry) => entry.event === 'werewolf:voting-complete')
+      ).toBe(false);
+
+      yield* werewolfVoting.handleVote('wolf-2', 'villager-1');
+
+      const completions = emissions.filter(
+        (entry) => entry.event === 'werewolf:voting-complete'
+      );
+      expect(completions).toHaveLength(2);
+      expect(completions.map((entry) => entry.room).sort()).toEqual([
+        'wolf-1',
+        'wolf-2',
+      ]);
+    }).pipe(Effect.provide(makeTestLayer(ioStub)));
+  });
 });

@@ -30,6 +30,24 @@ export class WerewolfVoting extends Effect.Service<WerewolfVoting>()(
         }
       );
 
+      const maybeEmitVotingComplete = Effect.fn('maybeEmitVotingComplete')(
+        function* () {
+          const werewolves = yield* game.getWerewolves;
+          const werewolfSids = werewolves.map((werewolf) =>
+            werewolf.getSocketId()
+          );
+          const target = yield* sharedState.getWerewolfTarget(werewolfSids);
+
+          if (!target) {
+            return;
+          }
+
+          for (const werewolf of werewolves) {
+            io.to(werewolf.getSocketId()).emit('werewolf:voting-complete');
+          }
+        }
+      );
+
       const handleVote = Effect.fn('handleVote')(function* (
         voterSid: string,
         targetSid: string
@@ -37,6 +55,7 @@ export class WerewolfVoting extends Effect.Service<WerewolfVoting>()(
         const players = yield* getPlayersMap();
         yield* sharedState.setWerewolfVote(voterSid, targetSid, players);
         yield* broadcastCurrentVotes();
+        yield* maybeEmitVotingComplete();
       });
 
       const handleVoteUpdate = Effect.fn('handleVoteUpdate')(function* (
@@ -52,6 +71,7 @@ export class WerewolfVoting extends Effect.Service<WerewolfVoting>()(
           players
         );
         yield* broadcastCurrentVotes();
+        yield* maybeEmitVotingComplete();
       });
 
       return {

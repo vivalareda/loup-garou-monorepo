@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@effect/vitest';
 import type { DeathInfo, PendingDeath } from '@repo/types';
 import { Effect } from 'effect';
+import { Player } from '@/core/player.js';
 import { SharedState } from '../SharedState.js';
 
 describe('SharedState Service', () => {
@@ -93,6 +94,43 @@ describe('SharedState Service', () => {
       yield* sharedState.resetWitchPotionsOnDeath;
       expect(yield* sharedState.canWitchHeal).toBe(false);
       expect(yield* sharedState.canWitchPoison).toBe(false);
+    }).pipe(Effect.provide(SharedState.Default))
+  );
+
+  it.effect('tracks werewolf and day votes with tallies', () =>
+    Effect.gen(function* () {
+      const sharedState = yield* SharedState;
+
+      const werewolfSids = ['wolf-1', 'wolf-2'];
+      yield* sharedState.setWerewolfVote('wolf-1', 'target-1');
+      yield* sharedState.setWerewolfVote('wolf-2', 'target-1');
+
+      const werewolfTallies = yield* sharedState.getWerewolfVoteTallies;
+      expect(werewolfTallies).toEqual({ 'target-1': 2 });
+      expect(yield* sharedState.getWerewolfTarget(werewolfSids)).toBe(
+        'target-1'
+      );
+
+      const playerOne = new Player('Alice', 'target-1', 'VILLAGER');
+      const playerTwo = new Player('Bob', 'target-2', 'VILLAGER');
+      const players = new Map<string, Player>([
+        ['target-1', playerOne],
+        ['target-2', playerTwo],
+      ]);
+
+      yield* sharedState.setDayVote('player-1', 'target-1');
+      yield* sharedState.setDayVote('player-2', 'target-1');
+      yield* sharedState.setDayVote('player-3', 'target-2');
+
+      const dayTallies = yield* sharedState.getDayVoteTallies;
+      expect(dayTallies).toEqual({ 'target-1': 2, 'target-2': 1 });
+      expect(yield* sharedState.getDayVoteTarget(players)).toBe(playerOne);
+
+      yield* sharedState.clearWerewolfVotes;
+      expect(yield* sharedState.getWerewolfVoteTallies).toEqual({});
+
+      yield* sharedState.clearDayVotes;
+      expect(yield* sharedState.getDayVoteTallies).toEqual({});
     }).pipe(Effect.provide(SharedState.Default))
   );
 });

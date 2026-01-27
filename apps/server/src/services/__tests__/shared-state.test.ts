@@ -151,4 +151,57 @@ describe('SharedState Service', () => {
       expect(yield* sharedState.getDayVoteTallies).toEqual({});
     }).pipe(Effect.provide(SharedState.Default))
   );
+
+  it.effect(
+    'lists alive players, resolves lover partners, and reports hunter status',
+    () =>
+      Effect.gen(function* () {
+        const sharedState = yield* SharedState;
+
+        const hunter = new Player('Hunter', 'hunter-1', 'HUNTER');
+        const lover = new Player('Lover', 'lover-1', 'VILLAGER');
+        const villager = new Player('Villager', 'villager-1', 'VILLAGER');
+
+        const players = [hunter, lover, villager];
+
+        expect(yield* sharedState.listAlivePlayers(players)).toEqual(players);
+        expect(yield* sharedState.listAlivePlayerSids(players)).toEqual([
+          'hunter-1',
+          'lover-1',
+          'villager-1',
+        ]);
+
+        yield* sharedState.setLovers('hunter-1', 'lover-1');
+        expect(yield* sharedState.isPlayerLover('hunter-1')).toBe(true);
+        expect(yield* sharedState.isPlayerLover('lover-1')).toBe(true);
+        expect(yield* sharedState.isPlayerLover('villager-1')).toBe(false);
+        expect(
+          (yield* sharedState.getLoverPartner(players, 'hunter-1'))?.getSocketId()
+        ).toBe('lover-1');
+        expect(
+          (yield* sharedState.getLoverPartner(players, 'lover-1'))?.getSocketId()
+        ).toBe('hunter-1');
+        expect(
+          yield* sharedState.getLoverPartner(players, 'villager-1')
+        ).toBeNull();
+
+        expect(yield* sharedState.isHunterAlive(players)).toBe(true);
+        expect(yield* sharedState.isHunterInDeathQueue(players)).toBe(false);
+
+        yield* sharedState.addPendingDeath({
+          playerId: 'hunter-1',
+          cause: 'DAY_VOTE',
+        });
+        expect(yield* sharedState.isHunterInDeathQueue(players)).toBe(true);
+
+        hunter.kill();
+        expect(yield* sharedState.isHunterAlive(players)).toBe(false);
+
+        const alivePlayers = yield* sharedState.listAlivePlayers(players);
+        expect(alivePlayers.map((player) => player.getSocketId())).toEqual([
+          'lover-1',
+          'villager-1',
+        ]);
+      }).pipe(Effect.provide(SharedState.Default))
+  );
 });

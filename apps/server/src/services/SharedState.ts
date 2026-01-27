@@ -19,6 +19,7 @@ export class SharedState extends Effect.Service<SharedState>()(
       const dayVotes = new Map<string, string>();
       let witchHasHealPotion = true;
       let witchHasPoisonPotion = true;
+      let lovers: [string, string] | null = null;
 
       return {
         addPendingDeath: Effect.sync((pendingDeath: PendingDeath) => {
@@ -130,6 +131,68 @@ export class SharedState extends Effect.Service<SharedState>()(
 
         clearDayVotes: Effect.sync(() => {
           dayVotes.clear();
+        }),
+
+        listAlivePlayers: Effect.sync((players: Player[]) =>
+          players.filter((player) => player.isAlive)
+        ),
+
+        listAlivePlayerSids: Effect.sync((players: Player[]) =>
+          players
+            .filter((player) => player.isAlive)
+            .map((player) => player.getSocketId())
+        ),
+
+        setLovers: Effect.sync((firstSid: string, secondSid: string) => {
+          lovers = [firstSid, secondSid];
+          return lovers;
+        }),
+
+        clearLovers: Effect.sync(() => {
+          lovers = null;
+        }),
+
+        listLovers: Effect.sync(() => lovers),
+
+        isPlayerLover: Effect.sync((playerSid: string) => {
+          if (!lovers) {
+            return false;
+          }
+          return lovers[0] === playerSid || lovers[1] === playerSid;
+        }),
+
+        getLoverPartner: Effect.sync(
+          (players: Player[], playerSid: string) => {
+            if (!lovers) {
+              return null;
+            }
+            const [first, second] = lovers;
+            if (playerSid !== first && playerSid !== second) {
+              return null;
+            }
+            const partnerSid = playerSid === first ? second : first;
+            return (
+              players.find((player) => player.getSocketId() === partnerSid) ??
+              null
+            );
+          }
+        ),
+
+        getHunter: Effect.sync((players: Player[]) =>
+          players.find((player) => player.getRole() === 'HUNTER') ?? null
+        ),
+
+        isHunterAlive: Effect.sync((players: Player[]) => {
+          const hunter = players.find((player) => player.getRole() === 'HUNTER');
+          return hunter ? hunter.isAlive : false;
+        }),
+
+        isHunterInDeathQueue: Effect.sync((players: Player[]) => {
+          const hunter = players.find((player) => player.getRole() === 'HUNTER');
+          if (!hunter) {
+            return false;
+          }
+          return pendingDeaths.has(hunter.getSocketId());
         }),
 
         checkForWinner: Effect.sync((players: Player[]) =>

@@ -20,6 +20,28 @@ export class SharedState extends Effect.Service<SharedState>()(
       let witchHasHealPotion = true;
       let witchHasPoisonPotion = true;
       let lovers: [string, string] | null = null;
+      const assertWerewolfVoter = (
+        players: Map<string, Player>,
+        voterSid: string
+      ) => {
+        const voter = players.get(voterSid);
+        if (voter?.getRole() !== 'WEREWOLF') {
+          throw new Error(
+            `Player ${voterSid} is not a werewolf and cannot vote during werewolf phase`
+          );
+        }
+      };
+      const assertNonWerewolfTarget = (
+        players: Map<string, Player>,
+        targetSid: string
+      ) => {
+        const target = players.get(targetSid);
+        if (target?.getRole() === 'WEREWOLF') {
+          throw new Error(
+            `Target ${targetSid} is not a valid target (cannot vote for werewolves)`
+          );
+        }
+      };
 
       return {
         addPendingDeath: Effect.sync((pendingDeath: PendingDeath) => {
@@ -86,13 +108,24 @@ export class SharedState extends Effect.Service<SharedState>()(
           witchHasPoisonPotion = false;
         }),
 
-        setWerewolfVote: Effect.sync((voterSid: string, targetSid: string) => {
-          werewolfVotes.set(voterSid, targetSid);
-          return calculateWerewolfVoteTallies(werewolfVotes);
-        }),
+        setWerewolfVote: Effect.sync(
+          (voterSid: string, targetSid: string, players: Map<string, Player>) => {
+            assertWerewolfVoter(players, voterSid);
+            assertNonWerewolfTarget(players, targetSid);
+            werewolfVotes.set(voterSid, targetSid);
+            return calculateWerewolfVoteTallies(werewolfVotes);
+          }
+        ),
 
         updateWerewolfVote: Effect.sync(
-          (voterSid: string, targetSid: string, oldTargetSid: string) => {
+          (
+            voterSid: string,
+            targetSid: string,
+            oldTargetSid: string,
+            players: Map<string, Player>
+          ) => {
+            assertWerewolfVoter(players, voterSid);
+            assertNonWerewolfTarget(players, targetSid);
             const currentVote = werewolfVotes.get(voterSid);
             if (currentVote !== oldTargetSid) {
               throw new Error(

@@ -119,9 +119,20 @@ describe('SharedState Service', () => {
     Effect.gen(function* () {
       const sharedState = yield* SharedState;
 
+      const wolfOne = new Player('Wolf One', 'wolf-1', 'WEREWOLF');
+      const wolfTwo = new Player('Wolf Two', 'wolf-2', 'WEREWOLF');
+      const villagerOne = new Player('Alice', 'target-1', 'VILLAGER');
+      const villagerTwo = new Player('Bob', 'target-2', 'VILLAGER');
+      const players = new Map<string, Player>([
+        ['wolf-1', wolfOne],
+        ['wolf-2', wolfTwo],
+        ['target-1', villagerOne],
+        ['target-2', villagerTwo],
+      ]);
+
       const werewolfSids = ['wolf-1', 'wolf-2'];
-      yield* sharedState.setWerewolfVote('wolf-1', 'target-1');
-      yield* sharedState.setWerewolfVote('wolf-2', 'target-1');
+      yield* sharedState.setWerewolfVote('wolf-1', 'target-1', players);
+      yield* sharedState.setWerewolfVote('wolf-2', 'target-1', players);
 
       const werewolfTallies = yield* sharedState.getWerewolfVoteTallies;
       expect(werewolfTallies).toEqual({ 'target-1': 2 });
@@ -129,26 +140,66 @@ describe('SharedState Service', () => {
         'target-1'
       );
 
-      const playerOne = new Player('Alice', 'target-1', 'VILLAGER');
-      const playerTwo = new Player('Bob', 'target-2', 'VILLAGER');
-      const players = new Map<string, Player>([
-        ['target-1', playerOne],
-        ['target-2', playerTwo],
-      ]);
-
       yield* sharedState.setDayVote('player-1', 'target-1');
       yield* sharedState.setDayVote('player-2', 'target-1');
       yield* sharedState.setDayVote('player-3', 'target-2');
 
       const dayTallies = yield* sharedState.getDayVoteTallies;
       expect(dayTallies).toEqual({ 'target-1': 2, 'target-2': 1 });
-      expect(yield* sharedState.getDayVoteTarget(players)).toBe(playerOne);
+      expect(yield* sharedState.getDayVoteTarget(players)).toBe(villagerOne);
 
       yield* sharedState.clearWerewolfVotes;
       expect(yield* sharedState.getWerewolfVoteTallies).toEqual({});
 
       yield* sharedState.clearDayVotes;
       expect(yield* sharedState.getDayVoteTallies).toEqual({});
+    }).pipe(Effect.provide(SharedState.Default))
+  );
+
+  it.effect('validates werewolf voters and non-werewolf targets', () =>
+    Effect.gen(function* () {
+      const sharedState = yield* SharedState;
+
+      const wolf = new Player('Wolf', 'wolf-1', 'WEREWOLF');
+      const villager = new Player('Villager', 'villager-1', 'VILLAGER');
+      const players = new Map<string, Player>([
+        ['wolf-1', wolf],
+        ['villager-1', villager],
+      ]);
+
+      const voterError = yield* sharedState
+        .setWerewolfVote('villager-1', 'villager-1', players)
+        .pipe(Effect.flip);
+      expect(voterError).toBeInstanceOf(Error);
+      expect(voterError.message).toBe(
+        'Player villager-1 is not a werewolf and cannot vote during werewolf phase'
+      );
+
+      const targetError = yield* sharedState
+        .setWerewolfVote('wolf-1', 'wolf-1', players)
+        .pipe(Effect.flip);
+      expect(targetError).toBeInstanceOf(Error);
+      expect(targetError.message).toBe(
+        'Target wolf-1 is not a valid target (cannot vote for werewolves)'
+      );
+
+      yield* sharedState.setWerewolfVote('wolf-1', 'villager-1', players);
+
+      const updateVoterError = yield* sharedState
+        .updateWerewolfVote('villager-1', 'villager-1', 'villager-1', players)
+        .pipe(Effect.flip);
+      expect(updateVoterError).toBeInstanceOf(Error);
+      expect(updateVoterError.message).toBe(
+        'Player villager-1 is not a werewolf and cannot vote during werewolf phase'
+      );
+
+      const updateTargetError = yield* sharedState
+        .updateWerewolfVote('wolf-1', 'wolf-1', 'villager-1', players)
+        .pipe(Effect.flip);
+      expect(updateTargetError).toBeInstanceOf(Error);
+      expect(updateTargetError.message).toBe(
+        'Target wolf-1 is not a valid target (cannot vote for werewolves)'
+      );
     }).pipe(Effect.provide(SharedState.Default))
   );
 

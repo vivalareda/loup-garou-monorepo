@@ -156,4 +156,56 @@ describe('WerewolfVoting Service', () => {
       ]);
     }).pipe(Effect.provide(makeTestLayer(ioStub)));
   });
+
+  it.effect('adds a WEREWOLVES pending death when consensus is reached', () => {
+    const ioStub: SocketIOInstance = {
+      to: () => ({
+        emit: () => {
+          // no-op
+        },
+      }),
+    } as SocketIOInstance;
+
+    return Effect.gen(function* () {
+      const lobby = yield* Lobby;
+      const game = yield* Game;
+      const sharedState = yield* SharedState;
+      const werewolfVoting = yield* WerewolfVoting;
+
+      yield* lobby.addPlayer('Wolf One', 'wolf-1');
+      yield* lobby.addPlayer('Wolf Two', 'wolf-2');
+      yield* lobby.addPlayer('Villager One', 'villager-1');
+      yield* lobby.addPlayer('Villager Two', 'villager-2');
+
+      const scenario: MockScenario = {
+        segment: 'WEREWOLF',
+        index: 2,
+        players: [
+          { role: 'WEREWOLF' },
+          { role: 'WEREWOLF' },
+          { role: 'VILLAGER' },
+          { role: 'VILLAGER' },
+        ],
+      };
+
+      yield* game.setPlayers(scenario);
+
+      yield* werewolfVoting.handleVote('wolf-1', 'villager-1');
+      expect(yield* sharedState.listPendingDeaths).toEqual([]);
+
+      yield* werewolfVoting.handleVote('wolf-2', 'villager-1');
+      expect(yield* sharedState.listPendingDeaths).toEqual([
+        { playerId: 'villager-1', cause: 'WEREWOLVES' },
+      ]);
+
+      yield* werewolfVoting.handleVoteUpdate(
+        'wolf-2',
+        'villager-2',
+        'villager-1'
+      );
+      expect(yield* sharedState.listPendingDeaths).toEqual([
+        { playerId: 'villager-2', cause: 'WEREWOLVES' },
+      ]);
+    }).pipe(Effect.provide(makeTestLayer(ioStub)));
+  });
 });

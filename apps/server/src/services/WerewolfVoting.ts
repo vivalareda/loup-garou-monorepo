@@ -10,6 +10,7 @@ export class WerewolfVoting extends Effect.Service<WerewolfVoting>()(
       const game = yield* Game;
       const sharedState = yield* SharedState;
       const io = yield* SocketServer;
+      let lastConsensusTarget: string | null = null;
 
       const getPlayersMap = Effect.fn('getPlayersMap')(function* () {
         const players = yield* game.getPlayers;
@@ -39,8 +40,32 @@ export class WerewolfVoting extends Effect.Service<WerewolfVoting>()(
           const target = yield* sharedState.getWerewolfTarget(werewolfSids);
 
           if (!target) {
+            if (lastConsensusTarget) {
+              const removed = yield* sharedState.removePendingDeath(
+                lastConsensusTarget
+              );
+              if (removed && removed.cause !== 'WEREWOLVES') {
+                yield* sharedState.addPendingDeath(removed);
+              }
+              lastConsensusTarget = null;
+            }
             return;
           }
+
+          if (lastConsensusTarget && lastConsensusTarget !== target) {
+            const removed = yield* sharedState.removePendingDeath(
+              lastConsensusTarget
+            );
+            if (removed && removed.cause !== 'WEREWOLVES') {
+              yield* sharedState.addPendingDeath(removed);
+            }
+          }
+
+          lastConsensusTarget = target;
+          yield* sharedState.addPendingDeath({
+            playerId: target,
+            cause: 'WEREWOLVES',
+          });
 
           for (const werewolf of werewolves) {
             io.to(werewolf.getSocketId()).emit('werewolf:voting-complete');

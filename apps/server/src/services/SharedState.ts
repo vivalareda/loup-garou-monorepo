@@ -7,6 +7,8 @@ export class SharedState extends Effect.Service<SharedState>()(
     effect: Effect.gen(function* () {
       const pendingDeaths = new Map<string, PendingDeath>();
       const deathInfos = new Map<string, DeathInfo>();
+      let witchHasHealPotion = true;
+      let witchHasPoisonPotion = true;
 
       return {
         addPendingDeath: Effect.sync((pendingDeath: PendingDeath) => {
@@ -47,6 +49,30 @@ export class SharedState extends Effect.Service<SharedState>()(
 
         clearDeathInfos: Effect.sync(() => {
           deathInfos.clear();
+        }),
+
+        canWitchHeal: Effect.sync(() => witchHasHealPotion),
+
+        canWitchPoison: Effect.sync(() => witchHasPoisonPotion),
+
+        useWitchHealPotion: Effect.sync(() => {
+          witchHasHealPotion = false;
+          return witchHasHealPotion;
+        }),
+
+        useWitchPoisonPotion: Effect.sync(() => {
+          witchHasPoisonPotion = false;
+          return witchHasPoisonPotion;
+        }),
+
+        resetWitchPotions: Effect.sync(() => {
+          witchHasHealPotion = true;
+          witchHasPoisonPotion = true;
+        }),
+
+        resetWitchPotionsOnDeath: Effect.sync(() => {
+          witchHasHealPotion = false;
+          witchHasPoisonPotion = false;
         }),
       };
     }),

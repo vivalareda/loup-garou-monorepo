@@ -71,4 +71,28 @@ describe('SharedState Service', () => {
       expect(cleared).toEqual([]);
     }).pipe(Effect.provide(SharedState.Default))
   );
+
+  it.effect('tracks witch potion availability and resets on death', () =>
+    Effect.gen(function* () {
+      const sharedState = yield* SharedState;
+
+      expect(yield* sharedState.canWitchHeal).toBe(true);
+      expect(yield* sharedState.canWitchPoison).toBe(true);
+
+      yield* sharedState.useWitchHealPotion;
+      expect(yield* sharedState.canWitchHeal).toBe(false);
+      expect(yield* sharedState.canWitchPoison).toBe(true);
+
+      yield* sharedState.useWitchPoisonPotion;
+      expect(yield* sharedState.canWitchPoison).toBe(false);
+
+      yield* sharedState.resetWitchPotions;
+      expect(yield* sharedState.canWitchHeal).toBe(true);
+      expect(yield* sharedState.canWitchPoison).toBe(true);
+
+      yield* sharedState.resetWitchPotionsOnDeath;
+      expect(yield* sharedState.canWitchHeal).toBe(false);
+      expect(yield* sharedState.canWitchPoison).toBe(false);
+    }).pipe(Effect.provide(SharedState.Default))
+  );
 });

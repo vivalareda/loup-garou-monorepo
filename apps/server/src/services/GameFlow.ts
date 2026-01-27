@@ -5,6 +5,7 @@ import { SegmentNotFoundError } from './errors.js';
 import { Game } from './Game.js';
 import { Lobby } from './Lobby.js';
 import { MockScenario } from './MockScenario.js';
+import { SharedState } from './SharedState.js';
 import { SocketServer } from './SocketServer.js';
 
 export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
@@ -14,6 +15,7 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
     const io = yield* SocketServer;
     const audio = yield* AudioManager;
     const mockScenarios = yield* MockScenario;
+    const sharedState = yield* SharedState;
 
     const segments: Segment[] = [
       { type: 'CUPID', skip: false },
@@ -43,6 +45,14 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
     const playSegment = Effect.gen(function* () {
       currentSegmentIndex = findNextSegment(segments, currentSegmentIndex);
       const segment = segments[currentSegmentIndex];
+      if (segment.type === 'WITCH-HEAL') {
+        const shouldSkip = yield* shouldSkipWitchHeal;
+        if (shouldSkip) {
+          segment.skip = true;
+          yield* playSegment;
+          return;
+        }
+      }
       yield* Effect.log(`playing segment ${segment.type}`);
       yield* audio.playSegmentStart(segment.type);
       yield* dispatchSegmentAction(segment.type);
@@ -172,6 +182,15 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
       }
     });
 
+    const shouldSkipWitchHeal = Effect.gen(function* () {
+      const players = yield* game.getPlayers;
+      const hasLivingWitch = players.some(
+        (player) => player.getRole() === 'WITCH' && player.isAlive
+      );
+      const canHeal = yield* sharedState.canWitchHeal;
+      return !hasLivingWitch || !canHeal;
+    });
+
     return {
       startGame,
       playSegment,
@@ -188,6 +207,7 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
     SocketServer.Default,
     AudioManager.Default,
     MockScenario.Default,
+    SharedState.Default,
   ],
 }) {}
 

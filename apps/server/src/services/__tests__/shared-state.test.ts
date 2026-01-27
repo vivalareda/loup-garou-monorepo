@@ -97,6 +97,24 @@ describe('SharedState Service', () => {
     }).pipe(Effect.provide(SharedState.Default))
   );
 
+  it.effect('exposes winner detection using win-conditions', () =>
+    Effect.gen(function* () {
+      const sharedState = yield* SharedState;
+
+      const players = [
+        new Player('Witch', 'witch-1', 'WITCH'),
+        new Player('Wolf', 'wolf-1', 'WEREWOLF'),
+      ];
+
+      expect(yield* sharedState.checkForWinner(players)).toBeNull();
+
+      yield* sharedState.useWitchHealPotion;
+      yield* sharedState.useWitchPoisonPotion;
+
+      expect(yield* sharedState.checkForWinner(players)).toBe('werewolves');
+    }).pipe(Effect.provide(SharedState.Default))
+  );
+
   it.effect('tracks werewolf and day votes with tallies', () =>
     Effect.gen(function* () {
       const sharedState = yield* SharedState;

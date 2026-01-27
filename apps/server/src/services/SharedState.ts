@@ -1,6 +1,7 @@
 import type { DeathInfo, PendingDeath } from '@repo/types';
 import type { Player } from '@/core/player.js';
 import { Effect } from 'effect';
+import { checkIfWinner } from './win-conditions.js';
 import {
   calculateDayVoteTallies,
   calculateWerewolfVoteTallies,
@@ -130,6 +131,14 @@ export class SharedState extends Effect.Service<SharedState>()(
         clearDayVotes: Effect.sync(() => {
           dayVotes.clear();
         }),
+
+        checkForWinner: Effect.sync((players: Player[]) =>
+          checkIfWinner(
+            players,
+            witchHasHealPotion,
+            witchHasPoisonPotion
+          )
+        ),
       };
     }),
   }

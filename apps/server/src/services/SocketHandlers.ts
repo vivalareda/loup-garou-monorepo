@@ -5,6 +5,7 @@ import { GameFlow } from './GameFlow.js';
 import { Lobby } from './Lobby.js';
 import { LobbyConfig } from './LobbyConfig.js';
 import { SocketServer } from './SocketServer.js';
+import { WerewolfVoting } from './WerewolfVoting.js';
 
 export class SocketHandlers extends Effect.Service<SocketHandlers>()(
   '@app/SocketHandlers',
@@ -15,6 +16,7 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       const config = yield* LobbyConfig;
       const gameFlow = yield* GameFlow;
       const game = yield* Game;
+      const werewolfVoting = yield* WerewolfVoting;
 
       let loversAlertCount = 0;
 
@@ -93,6 +95,43 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
             }).pipe(Effect.runPromise);
           });
 
+          socket.on('werewolf:player-voted', (targetPlayer: string) => {
+            Effect.gen(function* () {
+              yield* werewolfVoting.handleVote(socket.id, targetPlayer);
+            }).pipe(
+              Effect.catchAll((error) =>
+                Effect.sync(() => {
+                  const message =
+                    error instanceof Error ? error.message : 'Unknown error';
+                  socket.emit('error', message);
+                })
+              ),
+              Effect.runPromise
+            );
+          });
+
+          socket.on(
+            'werewolf:player-update-vote',
+            (targetPlayer: string, oldVote: string) => {
+              Effect.gen(function* () {
+                yield* werewolfVoting.handleVoteUpdate(
+                  socket.id,
+                  targetPlayer,
+                  oldVote
+                );
+              }).pipe(
+                Effect.catchAll((error) =>
+                  Effect.sync(() => {
+                    const message =
+                      error instanceof Error ? error.message : 'Unknown error';
+                    socket.emit('error', message);
+                  })
+                ),
+                Effect.runPromise
+              );
+            }
+          );
+
           socket.on('disconnect', () => {
             Effect.log(`player disconnected ${socket.id}`).pipe(Effect.runSync);
           });
@@ -109,6 +148,7 @@ export class SocketHandlers extends Effect.Service<SocketHandlers>()(
       LobbyConfig.Live,
       GameFlow.Default,
       Game.Default,
+      WerewolfVoting.Default,
     ],
   }
 ) {}

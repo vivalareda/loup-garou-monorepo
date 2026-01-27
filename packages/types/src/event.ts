@@ -1,6 +1,7 @@
 import type { DeathInfo } from './death';
 import type { Player, PlayerIdentity } from './player';
 import type { Role } from './role';
+import type { SegmentType } from './segment';
 
 export type WerewolvesVoteState = Record<string, number>;
 
@@ -11,6 +12,7 @@ export type ServerToClientEvents = {
   'lobby:update-players-list': (player: Player) => void;
   'lobby:players-list': (playersList: PlayerIdentity[]) => void;
   'lobby:villagers-list': (villagers: Player[]) => void;
+  'lobby:start-game': () => void;
 
   'player:role-assigned': (role: Role) => void;
   'cupid:pick-required': () => void;
@@ -44,6 +46,8 @@ export type ServerToClientEvents = {
 export type ClientToServerEvents = {
   'lobby:get-players-list': () => void;
   'player:join': (playerName: string) => void;
+  'lobby:start-game': () => void;
+  'lobby:start-mock': (segment: SegmentType) => void;
 
   'admin:start-game': () => void;
   'admin:next-segment': () => void;
@@ -76,4 +80,5 @@ export type ClientToServerEvents = {
   'day:player-voted': (targetPlayer: string) => void;
   'alert:hunter-died': () => void;
   'hunter:killed-player': (selectedPlayer: string) => void;
+  'mocksegment:setup': (segment: SegmentType) => void;
 };

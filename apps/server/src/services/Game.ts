@@ -1,4 +1,4 @@
-import type { Role } from '@repo/types';
+import type { MockScenario, Role } from '@repo/types';
 import { Effect } from 'effect';
 import { Player } from '@/core/player.js';
 import {
@@ -34,8 +34,22 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
       }
     });
 
-    const getPlayers = Effect.sync(() => Array.from(players.values()));
+    const setPlayers = Effect.fn('setPlayers')(function* (
+      mockScenario: MockScenario
+    ) {
+      const lobbyPlayers = yield* lobby.getAllPlayers;
+      mockScenario.players.forEach((p, idx) => {
+        const player = new Player(
+          lobbyPlayers[idx].name,
+          lobbyPlayers[idx].sid,
+          p.role
+        );
+        players.set(player.getSocketId(), player);
+        setSpecialRolePlayer(player, player.getRole());
+      });
+    });
 
+    const getPlayers = Effect.sync(() => Array.from(players.values()));
     const getPlayerBySocketId = Effect.fn('getPlayerBySocketId')(function* (
       socketId: string
     ) {
@@ -57,21 +71,10 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
       );
     });
 
-    const getCupid = Effect.gen(function* () {
-      return yield* getSpecialRolePlayer('CUPID');
-    });
-
-    const getWitch = Effect.gen(function* () {
-      return yield* getSpecialRolePlayer('WITCH');
-    });
-
-    const getSeer = Effect.gen(function* () {
-      return yield* getSpecialRolePlayer('SEER');
-    });
-
-    const getHunter = Effect.gen(function* () {
-      return yield* getSpecialRolePlayer('HUNTER');
-    });
+    const getCupid = getSpecialRolePlayer('CUPID');
+    const getWitch = Effect.sync(() => getSpecialRolePlayer('WITCH'));
+    const getSeer = Effect.sync(() => getSpecialRolePlayer('SEER'));
+    const getHunter = Effect.sync(() => getSpecialRolePlayer('HUNTER'));
 
     const getWerewolves = Effect.sync(() =>
       Array.from(players.values()).filter((p) => p.getRole() === 'WEREWOLF')
@@ -85,11 +88,10 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
       const second = players.get(secondSid);
 
       if (!(first && second)) {
-        return yield* Effect.fail(
-          new PlayerNotFoundError({
-            socketId: first ? secondSid : firstSid,
-          })
-        );
+        return yield* new PlayerNotFoundError({
+          socketId: first ? secondSid : firstSid,
+          message: 'Error while trying to set lovers',
+        });
       }
 
       lovers = [first, second];
@@ -137,6 +139,7 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
 
     return {
       startGame,
+      setPlayers,
       getPlayers,
       getPlayerBySocketId,
       getClientPlayerList,

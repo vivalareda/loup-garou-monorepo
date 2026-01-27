@@ -8,6 +8,12 @@ export type {
   ServerToClientEvents,
   WerewolvesVoteState,
 } from './src/event';
+export type {
+  MockLoverScenario,
+  MockScenario,
+  MockScenarioPlayer,
+  MockWerewolvesScenario,
+} from './src/mock-scenario';
 export {
   type GamePlayer,
   isGamePlayer,

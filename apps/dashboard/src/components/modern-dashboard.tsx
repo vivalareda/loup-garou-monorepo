@@ -1,9 +1,10 @@
-import { isGamePlayer } from '@repo/types';
+import { isGamePlayer, type SegmentType } from '@repo/types';
 import { Moon, Plus, Server, Sun, UserPlus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
+import { socket } from '@/utils/socket';
 import { CupidSelectionModal } from './cupid-selection-modal';
 import { DayVoteModal } from './day-vote-modal';
 import { PlayerCard } from './player-card';
@@ -18,6 +19,8 @@ type ModernDashboardProps = {
   setIsDarkMode: (value: boolean) => void;
   onAddPlayer: () => void;
   onBatchAddPlayers: () => void;
+  onModernSegmentClick: () => void;
+  mockSegment: SegmentType | undefined;
 };
 
 export function ModernDashboard({
@@ -25,6 +28,8 @@ export function ModernDashboard({
   setIsDarkMode,
   onAddPlayer,
   onBatchAddPlayers,
+  onModernSegmentClick,
+  mockSegment,
 }: ModernDashboardProps) {
   const {
     players,
@@ -35,6 +40,7 @@ export function ModernDashboard({
     assignWitchRole,
     simulateAllWerewolfVotes,
     toggleLoverSelection,
+    sendLoverClosedAlert,
     sendLoverSelection,
   } = useMockPlayerStore();
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -51,6 +57,12 @@ export function ModernDashboard({
 
   const handleWerewolfVote = (targetPlayerName: string) => {
     simulateAllWerewolfVotes(targetPlayerName);
+  };
+
+  const handleStartGame = () => {
+    mockSegment
+      ? socket.emit('lobby:start-mock', mockSegment)
+      : socket.emit('lobby:start-game');
   };
 
   const selectedPlayerForAction = actionPlayerId
@@ -97,6 +109,9 @@ export function ModernDashboard({
         </nav>
 
         <div className="space-y-3 mb-6">
+          <Button className="w-full gap-2 text-white" onClick={handleStartGame}>
+            Start Game
+          </Button>
           <Button className="w-full gap-2 text-white" onClick={onAddPlayer}>
             <Plus className="h-4 w-4" />
             Add Player
@@ -108,6 +123,14 @@ export function ModernDashboard({
           >
             <UserPlus className="h-4 w-4" />
             Batch Add
+          </Button>
+          <Button
+            className="w-full gap-2 text-foreground"
+            onClick={onModernSegmentClick}
+            variant="outline"
+          >
+            <UserPlus className="h-4 w-4" />
+            Mock segment
           </Button>
         </div>
 
@@ -193,28 +216,29 @@ export function ModernDashboard({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {playersArray.map((player) => (
-                  <PlayerCard
-                    key={player.id}
-                    onAssignWerewolfRole={() => assignWerewolfRole(player.id)}
-                    onAssignWitchRole={() => assignWitchRole(player.id)}
-                    onConnect={() => connectPlayer(player.id)}
-                    onCupidSelect={() => {
-                      setActionPlayerId(player.id);
-                      setIsCupidSelectionOpen(true);
-                    }}
-                    onDisconnect={() => disconnectPlayer(player.id)}
-                    onRemove={() => removePlayer(player.id)}
-                    onSelect={() => setSelectedPlayerId(player.id)}
-                    onWerewolfSimulate={() => {
-                      setActionPlayerId(player.id);
-                      setIsWerewolfSimulationOpen(true);
-                    }}
-                    onWerewolfVote={() => {
-                      setActionPlayerId(player.id);
-                      setIsWerewolfVotingOpen(true);
-                    }}
-                    player={player}
-                  />
+                <PlayerCard
+                  key={player.id}
+                  onAssignWerewolfRole={() => assignWerewolfRole(player.id)}
+                  onAssignWitchRole={() => assignWitchRole(player.id)}
+                  onCloseLoverAlert={() => sendLoverClosedAlert(player.id)}
+                  onConnect={() => connectPlayer(player.id)}
+                  onCupidSelect={() => {
+                    setActionPlayerId(player.id);
+                    setIsCupidSelectionOpen(true);
+                  }}
+                  onDisconnect={() => disconnectPlayer(player.id)}
+                  onRemove={() => removePlayer(player.id)}
+                  onSelect={() => setSelectedPlayerId(player.id)}
+                  onWerewolfSimulate={() => {
+                    setActionPlayerId(player.id);
+                    setIsWerewolfSimulationOpen(true);
+                  }}
+                  onWerewolfVote={() => {
+                    setActionPlayerId(player.id);
+                    setIsWerewolfVotingOpen(true);
+                  }}
+                  player={player}
+                />
               ))}
             </div>
           )}

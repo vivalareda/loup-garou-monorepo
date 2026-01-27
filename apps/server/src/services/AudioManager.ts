@@ -25,7 +25,7 @@ const getSegmentStartAudio = (segment: SegmentType): string => {
   }
 };
 
-const getSegmentEndAudio = (segment: SegmentType): string | null => {
+const getSegmentEndAudio = (segment: SegmentType): string => {
   switch (segment) {
     case 'CUPID':
       return 'Cupidon/Cupidon-2';
@@ -34,12 +34,15 @@ const getSegmentEndAudio = (segment: SegmentType): string | null => {
     case 'DAY_VOTE':
       return 'Day-vote/Vote-Death';
     case 'HUNTER':
+      return 'to implement';
     case 'LOVERS':
+      return 'Lovers/Lover-3';
     case 'WITCH-HEAL':
+      return 'to implement';
     case 'WITCH-POISON':
-      return null;
+      return 'to implement';
     default:
-      return null;
+      return 'to implement';
   }
 };
 
@@ -50,6 +53,8 @@ export class AudioManager extends Effect.Service<AudioManager>()(
       const assetsPath = yield* Config.string('ASSETS_PATH').pipe(
         Config.withDefault('./assets')
       );
+
+      let loverAudioRunning = false;
 
       const playAudio = (file: string) =>
         Effect.tryPromise({
@@ -63,17 +68,39 @@ export class AudioManager extends Effect.Service<AudioManager>()(
           catch: (error) => new AudioPlaybackError({ file, error }),
         });
 
+      const playLoversAudio = Effect.fn('playLoversAudio')(function* (
+        file: string
+      ) {
+        const LOVERS_AUDIO_LENGTH = 13_000;
+        yield* Effect.sync(() => setLoverAudioRunning(true));
+
+        yield* playAudio(file).pipe(Effect.forkDaemon);
+
+        yield* Effect.sync(() => {
+          setLoverAudioRunning(false);
+        }).pipe(Effect.delay(LOVERS_AUDIO_LENGTH), Effect.forkDaemon);
+      });
+
+      const setLoverAudioRunning = (value: boolean) => {
+        loverAudioRunning = value;
+      };
+
+      const isLoverAudioRunning = () => loverAudioRunning;
+
       const playSegmentStart = Effect.fn('playSegmentStart')(function* (
         segment: SegmentType
       ) {
         const audioFile = getSegmentStartAudio(segment);
-        yield* playAudio(audioFile);
+        segment === 'LOVERS'
+          ? yield* playLoversAudio(audioFile)
+          : yield* playAudio(audioFile);
       });
 
       const playSegmentEnd = Effect.fn('playSegmentEnd')(function* (
         segment: SegmentType
       ) {
         const audioFile = getSegmentEndAudio(segment);
+
         if (audioFile) {
           yield* playAudio(audioFile);
         }
@@ -89,14 +116,13 @@ export class AudioManager extends Effect.Service<AudioManager>()(
         );
       });
 
-      const playIntro = Effect.gen(function* () {
-        yield* playAudio('Intro');
-      });
+      const playIntro = playAudio('intro');
 
       return {
         playSegmentStart,
         playSegmentEnd,
         playWinnerAudio,
+        isLoverAudioRunning,
         playIntro,
       };
     }),
@@ -106,6 +132,7 @@ export class AudioManager extends Effect.Service<AudioManager>()(
     this,
     new AudioManager({
       playIntro: Effect.void,
+      isLoverAudioRunning: () => false,
       playWinnerAudio: () => Effect.void,
       playSegmentEnd: () => Effect.void,
       playSegmentStart: () => Effect.void,

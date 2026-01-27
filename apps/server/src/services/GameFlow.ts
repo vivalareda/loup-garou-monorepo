@@ -4,6 +4,7 @@ import { AudioManager } from './AudioManager.js';
 import { SegmentNotFoundError } from './errors.js';
 import { Game } from './Game.js';
 import { Lobby } from './Lobby.js';
+import { MockScenario } from './MockScenario.js';
 import { SocketServer } from './SocketServer.js';
 
 export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
@@ -12,10 +13,11 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
     const lobby = yield* Lobby;
     const io = yield* SocketServer;
     const audio = yield* AudioManager;
+    const mockScenarios = yield* MockScenario;
 
     const segments: Segment[] = [
-      { type: 'CUPID', skip: false, isFirstNight: true },
-      { type: 'LOVERS', skip: false, isFirstNight: true },
+      { type: 'CUPID', skip: false },
+      { type: 'LOVERS', skip: false },
       { type: 'WEREWOLF', skip: false },
       { type: 'WITCH-HEAL', skip: false },
       { type: 'WITCH-POISON', skip: false },
@@ -57,6 +59,38 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
       yield* playSegment;
     });
 
+    const loadMockScenario = Effect.fn('loadMockScenario')(function* (
+      scenario: 'LOVERS' | 'WEREWOLF'
+    ) {
+      const mockScenario = mockScenarios[scenario];
+      yield* Effect.log(`player mock scenario ${mockScenario.segment}`);
+      const lobbyPlayers = yield* lobby.getAllPlayers;
+      const mockLovers: string[] = [];
+      if (mockScenario.players.length !== lobbyPlayers.length) {
+        return new Error(
+          `Players count mismatch, scenario requires ${mockScenario.players.length} players, but lobby has ${lobbyPlayers.length} players`
+        );
+      }
+
+      yield* game.setPlayers(mockScenario);
+      const players = yield* game.getPlayers;
+
+      if (mockScenario.loversIndex) {
+        for (const idx of mockScenario.loversIndex) {
+          const player = players[idx];
+          mockLovers.push(player.getSocketId());
+        }
+        yield* game.setLovers(mockLovers[0], mockLovers[1]);
+      }
+
+      for (const player of players) {
+        io.to(player.socketId).emit('player:role-assigned', player.role);
+      }
+
+      currentSegmentIndex = mockScenario.index;
+      yield* playSegment;
+    });
+
     const markSegmentAsSkipped = Effect.fn('markSegmentAsSkipped')(function* (
       segment: SegmentType
     ) {
@@ -88,6 +122,11 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
       }
     });
 
+    const setCurrentSegment = (segmentIndex: number) =>
+      Effect.sync(() => {
+        currentSegmentIndex = segmentIndex;
+      });
+
     const getCurrentSegment = Effect.sync(() => segments[currentSegmentIndex]);
 
     const promptCupid = Effect.gen(function* () {
@@ -97,12 +136,17 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
     });
 
     const promptLovers = Effect.gen(function* () {
-      const LOVERS_AUDIO_DURATION_MS = 21_000;
+      yield* Effect.log('inside the prompt lover function');
+      const LOVERS_REVEAL_DELAY = 5000;
+      const LOVERS_ALERT_DELAY = 6000;
 
       const lovers = yield* game.getLovers.pipe(
         Effect.tapError((err) => Effect.logError(err))
       );
 
+      yield* Effect.sleep(Duration.millis(LOVERS_REVEAL_DELAY));
+
+      yield* Effect.log('emitting to lovers');
       io.to(lovers[0].getSocketId()).emit(
         'alert:player-is-lover',
         lovers[1].getSocketId()
@@ -113,7 +157,12 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
         lovers[0].getSocketId()
       );
 
-      yield* Effect.sleep(Duration.millis(LOVERS_AUDIO_DURATION_MS));
+      yield* Effect.sleep(Duration.millis(LOVERS_ALERT_DELAY));
+
+      yield* Effect.log('emitting closing alert');
+      for (const lover of lovers) {
+        io.to(lover.getSocketId()).emit('alert:lovers-can-close-alert');
+      }
     });
 
     const promptWerewolves = Effect.gen(function* () {
@@ -127,8 +176,10 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
       startGame,
       playSegment,
       getCurrentSegment,
+      setCurrentSegment,
       markSegmentAsSkipped,
       finishSegment,
+      loadMockScenario,
     };
   }),
   dependencies: [
@@ -136,6 +187,7 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
     Lobby.Default,
     SocketServer.Default,
     AudioManager.Default,
+    MockScenario.Default,
   ],
 }) {}
 

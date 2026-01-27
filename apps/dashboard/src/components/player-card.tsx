@@ -1,5 +1,13 @@
 import { isGamePlayer } from '@repo/types';
-import { Ghost, Heart, Power, PowerOff, Skull, Trash2, Zap } from 'lucide-react';
+import {
+  Ghost,
+  Heart,
+  Power,
+  PowerOff,
+  Skull,
+  Trash2,
+  Zap,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { MockPlayer } from '@/store/mock-players';
 import { getRoleClassName } from '@/utils/status';
@@ -15,6 +23,7 @@ type PlayerCardProps = {
   onWerewolfVote: () => void;
   onWerewolfSimulate: () => void;
   onCupidSelect: () => void;
+  onCloseLoverAlert: () => void;
 };
 
 function PlayerInfo({ player }: { player: MockPlayer }) {
@@ -22,6 +31,10 @@ function PlayerInfo({ player }: { player: MockPlayer }) {
     player.player && isGamePlayer(player.player) ? player.player.role : null;
   const isAlive =
     player.player && isGamePlayer(player.player) ? player.player.isAlive : true;
+  const loverName = player.loverName
+    ? (player.playersList.find((lover) => lover.sid === player.loverName)
+        ?.name ?? player.loverName)
+    : null;
 
   return (
     <div className="space-y-2 text-sm">
@@ -58,6 +71,16 @@ function PlayerInfo({ player }: { player: MockPlayer }) {
           </span>
         </div>
       )}
+
+      {player.isLover && (
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Lover:</span>
+          <span className="flex items-center gap-1 text-rose-600">
+            <Heart className="h-3 w-3" />
+            {loverName || 'Unknown'}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -72,6 +95,7 @@ function PlayerActions({
   onWerewolfVote,
   onWerewolfSimulate,
   onCupidSelect,
+  onCloseLoverAlert,
 }: PlayerCardProps) {
   const playerRole =
     player.player && isGamePlayer(player.player) ? player.player.role : null;
@@ -108,6 +132,19 @@ function PlayerActions({
           Details
         </Button>
       </div>
+
+      {player.isLover && (
+        <Button
+          className="w-full text-xs"
+          disabled={!player.canCloseLoverAlert}
+          onClick={onCloseLoverAlert}
+          size="sm"
+          variant="secondary"
+        >
+          <Heart className="h-3 w-3 mr-1" />
+          Close Lover Alert
+        </Button>
+      )}
 
       {player.status === 'in-game' && isAlive && (
         <div className="space-y-1 pt-2">

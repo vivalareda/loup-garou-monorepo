@@ -9,6 +9,7 @@ export class PlayerNotFoundError extends Data.TaggedError(
   'PlayerNotFoundError'
 )<{
   socketId: string;
+  message?: string;
 }> {}
 
 export class SpecialPlayerNotFoundError extends Data.TaggedError(

@@ -19,6 +19,11 @@ export function PlayerInfo({
   onToggleLoverSelection,
   onSendLoverSelection,
 }: PlayerInfoProps) {
+  const loverName = player.loverName
+    ? (player.playersList.find((lover) => lover.sid === player.loverName)
+        ?.name ?? player.loverName)
+    : null;
+
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
       <h2 className="mb-4 text-lg font-semibold text-gray-800">Player Data</h2>
@@ -101,18 +106,17 @@ export function PlayerInfo({
             <div className="flex items-center gap-2">
               <span className="text-lg">💕</span>
               <span className="font-medium text-red-600">
-                In love with {player.loverName}
+                In love with {loverName || 'Unknown'}
               </span>
             </div>
-            {player.canCloseLoverAlert && (
-              <Button
-                className="mt-2"
-                onClick={() => onSendLoverClosedAlert(player.id)}
-                size="sm"
-              >
-                Close Lover Alert
-              </Button>
-            )}
+            <Button
+              className="mt-2"
+              disabled={!player.canCloseLoverAlert}
+              onClick={() => onSendLoverClosedAlert(player.id)}
+              size="sm"
+            >
+              Close Lover Alert
+            </Button>
           </div>
         )}
         {player.isCupid && player.canSelectLovers && (
@@ -122,7 +126,9 @@ export function PlayerInfo({
             </div>
             <div className="mt-2 space-y-2">
               {player.playersList
-                .filter((p) => p.sid !== (player.player?.sid ?? player.socket.id))
+                .filter(
+                  (p) => p.sid !== (player.player?.sid ?? player.socket.id)
+                )
                 .map((p) => (
                   <button
                     className={`flex cursor-pointer items-center gap-2 rounded p-2 transition-colors${

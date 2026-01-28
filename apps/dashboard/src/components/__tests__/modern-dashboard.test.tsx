@@ -31,8 +31,10 @@ describe('ModernDashboard', () => {
         <BrowserRouter>
           <ModernDashboard
             isDarkMode={true}
+            mockSegment={undefined}
             onAddPlayer={mockAddPlayer}
             onBatchAddPlayers={mockBatchAddPlayers}
+            onModernSegmentClick={() => {}}
             setIsDarkMode={mockSetDarkMode}
           />
         </BrowserRouter>

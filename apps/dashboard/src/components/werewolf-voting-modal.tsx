@@ -15,14 +15,15 @@ export function WerewolfVotingModal({
   playersList,
   currentPlayerName,
 }: WerewolfVotingModalProps) {
-  const { players, activePlayerId } = useMockPlayerStore();
+  const { players } = useMockPlayerStore();
   const [votes, setVotes] = useState<WerewolvesVoteState>({});
   const [playerVote, setPlayerVote] = useState('');
   const [isVotingComplete, setIsVotingComplete] = useState(false);
 
-  // Get the current active player's socket
-  const activePlayer = activePlayerId ? players.get(activePlayerId) : null;
-  const socket = activePlayer?.socket;
+  const currentPlayer = Array.from(players.values()).find(
+    (p) => p.name === currentPlayerName
+  );
+  const socket = currentPlayer?.socket;
 
   useEffect(() => {
     if (!(socket && isOpen)) {
@@ -54,7 +55,7 @@ export function WerewolfVotingModal({
 
       const oldVote = playerVote;
       setPlayerVote(targetPlayerSocketId);
-      socket.emit('werewolf:player-update-vote', targetPlayerSocketId, oldVote);
+      socket.emit('werewolf:player-voted', targetPlayerSocketId, oldVote);
     },
     [socket, playerVote]
   );
@@ -86,7 +87,7 @@ export function WerewolfVotingModal({
     return null;
   }
 
-  if (!(activePlayer && socket)) {
+  if (!(currentPlayer && socket)) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6">

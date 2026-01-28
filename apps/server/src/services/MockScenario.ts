@@ -1,4 +1,8 @@
-import type { MockLoverScenario, MockWerewolvesScenario } from '@repo/types';
+import type {
+  MockLoverScenario,
+  MockWerewolvesScenario,
+  MockWitchHealScenario,
+} from '@repo/types';
 import { Effect } from 'effect';
 
 const loverScenario: MockLoverScenario = {
@@ -28,14 +32,33 @@ const werewolvesScenario: MockWerewolvesScenario = {
   ],
 };
 
-const mockScenarios = {
+const witchHealScenario: MockWitchHealScenario = {
+  segment: 'WEREWOLF',
+  index: 3,
+  players: [
+    { role: 'CUPID', isAlive: true },
+    { role: 'WEREWOLF', isAlive: true },
+    { role: 'WEREWOLF', isAlive: true },
+    { role: 'WITCH', isAlive: true },
+    { role: 'VILLAGER', isAlive: true },
+    { role: 'VILLAGER', isAlive: true },
+  ],
+  werewolvesTargetIndex: 5,
+};
+
+const mockScenarios: {
+  LOVERS: MockLoverScenario;
+  WEREWOLF: MockWerewolvesScenario;
+  WITCH_HEAL: MockWitchHealScenario;
+} = {
   LOVERS: loverScenario,
   WEREWOLF: werewolvesScenario,
-} as const;
+  WITCH_HEAL: witchHealScenario,
+};
 
-export class MockScenario extends Effect.Service<MockScenario>()(
-  'MockScenario',
-  {
-    succeed: mockScenarios,
-  }
-) {}
+const MockScenarioValue = Effect.succeed(mockScenarios) as Effect.Effect<
+  typeof mockScenarios
+>;
+
+export const MockScenario = MockScenarioValue;
+export const MockScenarioDefault = MockScenarioValue;

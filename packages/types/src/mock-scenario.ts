@@ -37,7 +37,7 @@ export type MockScenarioPendingDeath = {
  */
 export type MockScenario = {
   /**
-   * Segment that should be considered "current" after loading the scenario.
+   * Segment that should be considered "current" after loading scenario.
    */
   segment: SegmentType;
   /**
@@ -48,22 +48,23 @@ export type MockScenario = {
    * Ordered player slots with their desired roles.
    */
   players: readonly MockScenarioPlayer[];
-  // /**
-  //  * Pair of slot indexes representing the lovers link.
-  //  */
-  // lovers?: readonly [PlayerSlot, PlayerSlot];
-  // /**
-  //  * Pre-loaded werewolf vote mapping (voter slot -> target slot).
-  //  */
-  // werewolfVotes?: MockScenarioVoteMap;
-  // /**
-  //  * Pre-loaded day vote mapping (voter slot -> target slot).
-  //  */
-  // dayVotes?: MockScenarioVoteMap;
-  // /**
-  //  * Queue of deaths that should resolve when the scenario starts.
-  //  */
-  // pendingDeaths?: readonly MockScenarioPendingDeath[];
+  /**
+   * Pair of slot indexes representing lovers link.
+   */
+  lovers?: readonly [PlayerSlot, PlayerSlot];
+  /**
+   * Pre-loaded werewolf vote mapping (voter slot -> target slot).
+   */
+  werewolfVotes?: MockScenarioVoteMap;
+  /**
+   * Pre-loaded day vote mapping (voter slot -> target slot).
+   */
+  dayVotes?: MockScenarioVoteMap;
+  /**
+   * Queue of deaths that should resolve when the scenario starts.
+   */
+  pendingDeaths?: readonly MockScenarioPendingDeath[];
+  werewolvesTargetIndex?: number;
 };
 
 export type MockLoverScenario = CompleteType<
@@ -75,5 +76,12 @@ export type MockLoverScenario = CompleteType<
 export type MockWerewolvesScenario = CompleteType<
   MockScenario & {
     loversIndex?: number[];
+  }
+>;
+
+export type MockWitchHealScenario = CompleteType<
+  MockScenario & {
+    loversIndex?: number[];
+    werewolvesTargetIndex: number;
   }
 >;

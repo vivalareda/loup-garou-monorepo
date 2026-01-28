@@ -30,3 +30,14 @@ export class SegmentNotFoundError extends Data.TaggedError(
 }> {}
 
 export class LoversNullError extends Data.TaggedError('LoversNullError')<{}> {}
+export class PlayerNotWerewolfError extends Data.TaggedError(
+  'PlayerNotWerewolfError'
+)<{
+  socketId: string;
+}> {}
+export class VictimNotFound extends Data.TaggedError('VictimNotFound')<{
+  reason: string;
+}> {}
+export class NotEnoughPlayersError extends Data.TaggedError(
+  'NotEnoughPlayersError'
+)<{}> {}

@@ -8,8 +8,7 @@ import type {
 describe('MockScenario type', () => {
   it('accepts a minimal scenario definition', () => {
     const minimalScenario: MockScenario = {
-      id: 'lovers-night',
-      label: 'Lovers Night Focus',
+      index: 2,
       segment: 'LOVERS',
       players: [
         { role: 'CUPID' },
@@ -41,8 +40,7 @@ describe('MockScenario type', () => {
     ];
 
     const richScenario = {
-      id: 'werewolf-revenge',
-      label: 'Werewolves focus',
+      index: 5,
       segment: 'DAY_VOTE',
       players: [
         { role: 'VILLAGER' },
@@ -67,7 +65,7 @@ describe('MockScenario type', () => {
       readonly [number, number] | undefined
     >();
     expectTypeOf<MockScenario['pendingDeaths']>().toEqualTypeOf<
-      ReadonlyArray<MockScenarioPendingDeath> | undefined
+      readonly MockScenarioPendingDeath[] | undefined
     >();
   });
 });

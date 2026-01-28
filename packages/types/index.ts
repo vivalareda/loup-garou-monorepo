@@ -13,6 +13,7 @@ export type {
   MockScenario,
   MockScenarioPlayer,
   MockWerewolvesScenario,
+  MockWitchHealScenario,
 } from './src/mock-scenario';
 export {
   type GamePlayer,

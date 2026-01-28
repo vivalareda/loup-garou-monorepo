@@ -14,6 +14,10 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
     const lobby = yield* Lobby;
     const players = new Map<string, Player>();
     const specialRolePlayers = new Map<Role, Player>();
+
+    let witchCanHeal = true;
+    let witchCanKill = true;
+
     let lovers: [Player, Player] | null = null;
 
     const setSpecialRolePlayer = (player: Player, role: Role) => {
@@ -49,6 +53,14 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
       });
     });
 
+    const canWitchKill = Effect.sync(() => witchCanKill);
+    const canWitchHeal = Effect.sync(() => witchCanHeal);
+    const witchUsedKill = Effect.sync(() => {
+      witchCanKill = false;
+    });
+    const witchUsedHeal = Effect.sync(() => {
+      witchCanHeal = false;
+    });
     const getPlayers = Effect.sync(() => Array.from(players.values()));
     const getPlayerBySocketId = Effect.fn('getPlayerBySocketId')(function* (
       socketId: string
@@ -72,7 +84,7 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
     });
 
     const getCupid = getSpecialRolePlayer('CUPID');
-    const getWitch = Effect.sync(() => getSpecialRolePlayer('WITCH'));
+    const getWitch = getSpecialRolePlayer('WITCH');
     const getSeer = Effect.sync(() => getSpecialRolePlayer('SEER'));
     const getHunter = Effect.sync(() => getSpecialRolePlayer('HUNTER'));
 
@@ -154,6 +166,10 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
       getPartner,
       isPlayerLover,
       isAnyLoverHunter,
+      canWitchKill,
+      canWitchHeal,
+      witchUsedKill,
+      witchUsedHeal,
     };
   }),
   dependencies: [Lobby.Default],

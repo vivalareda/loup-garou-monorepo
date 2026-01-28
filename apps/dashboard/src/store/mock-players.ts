@@ -107,11 +107,7 @@ function createPlayerSocket(
     console.log(`Player ${name} received new player:`, newPlayer);
     const currentPlayer = store.getState().players.get(id);
     const currentList = currentPlayer?.playersList || [];
-    if (
-      !currentList.some(
-        (p: PlayerIdentity) => p.sid === newPlayer.sid
-      )
-    ) {
+    if (!currentList.some((p: PlayerIdentity) => p.sid === newPlayer.sid)) {
       const updatedList = [...currentList, newPlayer];
       store.getState().updatePlayerData(id, { playersList: updatedList });
     }
@@ -167,13 +163,13 @@ function createPlayerSocket(
   // Witch event listeners
   socket.on('witch:can-heal', (victimSid: string) => {
     console.log(
-      `🧙‍♀️ [WITCH STORE] Player ${name} received witch:can-heal event`,
+      `🧙 [WITCH STORE] Player ${name} received witch:can-heal event`,
       { victimSid }
     );
     const currentPlayer = store.getState().players.get(id);
     if (
       currentPlayer?.player &&
-      isGamePlayer(currentPlayer.player) &&
+      currentPlayer.player.type === 'game' &&
       currentPlayer.player.isAlive
     ) {
       store.getState().updatePlayerData(id, {
@@ -182,19 +178,19 @@ function createPlayerSocket(
       });
     } else {
       console.log(
-        `🧙‍♀️ [WITCH STORE] Skipping heal modal for dead player ${name}`
+        `🧙 [WITCH STORE] Skipping heal modal for dead player ${name}`
       );
     }
   });
 
   socket.on('witch:pick-poison-player', () => {
     console.log(
-      `🧙‍♀️ [WITCH STORE] Player ${name} received witch:pick-poison-player event`
+      `🧙 [WITCH STORE] Player ${name} received witch:pick-poison-player event`
     );
     const currentPlayer = store.getState().players.get(id);
     if (
       currentPlayer?.player &&
-      isGamePlayer(currentPlayer.player) &&
+      currentPlayer.player.type === 'game' &&
       currentPlayer.player.isAlive
     ) {
       store.getState().updatePlayerData(id, {
@@ -202,7 +198,7 @@ function createPlayerSocket(
       });
     } else {
       console.log(
-        `🧙‍♀️ [WITCH STORE] Skipping poison modal for dead player ${name}`
+        `🧙 [WITCH STORE] Skipping poison modal for dead player ${name}`
       );
     }
   });
@@ -210,7 +206,7 @@ function createPlayerSocket(
   // Day vote event listeners
   socket.on('day:voting-phase-start', () => {
     console.log(
-      `☀️ [DAY VOTE] Player ${name} received day:voting-phase-start event`
+      `☀ [DAY VOTE] Player ${name} received day:voting-phase-start event`
     );
     const currentPlayer = store.getState().players.get(id);
     if (
@@ -224,7 +220,7 @@ function createPlayerSocket(
       });
     } else {
       console.log(
-        `☀️ [DAY VOTE] Skipping day vote modal for dead player ${name}`
+        `☀ [DAY VOTE] Skipping day vote modal for dead player ${name}`
       );
     }
   });
@@ -506,7 +502,7 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
   // Witch actions
   healPlayer: (playerId: string) => {
     console.log(
-      '🧙‍♀️ [WITCH STORE] Healing player - emitting witch:healed-player'
+      '🧙 [WITCH STORE] Healing player - emitting witch:healed-player'
     );
     const player = get().players.get(playerId);
     if (player?.socket) {
@@ -519,9 +515,7 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
   },
 
   skipHeal: (playerId: string) => {
-    console.log(
-      '🧙‍♀️ [WITCH STORE] Skipping heal - emitting witch:skipped-heal'
-    );
+    console.log('🧙 [WITCH STORE] Skipping heal - emitting witch:skipped-heal');
     const player = get().players.get(playerId);
     if (player?.socket) {
       player.socket.emit('witch:skipped-heal');
@@ -534,7 +528,7 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
 
   poisonPlayer: (playerId: string, targetPlayerId: string) => {
     console.log(
-      '🧙‍♀️ [WITCH STORE] Poisoning player - emitting witch:poisoned-player',
+      '🧙 [WITCH STORE] Poisoning player - emitting witch:poisoned-player',
       { targetPlayerId }
     );
     const player = get().players.get(playerId);
@@ -548,7 +542,7 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
 
   skipPoison: (playerId: string) => {
     console.log(
-      '🧙‍♀️ [WITCH STORE] Skipping poison - emitting witch:skipped-poison'
+      '🧙 [WITCH STORE] Skipping poison - emitting witch:skipped-poison'
     );
     const player = get().players.get(playerId);
     if (player?.socket) {
@@ -574,7 +568,7 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
 
   // Day vote actions
   voteDayPlayer: (playerId: string, targetPlayerId: string) => {
-    console.log(`☀️ [DAY VOTE] Player ${playerId} voting for ${targetPlayerId}`);
+    console.log(`☀ [DAY VOTE] Player ${playerId} voting for ${targetPlayerId}`);
     const player = get().players.get(playerId);
     if (player?.socket) {
       player.socket.emit('day:player-voted', targetPlayerId);

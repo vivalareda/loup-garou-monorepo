@@ -1,4 +1,4 @@
-import { SegmentType } from '@repo/types';
+import type { SegmentType } from '@repo/types';
 import { useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Link, Route, Routes } from 'react-router-dom';
@@ -7,6 +7,10 @@ import { BatchAddPlayersModal } from '@/components/batch-add-players-modal';
 import { ModernDashboard } from '@/components/modern-dashboard';
 import { SelectSegmentModal } from '@/components/select-segment-modal';
 import { ServerDashboard } from '@/components/server-dashboard';
+import { socket } from '@/utils/socket';
+import { useMockPlayerStore } from './store/mock-players';
+
+const AUTO_PLAYER_COUNT = 6;
 
 export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -16,17 +20,26 @@ export default function App() {
   const [mockSegment, setMockSegment] = useState<SegmentType | undefined>(
     undefined
   );
+  const addPlayer = useMockPlayerStore((state) => state.addPlayer);
+
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
+  const handleHotkeyPress = async () => {
+    for (let i = 1; i <= AUTO_PLAYER_COUNT; i++) {
+      addPlayer(`test-player-${i}`);
+    }
+    setMockSegment('WITCH_HEAL');
+    await sleep(1000);
+    socket.emit('lobby:start-mock', 'WITCH_HEAL');
+  };
 
   useHotkeys(
-    ['cmd+u', 'cmd+shift+u'],
-    (event) => {
-      event.preventDefault();
-      setIsBatchAddModalOpen(true);
+    ['shift+h'],
+    () => {
+      handleHotkeyPress();
     },
-    {
-      preventDefault: true,
-      enableOnFormTags: true,
-    }
+    { preventDefault: true, enableOnFormTags: true }
   );
 
   return (

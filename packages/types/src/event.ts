@@ -47,7 +47,12 @@ export type ClientToServerEvents = {
   'lobby:get-players-list': () => void;
   'player:join': (playerName: string) => void;
   'lobby:start-game': () => void;
-  'lobby:start-mock': (segment: SegmentType) => void;
+  'lobby:start-mock': (
+    segment: Exclude<
+      SegmentType,
+      'CUPID' | 'HUNTER' | 'DAY_VOTE' | 'WITCH_POISON'
+    >
+  ) => void;
 
   'admin:start-game': () => void;
   'admin:next-segment': () => void;

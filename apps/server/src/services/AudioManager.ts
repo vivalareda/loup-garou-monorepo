@@ -12,9 +12,9 @@ const getSegmentStartAudio = (segment: SegmentType): string => {
       return 'Lovers/combined_lover';
     case 'WEREWOLF':
       return 'Werewolves/Werewolves-1';
-    case 'WITCH-HEAL':
+    case 'WITCH_HEAL':
       return 'Witch/Witch-wake-up';
-    case 'WITCH-POISON':
+    case 'WITCH_POISON':
       return 'Witch/Witch-poison';
     case 'DAY_VOTE':
       return 'Day-vote/Vote-Start';
@@ -37,9 +37,9 @@ const getSegmentEndAudio = (segment: SegmentType): string => {
       return 'to implement';
     case 'LOVERS':
       return 'Lovers/Lover-3';
-    case 'WITCH-HEAL':
-      return 'to implement';
-    case 'WITCH-POISON':
+    case 'WITCH_HEAL':
+      return 'Witch-wake-up';
+    case 'WITCH_POISON':
       return 'to implement';
     default:
       return 'to implement';

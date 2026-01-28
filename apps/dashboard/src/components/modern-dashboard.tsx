@@ -1,6 +1,6 @@
 import { isGamePlayer, type SegmentType } from '@repo/types';
 import { Moon, Plus, Server, Sun, UserPlus, Users } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
@@ -42,7 +42,14 @@ export function ModernDashboard({
     toggleLoverSelection,
     sendLoverClosedAlert,
     sendLoverSelection,
+    healPlayer,
+    skipHeal,
+    poisonPlayer,
+    skipPoison,
+    closeHealModal,
+    closePoisonModal,
   } = useMockPlayerStore();
+
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [isWerewolfVotingOpen, setIsWerewolfVotingOpen] = useState(false);
   const [isWerewolfSimulationOpen, setIsWerewolfSimulationOpen] =
@@ -68,6 +75,30 @@ export function ModernDashboard({
   const selectedPlayerForAction = actionPlayerId
     ? players.get(actionPlayerId)
     : null;
+
+  useEffect(() => {
+    const playersArray = Array.from(players.values());
+    const playerWithHealModal = playersArray.find(
+      (p) =>
+        p.showHealModal &&
+        p.player &&
+        isGamePlayer(p.player) &&
+        p.player.isAlive
+    );
+    const playerWithPoisonModal = playersArray.find(
+      (p) =>
+        p.showPoisonModal &&
+        p.player &&
+        isGamePlayer(p.player) &&
+        p.player.isAlive
+    );
+
+    if (playerWithHealModal && !actionPlayerId) {
+      setActionPlayerId(playerWithHealModal.id);
+    } else if (playerWithPoisonModal && !actionPlayerId) {
+      setActionPlayerId(playerWithPoisonModal.id);
+    }
+  }, [players, actionPlayerId]);
 
   return (
     <div className="flex h-screen w-full">
@@ -304,15 +335,15 @@ export function ModernDashboard({
                       selectedPlayerForAction.player.isAlive
                   )}
                   onClose={() => {
-                    selectedPlayerForAction.showHealModal = false;
+                    closeHealModal(selectedPlayerForAction.id);
                     setActionPlayerId(null);
                   }}
                   onHeal={() => {
-                    selectedPlayerForAction.showHealModal = false;
+                    healPlayer(selectedPlayerForAction.id);
                     setActionPlayerId(null);
                   }}
                   onSkip={() => {
-                    selectedPlayerForAction.showHealModal = false;
+                    skipHeal(selectedPlayerForAction.id);
                     setActionPlayerId(null);
                   }}
                   playersList={selectedPlayerForAction.playersList}
@@ -326,15 +357,15 @@ export function ModernDashboard({
                       selectedPlayerForAction.player.isAlive
                   )}
                   onClose={() => {
-                    selectedPlayerForAction.showPoisonModal = false;
+                    closePoisonModal(selectedPlayerForAction.id);
                     setActionPlayerId(null);
                   }}
-                  onPoison={() => {
-                    selectedPlayerForAction.showPoisonModal = false;
+                  onPoison={(targetPlayerId) => {
+                    poisonPlayer(selectedPlayerForAction.id, targetPlayerId);
                     setActionPlayerId(null);
                   }}
                   onSkip={() => {
-                    selectedPlayerForAction.showPoisonModal = false;
+                    skipPoison(selectedPlayerForAction.id);
                     setActionPlayerId(null);
                   }}
                   playersList={selectedPlayerForAction.playersList}

@@ -1,5 +1,5 @@
-import type { Role } from './role';
 import type { PlayerIdentity } from './player';
+import type { Role } from './role';
 
 export type { PlayerIdentity } from './player';
 
@@ -27,10 +27,7 @@ export const isLobbyPlayer = (player: Player): player is LobbyPlayer =>
 export const isGamePlayer = (player: Player): player is GamePlayer =>
   player.type === 'game';
 
-export const createLobbyPlayer = (
-  name: string,
-  sid: string
-): LobbyPlayer => ({
+export const createLobbyPlayer = (name: string, sid: string): LobbyPlayer => ({
   type: 'lobby',
   name,
   sid,

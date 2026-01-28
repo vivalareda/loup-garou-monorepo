@@ -19,6 +19,9 @@
   },
   "linter": {
     "rules": {
+      "a11y": {
+        "noNoninteractiveElementToInteractiveRole": "error"
+      },
       "nursery": {
         "useSortedClasses": "off"
       },

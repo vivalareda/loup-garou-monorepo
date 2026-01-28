@@ -45,6 +45,7 @@ export function SelectSegmentModal({
               <SelectItem value="CUPID">Cupid</SelectItem>
               <SelectItem value="LOVERS">Lovers</SelectItem>
               <SelectItem value="WEREWOLF">Werewolf</SelectItem>
+              <SelectItem value="WITCH">Witch</SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>

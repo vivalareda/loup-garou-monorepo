@@ -30,10 +30,15 @@ export function CupidSelectionModal({
   const availableTargets = playersList.filter((p) => p.sid !== playerSid);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="💘 Cupid - Select Two Lovers">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="💘 Cupid - Select Two Lovers"
+    >
       <div className="space-y-4">
         <p className="text-sm text-gray-600">
-          Choose two players to fall in love. Selected: {selectedLovers.length}/2
+          Choose two players to fall in love. Selected: {selectedLovers.length}
+          /2
         </p>
 
         <div className="space-y-2">

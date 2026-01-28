@@ -49,16 +49,16 @@ describe('Lovers (Game Service)', () => {
       yield* lobby.addPlayer('Partner', 'lover-2');
       yield* game.startGame;
 
-      expect(yield* game.isAnyLoverHunter()).toBe(false);
+      expect(yield* game.isAnyLoverHunter).toBe(false);
 
       yield* game.setLovers('hunter-1', 'lover-2');
 
       const players = yield* game.getPlayers;
       const hunterPlayer = players.find((p) => p.getRole() === 'HUNTER');
 
-      if (hunterPlayer) {
+      if (hunterPlayer !== undefined) {
         yield* game.setLovers(hunterPlayer.getSocketId(), 'lover-2');
-        expect(yield* game.isAnyLoverHunter()).toBe(true);
+        expect(yield* game.isAnyLoverHunter).toBe(true);
       }
     }).pipe(Effect.provide(TestLayer))
   );

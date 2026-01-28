@@ -1,7 +1,8 @@
 import type { Segment, SegmentType } from '@repo/types';
 import { Duration, Effect } from 'effect';
 import { AudioManager } from './AudioManager.js';
-import { SegmentNotFoundError } from './errors.js';
+import { DeathManager } from './DeathManager.js';
+import { NotEnoughPlayersError, SegmentNotFoundError } from './errors.js';
 import { Game } from './Game.js';
 import { Lobby } from './Lobby.js';
 import { MockScenario } from './MockScenario.js';
@@ -14,17 +15,18 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
     const io = yield* SocketServer;
     const audio = yield* AudioManager;
     const mockScenarios = yield* MockScenario;
+    const deathManager = yield* DeathManager;
+
+    let currentSegmentIndex = 0;
 
     const segments: Segment[] = [
       { type: 'CUPID', skip: false },
       { type: 'LOVERS', skip: false },
       { type: 'WEREWOLF', skip: false },
-      { type: 'WITCH-HEAL', skip: false },
-      { type: 'WITCH-POISON', skip: false },
+      { type: 'WITCH_HEAL', skip: false },
+      { type: 'WITCH_POISON', skip: false },
       { type: 'DAY_VOTE', skip: false },
     ];
-
-    let currentSegmentIndex = 0;
 
     const startGame = Effect.gen(function* () {
       yield* game.startGame;
@@ -43,7 +45,6 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
     const playSegment = Effect.gen(function* () {
       currentSegmentIndex = findNextSegment(segments, currentSegmentIndex);
       const segment = segments[currentSegmentIndex];
-      yield* Effect.log(`playing segment ${segment.type}`);
       yield* audio.playSegmentStart(segment.type);
       yield* dispatchSegmentAction(segment.type);
     });
@@ -60,16 +61,18 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
     });
 
     const loadMockScenario = Effect.fn('loadMockScenario')(function* (
-      scenario: 'LOVERS' | 'WEREWOLF'
+      scenario: Exclude<
+        SegmentType,
+        'CUPID' | 'HUNTER' | 'DAY_VOTE' | 'WITCH_POISON'
+      >
     ) {
       const mockScenario = mockScenarios[scenario];
-      yield* Effect.log(`player mock scenario ${mockScenario.segment}`);
+      yield* Effect.log(`playing mock scenario ${mockScenario.segment}`);
       const lobbyPlayers = yield* lobby.getAllPlayers;
       const mockLovers: string[] = [];
       if (mockScenario.players.length !== lobbyPlayers.length) {
-        return new Error(
-          `Players count mismatch, scenario requires ${mockScenario.players.length} players, but lobby has ${lobbyPlayers.length} players`
-        );
+        console.log('not enough players');
+        return yield* Effect.fail(yield* new NotEnoughPlayersError());
       }
 
       yield* game.setPlayers(mockScenario);
@@ -81,6 +84,23 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
           mockLovers.push(player.getSocketId());
         }
         yield* game.setLovers(mockLovers[0], mockLovers[1]);
+      }
+
+      yield* Effect.log(
+        `had werwolves target ${mockScenario.werewolvesTargetIndex}`
+      );
+
+      if (mockScenario.werewolvesTargetIndex) {
+        const sorted = players.sort((a, b) => {
+          return a.name.localeCompare(b.name);
+        });
+        const victim = sorted[mockScenario.werewolvesTargetIndex];
+        yield* deathManager.addToPendingDeath(
+          'werewolves-kill',
+          victim.getSocketId()
+        );
+        yield* Effect.log(yield* deathManager.getVictim('werewolves-kill'));
+        yield* deathManager.log;
       }
 
       for (const player of players) {
@@ -117,6 +137,15 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
         case 'WEREWOLF':
           yield* promptWerewolves;
           break;
+        case 'WITCH_HEAL':
+          yield* promptWitchForHeal;
+          break;
+        case 'WITCH_POISON':
+          yield* promptDayVote;
+          break;
+        case 'DAY_VOTE':
+          yield* promptDayVote;
+          break;
         default:
           return `segment not implemented yet ${segment}`;
       }
@@ -129,10 +158,27 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
 
     const getCurrentSegment = Effect.sync(() => segments[currentSegmentIndex]);
 
+    const promptDayVote = Effect.gen(function* () {
+      yield* Effect.log('segment finished');
+      yield* Effect.log('pending death list: ');
+      yield* Effect.log(yield* deathManager.log);
+    });
+
     const promptCupid = Effect.gen(function* () {
       const cupid = yield* game.getCupid;
       io.to(cupid.getSocketId()).emit('cupid:pick-required');
       yield* Effect.log('sent socket event to cupid');
+    });
+
+    const promptWitchForPoison = Effect.gen(function* () {
+      const witch = yield* game.getWitch.pipe(Effect.orDie);
+      io.to(witch.getSocketId()).emit('witch:pick-poison-player');
+    });
+
+    const promptWitchForHeal = Effect.gen(function* () {
+      const witch = yield* game.getWitch.pipe(Effect.orDie);
+      const victim = yield* deathManager.getVictim('werewolves-kill');
+      io.to(witch.getSocketId()).emit('witch:can-heal', victim.getSocketId());
     });
 
     const promptLovers = Effect.gen(function* () {
@@ -146,7 +192,6 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
 
       yield* Effect.sleep(Duration.millis(LOVERS_REVEAL_DELAY));
 
-      yield* Effect.log('emitting to lovers');
       io.to(lovers[0].getSocketId()).emit(
         'alert:player-is-lover',
         lovers[1].getSocketId()
@@ -187,7 +232,7 @@ export class GameFlow extends Effect.Service<GameFlow>()('GameFlow', {
     Lobby.Default,
     SocketServer.Default,
     AudioManager.Default,
-    MockScenario.Default,
+    DeathManager.Default,
   ],
 }) {}
 

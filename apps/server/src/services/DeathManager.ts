@@ -1,9 +1,8 @@
+import type { DeathCause } from '@repo/types';
 import { Effect } from 'effect';
 import type { Player } from '@/core/player.js';
 import { VictimNotFound } from './errors.js';
 import { Game } from './Game.js';
-
-type Reason = 'werewolves-kill' | 'witch-kill';
 
 export class DeathManager extends Effect.Service<DeathManager>()(
   '@app/DeathManager',
@@ -11,10 +10,10 @@ export class DeathManager extends Effect.Service<DeathManager>()(
     dependencies: [Game.Default],
     effect: Effect.gen(function* () {
       const game = yield* Game;
-      const pendingDeath: Map<Reason, Player> = new Map();
+      const pendingDeath: Map<DeathCause, Player> = new Map();
 
       const addToPendingDeath = Effect.fn('addToPendingDeath')(function* (
-        reason: Reason,
+        reason: DeathCause,
         sid: string
       ) {
         const player = yield* game.getPlayerBySocketId(sid);
@@ -22,13 +21,15 @@ export class DeathManager extends Effect.Service<DeathManager>()(
       });
 
       const getVictim = Effect.fn('getWerewolfVictim')(function* (
-        reason: Reason
+        reason: DeathCause
       ) {
         yield* Effect.log(pendingDeath);
         return (
           pendingDeath.get(reason) ?? (yield* new VictimNotFound({ reason }))
         );
       });
+
+      const isPendingDeathEmpty = Effect.sync(() => pendingDeath.size === 0);
 
       const log = Effect.sync(() => {
         pendingDeath.forEach((v, k) => {
@@ -37,7 +38,7 @@ export class DeathManager extends Effect.Service<DeathManager>()(
       });
 
       const reviveWerewolfVictim = Effect.sync(() =>
-        pendingDeath.delete('werewolves-kill')
+        pendingDeath.delete('WEREWOLVES')
       );
 
       return {
@@ -45,6 +46,7 @@ export class DeathManager extends Effect.Service<DeathManager>()(
         getVictim,
         log,
         reviveWerewolfVictim,
+        isPendingDeathEmpty,
       };
     }),
   }

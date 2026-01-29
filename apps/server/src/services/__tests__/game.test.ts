@@ -27,7 +27,7 @@ const countRoles = (roles: Role[]): Record<Role, number> => {
 };
 
 const makeTestLayer = () => {
-  const configLayer = Layer.succeed(LobbyConfig, { maxPlayers: 6 });
+  const configLayer = LobbyConfig.Live;
   const lobbyLayer = Lobby.DefaultWithoutDependencies.pipe(
     Layer.provide(configLayer)
   );

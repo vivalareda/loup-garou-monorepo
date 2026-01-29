@@ -10,18 +10,19 @@ import { Lobby } from './Lobby.js';
 import { initRolesList } from './role-assignment.js';
 
 export class Game extends Effect.Service<Game>()('@app/Game', {
+  dependencies: [Lobby.Default],
   effect: Effect.gen(function* () {
     const lobby = yield* Lobby;
     const players = new Map<string, Player>();
     const specialRolePlayers = new Map<Role, Player>();
 
     let witchCanHeal = true;
-    let witchCanKill = true;
+    let witchCanPoison = true;
 
     let lovers: [Player, Player] | null = null;
 
     const setSpecialRolePlayer = (player: Player, role: Role) => {
-      if (role !== 'WEREWOLF' && role !== 'VILLAGER') {
+      if (!['WEREWOLF', 'VILLAGER'].includes(role)) {
         specialRolePlayers.set(role, player);
       }
     };
@@ -53,11 +54,12 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
       });
     });
 
-    const canWitchKill = Effect.sync(() => witchCanKill);
+    const canWitchPoison = Effect.sync(() => witchCanPoison);
     const canWitchHeal = Effect.sync(() => witchCanHeal);
     const witchUsedKill = Effect.sync(() => {
-      witchCanKill = false;
+      witchCanPoison = false;
     });
+
     const witchUsedHeal = Effect.sync(() => {
       witchCanHeal = false;
     });
@@ -166,11 +168,10 @@ export class Game extends Effect.Service<Game>()('@app/Game', {
       getPartner,
       isPlayerLover,
       isAnyLoverHunter,
-      canWitchKill,
+      canWitchKill: canWitchPoison,
       canWitchHeal,
       witchUsedKill,
       witchUsedHeal,
     };
   }),
-  dependencies: [Lobby.Default],
 }) {}

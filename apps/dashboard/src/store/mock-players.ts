@@ -533,6 +533,7 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
     );
     const player = get().players.get(playerId);
     if (player?.socket) {
+      console.log('emitting event for witch:poisoned-player');
       player.socket.emit('witch:poisoned-player', targetPlayerId);
       get().updatePlayerData(playerId, {
         showPoisonModal: false,

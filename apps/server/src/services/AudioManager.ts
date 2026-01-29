@@ -4,48 +4,6 @@ import { Config, Effect, Layer } from 'effect';
 import sound from 'sound-play';
 import { AudioPlaybackError } from './errors.js';
 
-const getSegmentStartAudio = (segment: SegmentType): string => {
-  switch (segment) {
-    case 'CUPID':
-      return 'Cupidon/Cupidon-1';
-    case 'LOVERS':
-      return 'Lovers/combined_lover';
-    case 'WEREWOLF':
-      return 'Werewolves/Werewolves-1';
-    case 'WITCH_HEAL':
-      return 'Witch/Witch-wake-up';
-    case 'WITCH_POISON':
-      return 'Witch/Witch-poison';
-    case 'DAY_VOTE':
-      return 'Day-vote/Vote-Start';
-    case 'HUNTER':
-      return 'Hunter/Hunter-wake-up';
-    default:
-      return 'problem';
-  }
-};
-
-const getSegmentEndAudio = (segment: SegmentType): string => {
-  switch (segment) {
-    case 'CUPID':
-      return 'Cupidon/Cupidon-2';
-    case 'WEREWOLF':
-      return 'Werewolves/Werewolves-2';
-    case 'DAY_VOTE':
-      return 'Day-vote/Vote-Death';
-    case 'HUNTER':
-      return 'to implement';
-    case 'LOVERS':
-      return 'Lovers/Lover-3';
-    case 'WITCH_HEAL':
-      return 'Witch-wake-up';
-    case 'WITCH_POISON':
-      return 'to implement';
-    default:
-      return 'to implement';
-  }
-};
-
 export class AudioManager extends Effect.Service<AudioManager>()(
   '@app/AudioManager',
   {
@@ -55,6 +13,8 @@ export class AudioManager extends Effect.Service<AudioManager>()(
       );
 
       let loverAudioRunning = false;
+      let witchHealAudioFile = 'skip';
+      let witchPoisonAudioFile = 'Witch/Witch-end';
 
       const playAudio = (file: string) =>
         Effect.tryPromise({
@@ -67,6 +27,48 @@ export class AudioManager extends Effect.Service<AudioManager>()(
           },
           catch: (error) => new AudioPlaybackError({ file, error }),
         });
+
+      const getSegmentEndAudio = (segment: SegmentType): string => {
+        switch (segment) {
+          case 'CUPID':
+            return 'Cupidon/Cupidon-2';
+          case 'WEREWOLF':
+            return 'Werewolves/Werewolves-2';
+          case 'DAY_VOTE':
+            return 'Day-vote/Vote-Death';
+          case 'HUNTER':
+            return 'to implement';
+          case 'LOVERS':
+            return 'Lovers/Lover-3';
+          case 'WITCH_HEAL':
+            return witchHealAudioFile;
+          case 'WITCH_POISON':
+            return witchPoisonAudioFile;
+          default:
+            return 'to implement';
+        }
+      };
+
+      const getSegmentStartAudio = (segment: SegmentType): string => {
+        switch (segment) {
+          case 'CUPID':
+            return 'Cupidon/Cupidon-1';
+          case 'LOVERS':
+            return 'Lovers/combined_lover';
+          case 'WEREWOLF':
+            return 'Werewolves/Werewolves-1';
+          case 'WITCH_HEAL':
+            return 'Witch/heeling-audio';
+          case 'WITCH_POISON':
+            return 'Witch/Witch-poison';
+          case 'DAY_VOTE':
+            return 'Day-vote/Vote-Start';
+          case 'HUNTER':
+            return 'Hunter/Hunter-wake-up';
+          default:
+            return 'problem';
+        }
+      };
 
       const playLoversAudio = Effect.fn('playLoversAudio')(function* (
         file: string
@@ -91,6 +93,12 @@ export class AudioManager extends Effect.Service<AudioManager>()(
         segment: SegmentType
       ) {
         const audioFile = getSegmentStartAudio(segment);
+        yield* Effect.log(`playing audio ${audioFile} for segment ${segment}`);
+
+        if (segment === 'WITCH_HEAL') {
+          yield* playAudio('Witch/wake-up-witch');
+        }
+
         segment === 'LOVERS'
           ? yield* playLoversAudio(audioFile)
           : yield* playAudio(audioFile);
@@ -100,11 +108,31 @@ export class AudioManager extends Effect.Service<AudioManager>()(
         segment: SegmentType
       ) {
         const audioFile = getSegmentEndAudio(segment);
+        yield* Effect.log(`end audio: ${audioFile}`);
 
-        if (audioFile) {
+        if (audioFile !== 'skip') {
           yield* playAudio(audioFile);
         }
       });
+
+      // const playWitchAudio = Effect.fn('playWitchAudio')(function* (context: {
+      //   playHeal: boolean;
+      //   playPoison: boolean;
+      // }) {
+      //   yield* playAudio('Witch/wake-up-witch');
+      //
+      //   if (context.playHeal) {
+      //     yield* playAudio('Witch/heeling-audio');
+      //     return;
+      //   }
+      //
+      //   if (context.playPoison) {
+      //     yield* playAudio('Witch/Witch-poison');
+      //     return;
+      //   }
+      //
+      //   yield* playAudio('Witch/Witch-end');
+      // });
 
       const playWinnerAudio = Effect.fn('playWinnerAudio')(function* (
         winner: 'werewolves' | 'villagers'

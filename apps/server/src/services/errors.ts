@@ -13,7 +13,7 @@ export class PlayerNotFoundError extends Data.TaggedError(
 }> {}
 
 export class SpecialPlayerNotFoundError extends Data.TaggedError(
-  'PlayerNotFoundError'
+  'SpecialPlayerNotFoundError'
 )<{
   role: Role;
 }> {}

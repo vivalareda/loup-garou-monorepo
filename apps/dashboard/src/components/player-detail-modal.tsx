@@ -56,6 +56,18 @@ function OverviewTab({ player }: { player: MockPlayer }) {
             </div>
           </div>
         )}
+
+        {player.isSheriff && (
+          <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+              <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              Sheriff
+            </div>
+            <div className="text-lg font-semibold text-amber-700 dark:text-amber-300 px-2 py-1 rounded inline-block">
+              SHERIFF
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rounded-lg bg-accent p-4">

@@ -1,9 +1,10 @@
 import type { SegmentType } from '@repo/types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Link, Route, Routes } from 'react-router-dom';
 import { AddPlayerModal } from '@/components/add-player-modal';
 import { BatchAddPlayersModal } from '@/components/batch-add-players-modal';
+import { DayVoteTestModal } from '@/components/day-vote-test-modal';
 import { ModernDashboard } from '@/components/modern-dashboard';
 import { SelectSegmentModal } from '@/components/select-segment-modal';
 import { ServerDashboard } from '@/components/server-dashboard';
@@ -16,11 +17,28 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isBatchAddModalOpen, setIsBatchAddModalOpen] = useState(false);
   const [isMockSegmentModalOpen, setIsMockSegmentModalOpen] = useState(false);
+  const [isDayVoteModalOpen, setIsDayVoteModalOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [mockSegment, setMockSegment] = useState<SegmentType | undefined>(
     undefined
   );
   const addPlayer = useMockPlayerStore((state) => state.addPlayer);
+
+  // Listen for day vote phase start
+  useEffect(() => {
+    const handleDayVoteStart = () => {
+      console.log('received vote required');
+      setIsDayVoteModalOpen(true);
+    };
+
+    socket.on('day:voting-phase-start', handleDayVoteStart);
+    socket.on('day:vote-required', handleDayVoteStart);
+
+    return () => {
+      socket.off('day:voting-phase-start', handleDayVoteStart);
+      socket.off('day:vote-required', handleDayVoteStart);
+    };
+  }, []);
 
   const sleep = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
@@ -29,9 +47,9 @@ export default function App() {
     for (let i = 1; i <= AUTO_PLAYER_COUNT; i++) {
       addPlayer(`test-player-${i}`);
     }
-    setMockSegment('WITCH_HEAL');
+    setMockSegment('WITCH');
     await sleep(1000);
-    socket.emit('lobby:start-mock', 'WITCH_HEAL');
+    socket.emit('lobby:start-mock', 'WITCH');
   };
 
   useHotkeys(
@@ -70,6 +88,10 @@ export default function App() {
               mockSegment={mockSegment}
               onClose={() => setIsMockSegmentModalOpen(false)}
               setMockSegment={setMockSegment}
+            />
+            <DayVoteTestModal
+              isOpen={isDayVoteModalOpen}
+              onClose={() => setIsDayVoteModalOpen(false)}
             />
           </div>
         }

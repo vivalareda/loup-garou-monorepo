@@ -35,6 +35,12 @@ export type MockPlayer = {
   showDayVoteModal: boolean;
   dayVoteTarget: string | null;
   canVote: boolean;
+  // Sheriff (tie-break) state
+  isSheriff: boolean;
+  showSheriffVoteModal: boolean;
+  sheriffTopVictims: string[];
+  // Hunter state
+  showHunterModal: boolean;
 };
 
 type MockPlayerState = {
@@ -66,6 +72,12 @@ type MockPlayerStore = MockPlayerState & {
   voteDayPlayer: (playerId: string, targetPlayerId: string) => void;
   closeDayVoteModal: (playerId: string) => void;
   simulateAllDayVotes: (targetPlayerName: string) => void;
+  // Sheriff actions
+  pickSheriffTarget: (playerId: string, targetPlayerId: string) => void;
+  closeSheriffVoteModal: (playerId: string) => void;
+  // Hunter actions
+  killHunterTarget: (playerId: string, targetPlayerId: string) => void;
+  closeHunterModal: (playerId: string) => void;
 };
 
 function createPlayerSocket(
@@ -225,6 +237,48 @@ function createPlayerSocket(
     }
   });
 
+  socket.on('alert:player-is-sheriff', () => {
+    console.log(`⭐ [SHERIFF] Player ${name} received alert:player-is-sheriff`);
+    store.getState().updatePlayerData(id, {
+      isSheriff: true,
+    });
+  });
+
+  socket.on('day:sheriff-vote', (topVictims: string[]) => {
+    console.log(`⭐ [SHERIFF] Player ${name} received day:sheriff-vote`, {
+      topVictims,
+    });
+    const currentPlayer = store.getState().players.get(id);
+    if (
+      currentPlayer?.player &&
+      isGamePlayer(currentPlayer.player) &&
+      currentPlayer.player.isAlive
+    ) {
+      store.getState().updatePlayerData(id, {
+        showSheriffVoteModal: true,
+        sheriffTopVictims: topVictims,
+      });
+    }
+  });
+
+  socket.on('hunter:pick-required', () => {
+    console.log(
+      `🎯 [HUNTER] Player ${name} received hunter:pick-required event`
+    );
+    const currentPlayer = store.getState().players.get(id);
+    if (
+      currentPlayer?.player &&
+      isGamePlayer(currentPlayer.player) &&
+      currentPlayer.player.isAlive
+    ) {
+      store.getState().updatePlayerData(id, {
+        showHunterModal: true,
+      });
+    } else {
+      console.log(`🎯 [HUNTER] Skipping hunter modal for dead player ${name}`);
+    }
+  });
+
   socket.on('alert:player-is-dead', () => {
     console.log(
       `💀 [DEATH] Player ${name} received alert:player-is-dead event`
@@ -239,6 +293,8 @@ function createPlayerSocket(
       store.getState().updatePlayerData(id, {
         player: deadPlayer,
         showDayVoteModal: false, // Close voting if this player died
+        showHunterModal: false,
+        showSheriffVoteModal: false,
       });
     }
   });
@@ -277,6 +333,12 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
       showDayVoteModal: false,
       dayVoteTarget: null,
       canVote: false,
+      // Sheriff state
+      isSheriff: false,
+      showSheriffVoteModal: false,
+      sheriffTopVictims: [],
+      // Hunter state
+      showHunterModal: false,
     };
 
     set((state) => ({
@@ -640,5 +702,42 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
         );
       }, index * 100);
     });
+  },
+
+  pickSheriffTarget: (playerId: string, targetPlayerId: string) => {
+    const player = get().players.get(playerId);
+    if (!player?.socket) {
+      return;
+    }
+
+    console.log(
+      `⭐ [SHERIFF] Player ${player.name} picked tie-break target ${targetPlayerId}`
+    );
+    player.socket.emit('day:sheriff-pick', targetPlayerId);
+    get().updatePlayerData(playerId, {
+      showSheriffVoteModal: false,
+      sheriffTopVictims: [],
+    });
+  },
+
+  closeSheriffVoteModal: (playerId: string) => {
+    get().updatePlayerData(playerId, {
+      showSheriffVoteModal: false,
+      sheriffTopVictims: [],
+    });
+  },
+
+  killHunterTarget: (playerId: string, targetPlayerId: string) => {
+    const player = get().players.get(playerId);
+    if (!player?.socket) {
+      return;
+    }
+
+    player.socket.emit('hunter:killed-player', targetPlayerId);
+    get().updatePlayerData(playerId, { showHunterModal: false });
+  },
+
+  closeHunterModal: (playerId: string) => {
+    get().updatePlayerData(playerId, { showHunterModal: false });
   },
 }));

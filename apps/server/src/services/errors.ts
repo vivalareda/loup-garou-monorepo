@@ -12,6 +12,21 @@ export class PlayerNotFoundError extends Data.TaggedError(
   message?: string;
 }> {}
 
+export class PlayerNotAliveError extends Data.TaggedError(
+  'PlayerNotAliveError'
+)<{
+  socketId: string;
+  message?: string;
+}> {}
+
+export class SheriffPlayerNotFoundError extends Data.TaggedError(
+  'SheriffPlayerNotFoundError'
+)<{}> {}
+
+export class SheriffPlayerNotSetError extends Data.TaggedError(
+  'SheriffPlayerNotSetError'
+)<{}> {}
+
 export class SpecialPlayerNotFoundError extends Data.TaggedError(
   'SpecialPlayerNotFoundError'
 )<{

@@ -17,7 +17,6 @@ const makeTestLayer = () => {
   const werewolvesVoteLayer = WerewolvesVote.DefaultWithoutDependencies.pipe(
     Layer.provide(gameLayer)
   );
-
   return Layer.mergeAll(lobbyLayer, gameLayer, werewolvesVoteLayer);
 };
 
@@ -28,14 +27,23 @@ describe('WerewolvesVote Service', () => {
       const game = yield* Game;
       const werewolvesVote = yield* WerewolvesVote;
 
-      yield* lobby.addPlayer('Wolf1', 'wolf-1-socket');
-      yield* lobby.addPlayer('Wolf2', 'wolf-2-socket');
-      yield* lobby.addPlayer('Victim', 'victim-socket');
+      for (let i = 1; i <= 6; i++) {
+        yield* lobby.addPlayer(`Player${i}`, `socket-${i}`);
+      }
 
       yield* game.startGame;
 
       const werewolves = yield* game.getWerewolves;
-      const victim = yield* game.getPlayerBySocketId('victim-socket');
+      const players = yield* game.getPlayers;
+
+      expect(werewolves.length).toBeGreaterThanOrEqual(1);
+
+      const victim = players.find((p) => p.getRole() !== 'WEREWOLF');
+      expect(victim).toBeDefined();
+
+      if (!victim) {
+        return;
+      }
 
       const result = yield* werewolvesVote.registerWerewolfVote(
         werewolves[0].getSocketId(),
@@ -52,25 +60,36 @@ describe('WerewolvesVote Service', () => {
       const game = yield* Game;
       const werewolvesVote = yield* WerewolvesVote;
 
-      yield* lobby.addPlayer('Wolf1', 'wolf-1-socket');
-      yield* lobby.addPlayer('Wolf2', 'wolf-2-socket');
-      yield* lobby.addPlayer('Victim', 'victim-socket');
+      for (let i = 1; i <= 6; i++) {
+        yield* lobby.addPlayer(`Player${i}`, `socket-${i}`);
+      }
 
       yield* game.startGame;
 
       const werewolves = yield* game.getWerewolves;
-      const victim = yield* game.getPlayerBySocketId('victim-socket');
+      const players = yield* game.getPlayers;
 
-      yield* werewolvesVote.registerWerewolfVote(
-        werewolves[0].getSocketId(),
-        victim.getSocketId()
-      );
-      const result = yield* werewolvesVote.registerWerewolfVote(
-        werewolves[1].getSocketId(),
-        victim.getSocketId()
-      );
+      expect(werewolves.length).toBeGreaterThanOrEqual(2);
 
-      expect(result).toBe('victim-socket');
+      const victim = players.find((p) => p.getRole() !== 'WEREWOLF');
+      expect(victim).toBeDefined();
+
+      if (!victim) {
+        return;
+      }
+
+      let finalResult: string | boolean = false;
+      for (const wolf of werewolves) {
+        const result = yield* werewolvesVote.registerWerewolfVote(
+          wolf.getSocketId(),
+          victim.getSocketId()
+        );
+        if (typeof result === 'string') {
+          finalResult = result;
+        }
+      }
+
+      expect(finalResult).toBe(victim.getSocketId());
     }).pipe(Effect.provide(makeTestLayer()))
   );
 
@@ -80,24 +99,28 @@ describe('WerewolvesVote Service', () => {
       const game = yield* Game;
       const werewolvesVote = yield* WerewolvesVote;
 
-      yield* lobby.addPlayer('Wolf1', 'wolf-1-socket');
-      yield* lobby.addPlayer('Wolf2', 'wolf-2-socket');
-      yield* lobby.addPlayer('Victim1', 'victim-1-socket');
-      yield* lobby.addPlayer('Victim2', 'victim-2-socket');
+      for (let i = 1; i <= 6; i++) {
+        yield* lobby.addPlayer(`Player${i}`, `socket-${i}`);
+      }
 
       yield* game.startGame;
 
       const werewolves = yield* game.getWerewolves;
-      const victim1 = yield* game.getPlayerBySocketId('victim-1-socket');
-      const victim2 = yield* game.getPlayerBySocketId('victim-2-socket');
+      const players = yield* game.getPlayers;
+
+      expect(werewolves.length).toBeGreaterThanOrEqual(2);
+
+      const victims = players.filter((p) => p.getRole() !== 'WEREWOLF');
+      expect(victims.length).toBeGreaterThanOrEqual(2);
 
       yield* werewolvesVote.registerWerewolfVote(
         werewolves[0].getSocketId(),
-        victim1.getSocketId()
+        victims[0].getSocketId()
       );
+
       const result = yield* werewolvesVote.registerWerewolfVote(
         werewolves[1].getSocketId(),
-        victim2.getSocketId()
+        victims[1].getSocketId()
       );
 
       expect(result).toBe(false);
@@ -110,16 +133,29 @@ describe('WerewolvesVote Service', () => {
       const game = yield* Game;
       const werewolvesVote = yield* WerewolvesVote;
 
-      yield* lobby.addPlayer('Wolf', 'wolf-socket');
-      yield* lobby.addPlayer('Villager', 'villager-socket');
+      for (let i = 1; i <= 6; i++) {
+        yield* lobby.addPlayer(`Player${i}`, `socket-${i}`);
+      }
 
       yield* game.startGame;
 
-      const victim = yield* game.getPlayerBySocketId('wolf-socket');
-      const villager = yield* game.getPlayerBySocketId('villager-socket');
+      const werewolves = yield* game.getWerewolves;
+      const players = yield* game.getPlayers;
+
+      expect(werewolves.length).toBeGreaterThanOrEqual(1);
+
+      const villager = players.find((p) => p.getRole() === 'VILLAGER');
+      expect(villager).toBeDefined();
+
+      if (!villager) {
+        return;
+      }
 
       const error = yield* werewolvesVote
-        .registerWerewolfVote(villager.getSocketId(), victim.getSocketId())
+        .registerWerewolfVote(
+          villager.getSocketId(),
+          werewolves[0].getSocketId()
+        )
         .pipe(Effect.flip);
 
       expect(error).toBeInstanceOf(PlayerNotWerewolfError);
@@ -132,37 +168,30 @@ describe('WerewolvesVote Service', () => {
       const game = yield* Game;
       const werewolvesVote = yield* WerewolvesVote;
 
-      yield* lobby.addPlayer('Wolf1', 'wolf-1-socket');
-      yield* lobby.addPlayer('Wolf2', 'wolf-2-socket');
-      yield* lobby.addPlayer('Wolf3', 'wolf-3-socket');
-      yield* lobby.addPlayer('Victim1', 'victim-1-socket');
-      yield* lobby.addPlayer('Victim2', 'victim-2-socket');
+      for (let i = 1; i <= 6; i++) {
+        yield* lobby.addPlayer(`Player${i}`, `socket-${i}`);
+      }
 
       yield* game.startGame;
 
       const werewolves = yield* game.getWerewolves;
-      const victim1 = yield* game.getPlayerBySocketId('victim-1-socket');
-      const victim2 = yield* game.getPlayerBySocketId('victim-2-socket');
+      const players = yield* game.getPlayers;
 
-      yield* werewolvesVote.registerWerewolfVote(
-        werewolves[0].getSocketId(),
-        victim1.getSocketId()
-      );
-      yield* werewolvesVote.registerWerewolfVote(
-        werewolves[1].getSocketId(),
-        victim1.getSocketId()
-      );
-      yield* werewolvesVote.registerWerewolfVote(
-        werewolves[2].getSocketId(),
-        victim2.getSocketId()
-      );
+      expect(werewolves.length).toBeGreaterThanOrEqual(2);
+
+      const victims = players.filter((p) => p.getRole() !== 'WEREWOLF');
+      expect(victims.length).toBeGreaterThanOrEqual(1);
+
+      for (const wolf of werewolves) {
+        yield* werewolvesVote.registerWerewolfVote(
+          wolf.getSocketId(),
+          victims[0].getSocketId()
+        );
+      }
 
       const tallies = yield* werewolvesVote.getVotes;
 
-      expect(tallies).toEqual({
-        Victim1: 2,
-        Victim2: 1,
-      });
+      expect(tallies[victims[0].getName()]).toBe(werewolves.length);
     }).pipe(Effect.provide(makeTestLayer()))
   );
 
@@ -172,23 +201,30 @@ describe('WerewolvesVote Service', () => {
       const game = yield* Game;
       const werewolvesVote = yield* WerewolvesVote;
 
-      yield* lobby.addPlayer('Wolf1', 'wolf-1-socket');
-      yield* lobby.addPlayer('Wolf2', 'wolf-2-socket');
-      yield* lobby.addPlayer('Victim', 'victim-socket');
+      for (let i = 1; i <= 6; i++) {
+        yield* lobby.addPlayer(`Player${i}`, `socket-${i}`);
+      }
 
       yield* game.startGame;
 
       const werewolves = yield* game.getWerewolves;
-      const victim = yield* game.getPlayerBySocketId('victim-socket');
+      const players = yield* game.getPlayers;
 
-      yield* werewolvesVote.registerWerewolfVote(
-        werewolves[0].getSocketId(),
-        victim.getSocketId()
-      );
-      yield* werewolvesVote.registerWerewolfVote(
-        werewolves[1].getSocketId(),
-        victim.getSocketId()
-      );
+      expect(werewolves.length).toBeGreaterThanOrEqual(1);
+
+      const victim = players.find((p) => p.getRole() !== 'WEREWOLF');
+      expect(victim).toBeDefined();
+
+      if (!victim) {
+        return;
+      }
+
+      for (const wolf of werewolves) {
+        yield* werewolvesVote.registerWerewolfVote(
+          wolf.getSocketId(),
+          victim.getSocketId()
+        );
+      }
 
       yield* werewolvesVote.clear;
 

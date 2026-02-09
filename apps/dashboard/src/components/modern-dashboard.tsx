@@ -7,8 +7,10 @@ import { useMockPlayerStore } from '@/store/mock-players';
 import { socket } from '@/utils/socket';
 import { CupidSelectionModal } from './cupid-selection-modal';
 import { DayVoteModal } from './day-vote-modal';
+import { HunterModal } from './hunter-modal';
 import { PlayerCard } from './player-card';
 import { PlayerDetailModal } from './player-detail-modal';
+import { SheriffVoteModal } from './sheriff-vote-modal';
 import { WerewolfSimulationModal } from './werewolf-simulation-modal';
 import { WerewolfVotingModal } from './werewolf-voting-modal';
 import { WitchHealModal } from './witch-heal-modal';
@@ -48,6 +50,7 @@ export function ModernDashboard({
     skipPoison,
     closeHealModal,
     closePoisonModal,
+    closeHunterModal,
   } = useMockPlayerStore();
 
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -61,6 +64,21 @@ export function ModernDashboard({
   const selectedPlayer = selectedPlayerId
     ? players.get(selectedPlayerId)
     : null;
+  const hunterPlayer = playersArray.find(
+    (player) =>
+      player.showHunterModal &&
+      player.player &&
+      isGamePlayer(player.player) &&
+      player.player.isAlive
+  );
+
+  const sheriffPlayer = playersArray.find(
+    (player) =>
+      player.showSheriffVoteModal &&
+      player.player &&
+      isGamePlayer(player.player) &&
+      player.player.isAlive
+  );
 
   const handleWerewolfVote = (targetPlayerName: string) => {
     simulateAllWerewolfVotes(targetPlayerName);
@@ -378,6 +396,16 @@ export function ModernDashboard({
             )}
         </>
       )}
+
+      {hunterPlayer && (
+        <HunterModal
+          isOpen={hunterPlayer.showHunterModal}
+          onClose={() => closeHunterModal(hunterPlayer.id)}
+          playerId={hunterPlayer.id}
+        />
+      )}
+
+      {sheriffPlayer && <SheriffVoteModal playerId={sheriffPlayer.id} />}
     </div>
   );
 }

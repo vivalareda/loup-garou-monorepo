@@ -22,6 +22,7 @@ export type ServerToClientEvents = {
   'alert:player-is-dead': () => void;
   'alert:player-won': () => void;
   'alert:player-lost': () => void;
+  'alert:player-is-sheriff': () => void;
 
   'werewolf:pick-required': () => void;
   'werewolf:current-votes': (currentvotes: WerewolvesVoteState) => void;
@@ -31,11 +32,18 @@ export type ServerToClientEvents = {
     oldVote: string
   ) => void;
 
+  'day:current-votes': (currentvotes: WerewolvesVoteState) => void;
+  'day:sheriff-vote': (topVictims: string[]) => void;
+
   'witch:can-heal': (playerSid: string) => void;
   'witch:pick-poison-player': () => void;
 
   'night:deaths-announced': (deaths: DeathInfo[]) => void;
-  'day:voting-phase-start': () => void;
+  'day:voting-phase-start': (data?: {
+    alivePlayerCount: number;
+    alivePlayers: Array<{ name: string; socketId: string }>;
+  }) => void;
+  'day:vote-required': () => void;
 
   'hunter:pick-required': () => void;
   'hunter:killed-player': (selectedPlayer: string) => void;
@@ -47,12 +55,7 @@ export type ClientToServerEvents = {
   'lobby:get-players-list': () => void;
   'player:join': (playerName: string) => void;
   'lobby:start-game': () => void;
-  'lobby:start-mock': (
-    segment: Exclude<
-      SegmentType,
-      'CUPID' | 'HUNTER' | 'DAY_VOTE' | 'WITCH_POISON'
-    >
-  ) => void;
+  'lobby:start-mock': (segment: SegmentType) => void;
 
   'admin:start-game': () => void;
   'admin:next-segment': () => void;
@@ -83,6 +86,8 @@ export type ClientToServerEvents = {
   'witch:skipped-poison': () => void;
 
   'day:player-voted': (targetPlayer: string) => void;
+  'day:player-update-vote': (targetPlayer: string) => void;
+  'day:sheriff-pick': (targetPlayer: string) => void;
   'alert:hunter-died': () => void;
   'hunter:killed-player': (selectedPlayer: string) => void;
   'mocksegment:setup': (segment: SegmentType) => void;

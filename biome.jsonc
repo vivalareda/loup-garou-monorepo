@@ -14,7 +14,8 @@
       "!apps/mobile/app/+not-found.tsx",
       "!apps/mobile/metro.config.js",
       "!apps/mobile/babel.config.js",
-      "!apps/dashboard/src/index.css"
+      "!apps/dashboard/src/index.css",
+      "!apps/server.bk"
     ]
   },
   "linter": {
@@ -29,7 +30,8 @@
         "noConsole": "off"
       },
       "style": {
-        "noMagicNumbers": "off"
+        "noMagicNumbers": "off",
+        "useFilenamingConvention": "off"
       }
     }
   }

@@ -8,10 +8,7 @@ export const segments = [
   'DAY_VOTE',
 ] as const;
 
-type WitchPhase = 'HEAL' | 'POISON';
-type BaseSegment = (typeof segments)[number];
-
-export type SegmentType = Exclude<BaseSegment, 'WITCH'> | `WITCH_${WitchPhase}`;
+export type SegmentType = (typeof segments)[number];
 
 export type Segment = {
   type: SegmentType;

@@ -1,0 +1,1 @@
+Le verdict est donc rendu! <break time="0.5s" /> Villageois <break time="0.2s" /> rendormez-vous maintenant. <break time="1s" />

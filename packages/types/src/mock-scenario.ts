@@ -49,6 +49,12 @@ export type MockScenario = {
    */
   players: readonly MockScenarioPlayer[];
   /**
+   * Slot index of the sheriff player (tie-breaker).
+   *
+   * Used by server debug scenarios to make tie-breaking deterministic.
+   */
+  sheriffPlayerSlot?: PlayerSlot;
+  /**
    * Pair of slot indexes representing lovers link.
    */
   lovers?: readonly [PlayerSlot, PlayerSlot];
@@ -65,6 +71,13 @@ export type MockScenario = {
    */
   pendingDeaths?: readonly MockScenarioPendingDeath[];
   werewolvesTargetIndex?: number;
+  killWerewolves?: boolean;
+  /**
+   * Kill all players with specific roles. Array of [role, cause] tuples.
+   * Example: [['WEREWOLF', 'WITCH_POISON'], ['VILLAGER', 'DAY_VOTE']]
+   */
+  killRoles?: readonly [Role, DeathCause][];
+  loversIndex?: number[];
 };
 
 export type MockLoverScenario = CompleteType<
@@ -79,9 +92,9 @@ export type MockWerewolvesScenario = CompleteType<
   }
 >;
 
-export type MockWitchHealScenario = CompleteType<
+export type MockWitchScenario = CompleteType<
   MockScenario & {
     loversIndex?: number[];
-    werewolvesTargetIndex: number;
+    werewolvesTargetIndex?: number;
   }
 >;

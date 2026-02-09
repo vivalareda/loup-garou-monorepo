@@ -56,6 +56,15 @@ function PlayerInfo({ player }: { player: MockPlayer }) {
         </div>
       )}
 
+      {player.isSheriff && (
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Sheriff:</span>
+          <span className="rounded bg-amber-500/20 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+            SHERIFF
+          </span>
+        </div>
+      )}
+
       {!isAlive && (
         <div className="flex items-center justify-between">
           <span className="text-destructive font-medium">Dead</span>

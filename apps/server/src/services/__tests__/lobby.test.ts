@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@effect/vitest';
-import { Effect, Layer } from 'effect';
+import { Effect, Either, Layer } from 'effect';
+import { LobbyPlayer } from '@/core/LobbyPlayer.js';
 import { LobbyFullError, NameExistsError } from '../errors.js';
 import { Lobby } from '../Lobby.js';
 import { LobbyConfig } from '../LobbyConfig.js';
@@ -7,6 +8,14 @@ import { LobbyConfig } from '../LobbyConfig.js';
 describe('Lobby Service', () => {
   const TestLayer = Lobby.DefaultWithoutDependencies.pipe(
     Layer.provide(LobbyConfig.Test)
+  );
+
+  const TestLayerMaxPlayers10 = Lobby.DefaultWithoutDependencies.pipe(
+    Layer.provide(Layer.succeed(LobbyConfig, { maxPlayers: 10 }))
+  );
+
+  const TestLayerMaxPlayers100 = Lobby.DefaultWithoutDependencies.pipe(
+    Layer.provide(Layer.succeed(LobbyConfig, { maxPlayers: 100 }))
   );
 
   it.effect('adds a player to the list correctly', () =>
@@ -92,22 +101,102 @@ describe('Lobby Service', () => {
     }).pipe(Effect.provide(TestLayer))
   );
 
-  // it('should handle concurrent adds without race conditions', async () => {
-  //   const testLayer = Layer.mergeAll(Lobby.Default, LobbyConfig.Live);
-  //
-  //   const program = Effect.gen(function* () {
-  //     const lobby = yield* Lobby;
-  //
-  //     const adds = Array.from({ length: 100 }, (_, i) =>
-  //       lobby.addPlayer(`Player${i}`, `sid${i}`)
-  //     );
-  //
-  //     yield* Effect.all(adds, { concurrency: 'unbounded' });
-  //
-  //     const count = yield* lobby.getPlayerCount;
-  //     expect(count).toBe(100);
-  //   });
-  //
-  //   await Effect.runPromise(program.pipe(Effect.provide(testLayer)));
-  // });
+  it.effect(
+    'should not allow external mutation of getAllPlayers snapshot',
+    () =>
+      Effect.gen(function* () {
+        // Arrange
+        const lobby = yield* Lobby;
+        yield* lobby.addPlayer('Alice', 'socket-1');
+
+        // Act
+        const snapshot = yield* lobby.getAllPlayers;
+        (snapshot as LobbyPlayer[]).push(new LobbyPlayer('Eve', 'socket-2'));
+
+        // Assert
+        const count = yield* lobby.getPlayerCount;
+        const snapshot2 = yield* lobby.getAllPlayers;
+        expect(count).toBe(1);
+        expect(snapshot2).toHaveLength(1);
+        expect(snapshot2.map((p) => p.name)).toEqual(['Alice']);
+      }).pipe(Effect.provide(TestLayerMaxPlayers10))
+  );
+
+  it.effect(
+    'should never exceed maxPlayers under concurrent addPlayer calls',
+    () =>
+      Effect.gen(function* () {
+        // Arrange
+        const lobby = yield* Lobby;
+
+        const adds = Array.from({ length: 20 }, (_, i) =>
+          lobby.addPlayer(`Player${i}`, `socket-${i}`).pipe(Effect.either)
+        );
+
+        // Act
+        const results = yield* Effect.all(adds, { concurrency: 'unbounded' });
+
+        // Assert
+        const successes = results.filter(Either.isRight);
+        const failures = results.filter(Either.isLeft);
+
+        expect(successes).toHaveLength(2);
+        expect(failures).toHaveLength(18);
+
+        for (const failure of failures) {
+          expect(failure.left).toBeInstanceOf(LobbyFullError);
+        }
+
+        const count = yield* lobby.getPlayerCount;
+        expect(count).toBe(2);
+      }).pipe(Effect.provide(TestLayer))
+  );
+
+  it.effect(
+    'should accept at most one player per name under concurrent adds',
+    () =>
+      Effect.gen(function* () {
+        // Arrange
+        const lobby = yield* Lobby;
+
+        const adds = Array.from({ length: 10 }, (_, i) =>
+          lobby.addPlayer('Alice', `socket-${i}`).pipe(Effect.either)
+        );
+
+        // Act
+        const results = yield* Effect.all(adds, { concurrency: 'unbounded' });
+
+        // Assert
+        const successes = results.filter(Either.isRight);
+        const failures = results.filter(Either.isLeft);
+
+        expect(successes).toHaveLength(1);
+        expect(failures).toHaveLength(9);
+        for (const failure of failures) {
+          expect(failure.left).toBeInstanceOf(NameExistsError);
+        }
+
+        const count = yield* lobby.getPlayerCount;
+        expect(count).toBe(1);
+      }).pipe(Effect.provide(TestLayerMaxPlayers10))
+  );
+
+  it('should handle concurrent adds without race conditions', async () => {
+    const program = Effect.gen(function* () {
+      const lobby = yield* Lobby;
+
+      const adds = Array.from({ length: 100 }, (_, i) =>
+        lobby.addPlayer(`Player${i}`, `sid${i}`)
+      );
+
+      yield* Effect.all(adds, { concurrency: 'unbounded' });
+
+      const count = yield* lobby.getPlayerCount;
+      expect(count).toBe(100);
+    });
+
+    await Effect.runPromise(
+      program.pipe(Effect.provide(TestLayerMaxPlayers100))
+    );
+  });
 });

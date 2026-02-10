@@ -26,6 +26,37 @@ class TestTimeoutError extends Data.TaggedError('TestTimeoutError')<{
 }> {}
 
 describe('GameFlow', () => {
+  it.effect('should play intro audio when starting a game', () => {
+    // Arrange
+    const { io, emissions } = makeIoCapture();
+    const { audio, playAudioCalls } = makeAudioCapture();
+    const testLayer = makeFullGameFlowTestLayer(io, audio);
+
+    // Act + Assert
+    return Effect.gen(function* () {
+      const lobby = yield* Lobby;
+      const gameFlow = yield* GameFlow;
+
+      yield* addSixPlayers(lobby.addPlayer);
+
+      // Avoid hanging on segment deferreds: skip all segments for this test.
+      yield* gameFlow.markSegmentAsSkipped('CUPID');
+      yield* gameFlow.markSegmentAsSkipped('LOVERS');
+      yield* gameFlow.markSegmentAsSkipped('WEREWOLF');
+      yield* gameFlow.markSegmentAsSkipped('WITCH');
+      yield* gameFlow.markSegmentAsSkipped('DAY_VOTE');
+
+      yield* gameFlow.startGame;
+
+      expect(playAudioCalls).toContain('intro');
+      expect(
+        emissions.some(
+          (e) => e.kind === 'to' && e.event === 'alert:player-is-sheriff'
+        )
+      ).toBe(true);
+    }).pipe(Effect.provide(testLayer));
+  });
+
   it.effect(
     'should run a day-vote tie-break end-to-end and proceed to next night',
     () => {
@@ -295,19 +326,22 @@ describe('GameFlow', () => {
       // Arrange
       const { io, emissions } = makeIoCapture();
       const { audio } = makeAudioCapture();
-      const testLayer = makeGameFlowTestLayer(io, audio);
+      const testLayer = makeFullGameFlowTestLayer(io, audio);
 
       // Act + Assert
       return Effect.gen(function* () {
         const lobby = yield* Lobby;
         const gameFlow = yield* GameFlow;
+        const game = yield* Game;
         const deathManager = yield* DeathManager;
+        const socketAction = yield* SocketAction;
 
         yield* addSixPlayers(lobby.addPlayer);
 
         // The built-in WEREWOLF mock does not include a WITCH role, but segments do.
         // Skip WITCH so the scenario can focus on werewolf voting.
         yield* gameFlow.markSegmentAsSkipped('WITCH');
+        yield* gameFlow.markSegmentAsSkipped('DAY_VOTE');
 
         const fiber = yield* gameFlow
           .loadMockScenario('WEREWOLF')
@@ -327,8 +361,21 @@ describe('GameFlow', () => {
             .sort()
         ).toEqual(['socket-2', 'socket-3']);
 
-        yield* gameFlow.completeWerewolfVote('socket-6');
+        const werewolves = yield* game.getWerewolves;
+        const wolfSids = werewolves.map((w) => w.getSocketId()).sort();
+        expect(wolfSids).toEqual(['socket-2', 'socket-3']);
+
+        // First vote should NOT complete the werewolf segment.
+        yield* socketAction.handleWerewolfVote(wolfSids[0]!, 'socket-6');
         yield* Effect.yieldNow();
+
+        const pendingAfterOne = yield* deathManager.getPendingDeath;
+        expect(pendingAfterOne.has('WEREWOLVES')).toBe(false);
+
+        // Second vote with same victim completes.
+        yield* socketAction.handleWerewolfVote(wolfSids[1]!, 'socket-6');
+
+        yield* waitForPendingDeath(deathManager, 'WEREWOLVES');
 
         const victim = yield* deathManager.getVictim('WEREWOLVES');
         expect(victim.getSocketId()).toBe('socket-6');
@@ -652,7 +699,9 @@ function makeAudioCapture() {
       Effect.sync(() => {
         playAudioCalls.push(file);
       }),
-    playIntro: Effect.void,
+    playIntro: Effect.sync(() => {
+      playAudioCalls.push('intro');
+    }),
     playSegmentStart: () => Effect.void,
     playSegmentEnd: () => Effect.void,
     playWinnerAudio: () => Effect.void,
@@ -734,5 +783,25 @@ const waitForAudioCall = Effect.fn('test.waitForAudioCall')(function* (
 
   return yield* new TestTimeoutError({
     message: `Timed out waiting for audio call: ${expected}`,
+  });
+});
+
+const waitForPendingDeath = Effect.fn('test.waitForPendingDeath')(function* (
+  deathManager: {
+    getPendingDeath: Effect.Effect<Map<string, unknown>>;
+  },
+  cause: string,
+  maxTurns = 10_000
+) {
+  for (let turn = 0; turn < maxTurns; turn += 1) {
+    const pending = yield* deathManager.getPendingDeath;
+    if (pending.has(cause)) {
+      return;
+    }
+    yield* Effect.yieldNow();
+  }
+
+  return yield* new TestTimeoutError({
+    message: `Timed out waiting for pending death: ${cause}`,
   });
 });

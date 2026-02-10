@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@effect/vitest';
 import type { Role } from '@repo/types';
 import { Effect, Layer } from 'effect';
+import { vi } from 'vitest';
 import { PlayerNotFoundError, SpecialPlayerNotFoundError } from '../errors.js';
 import { Game } from '../Game.js';
 import { Lobby } from '../Lobby.js';
@@ -54,6 +55,76 @@ const setupGame = Effect.gen(function* () {
 });
 
 describe('Game Service', () => {
+  it.effect('assigns a sheriff on startGame', () =>
+    Effect.gen(function* () {
+      // Arrange
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+
+      const lobby = yield* Lobby;
+      const game = yield* Game;
+
+      for (const [index, name] of playerNames.entries()) {
+        yield* lobby.addPlayer(name, playerSocketIds[index]);
+      }
+
+      // Act
+      yield* game.startGame;
+
+      // Assert
+      const sheriff = yield* game.getSheriffPlayer;
+      expect(sheriff).toBe(playerSocketIds[0]);
+    }).pipe(
+      Effect.ensuring(Effect.sync(() => vi.restoreAllMocks())),
+      Effect.provide(makeTestLayer())
+    )
+  );
+
+  it.effect('reassigns sheriff when the sheriff dies', () =>
+    Effect.gen(function* () {
+      // Arrange
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const { game } = yield* setupGame;
+
+      const sheriffBefore = yield* game.getSheriffPlayer;
+      expect(sheriffBefore).toBe(playerSocketIds[0]);
+
+      // Act
+      yield* game.playerIsDead(playerSocketIds[0]);
+
+      // Assert
+      const sheriffAfter = yield* game.getSheriffPlayer;
+      expect(sheriffAfter).toBe(playerSocketIds[1]);
+    }).pipe(
+      Effect.ensuring(Effect.sync(() => vi.restoreAllMocks())),
+      Effect.provide(makeTestLayer())
+    )
+  );
+
+  it.effect('sets sheriff to null when the last player (sheriff) dies', () =>
+    Effect.gen(function* () {
+      // Arrange
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const lobby = yield* Lobby;
+      const game = yield* Game;
+
+      yield* lobby.addPlayer('Solo', 'socket-solo');
+      yield* game.startGame;
+
+      const sheriffBefore = yield* game.getSheriffPlayer;
+      expect(sheriffBefore).toBe('socket-solo');
+
+      // Act
+      yield* game.playerIsDead('socket-solo');
+
+      // Assert
+      const sheriffAfter = yield* game.getSheriffPlayer;
+      expect(sheriffAfter).toBeNull();
+    }).pipe(
+      Effect.ensuring(Effect.sync(() => vi.restoreAllMocks())),
+      Effect.provide(makeTestLayer())
+    )
+  );
+
   it.effect('starts game with lobby players and assigns roles', () =>
     Effect.gen(function* () {
       const { players } = yield* setupGame;

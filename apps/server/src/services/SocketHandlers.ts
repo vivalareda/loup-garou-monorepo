@@ -71,6 +71,18 @@ const makeSocketHandlers = Effect.gen(function* () {
         }
       );
 
+      const emitWerewolfVotingComplete = Effect.fn(
+        'emitWerewolfVotingComplete'
+      )(function* () {
+        const { werewolves } =
+          yield* socketAction.getAlertWerewolvesAboutVotes();
+        yield* Effect.sync(() => {
+          for (const wolf of werewolves) {
+            io.to(wolf.getSocketId()).emit('werewolf:voting-complete');
+          }
+        });
+      });
+
       const alertVillageAboutVotes = Effect.fn('alertVillageAboutVotes')(
         function* () {
           const { voteData } = yield* socketAction.getAlertVillageAboutVotes();
@@ -81,17 +93,38 @@ const makeSocketHandlers = Effect.gen(function* () {
         }
       );
 
-      const handleWerewolfVote = (victim: string) => {
-        gameFlow.completeWerewolfVote(victim).pipe(
-          Effect.andThen(() => {
+      const handleWerewolfVote = (victim: string, oldVote?: string) => {
+        const effect = oldVote
+          ? socketAction.handleWerewolfUpdateVote(socket.id, victim)
+          : socketAction.handleWerewolfVote(socket.id, victim);
+
+        effect.pipe(
+          Effect.andThen((result) => {
             alertWerewolvesAboutVotes().pipe(Effect.runSync);
+            if (result.shouldFinish) {
+              emitWerewolfVotingComplete().pipe(Effect.runSync);
+            }
           }),
+          Effect.catchAllCause(Console.error),
+          Effect.runPromise
+        );
+      };
+
+      const handleWerewolfVoteUpdate = (victim: string, _oldVote?: string) => {
+        socketAction.handleWerewolfUpdateVote(socket.id, victim).pipe(
+          Effect.andThen((result) => {
+            alertWerewolvesAboutVotes().pipe(Effect.runSync);
+            if (result.shouldFinish) {
+              emitWerewolfVotingComplete().pipe(Effect.runSync);
+            }
+          }),
+          Effect.catchAllCause(Console.error),
           Effect.runPromise
         );
       };
 
       socket.on('werewolf:player-voted', handleWerewolfVote);
-      socket.on('werewolf:player-update-vote', handleWerewolfVote);
+      socket.on('werewolf:player-update-vote', handleWerewolfVoteUpdate);
 
       const handleDayVote = (victim: string) => {
         socketAction.handleDayVote(socket.id, victim).pipe(

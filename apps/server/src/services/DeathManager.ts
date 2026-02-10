@@ -58,7 +58,7 @@ const makeDeathManager = Effect.gen(function* () {
   });
 
   const deathCount = Effect.sync(() => pendingDeath.size);
-  const clear = Effect.sync(() => pendingDeath.clear);
+  const clear = Effect.sync(() => pendingDeath.clear());
 
   const reviveWerewolfVictim = Effect.sync(() =>
     pendingDeath.delete('WEREWOLVES')

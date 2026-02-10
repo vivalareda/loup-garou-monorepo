@@ -4,6 +4,13 @@ import { Config, Context, Effect, Layer } from 'effect';
 import sound from 'sound-play';
 import { AudioPlaybackError } from './errors.js';
 
+type AudioManagerSegment = Extract<
+  SegmentType,
+  'LOVERS' | 'WEREWOLF' | 'CUPID'
+>;
+
+const FILE_REGEX = /__\d\d$/;
+
 const makeAudioManager = Effect.gen(function* () {
   const assetsPath = yield* Config.string('ASSETS_PATH').pipe(
     Config.withDefault('./assets')
@@ -11,38 +18,63 @@ const makeAudioManager = Effect.gen(function* () {
 
   let loverAudioRunning = false;
 
+  const AUDIO_VARIANT_COUNT = 3;
+
+  const resolveAudioId = (requestedId: string): string | null => {
+    const requestedPath = `${assetsPath}/${requestedId}.mp3`;
+
+    if (requestedId.match(FILE_REGEX)) {
+      return existsSync(requestedPath) ? requestedId : null;
+    }
+
+    const variants: string[] = [];
+    for (let i = 1; i <= AUDIO_VARIANT_COUNT; i++) {
+      const suffix = String(i).padStart(2, '0');
+      const variantId = `${requestedId}__${suffix}`;
+      const variantPath = `${assetsPath}/${variantId}.mp3`;
+      if (existsSync(variantPath)) {
+        variants.push(variantId);
+      }
+    }
+
+    if (variants.length > 0) {
+      const idx = Math.floor(Math.random() * variants.length);
+      return variants[idx] ?? null;
+    }
+
+    return existsSync(requestedPath) ? requestedId : null;
+  };
+
   const playAudio = (file: string) =>
     Effect.tryPromise({
       try: async () => {
-        const fullPath = `${assetsPath}/${file}.mp3`;
-        if (!existsSync(fullPath)) {
+        const resolvedId = resolveAudioId(file);
+        if (!resolvedId) {
           return;
         }
+
+        const fullPath = `${assetsPath}/${resolvedId}.mp3`;
         await sound.play(fullPath);
       },
       catch: (error) => new AudioPlaybackError({ file, error }),
     });
 
-  const getSegmentEndAudio = (
-    segment: Exclude<SegmentType, 'WITCH'>
-  ): string => {
+  const getSegmentEndAudio = (segment: AudioManagerSegment): string => {
     switch (segment) {
       case 'CUPID':
+        console.log('returning cupid end audio');
         return 'Cupidon/Cupidon-2';
       case 'WEREWOLF':
+        console.log('returning werwolf end audio');
         return 'Werewolves/Werewolves-2';
-      case 'DAY_VOTE':
-        return 'Day-vote/Vote-Death';
-      case 'HUNTER':
-        return 'to implement';
       case 'LOVERS':
         return 'Lovers/Lover-3';
       default:
-        return 'to implement';
+        throw new Error(`${segment satisfies never} end audio doesn't exist`);
     }
   };
 
-  const getSegmentStartAudio = (segment: SegmentType): string => {
+  const getSegmentStartAudio = (segment: AudioManagerSegment): string => {
     switch (segment) {
       case 'CUPID':
         return 'Cupidon/Cupidon-1';
@@ -50,14 +82,8 @@ const makeAudioManager = Effect.gen(function* () {
         return 'Lovers/combined_lover';
       case 'WEREWOLF':
         return 'Werewolves/Werewolves-1';
-      case 'WITCH':
-        return 'skip'; // Witch handles its own audio internally
-      case 'DAY_VOTE':
-        return 'Day-vote/Vote-Start';
-      case 'HUNTER':
-        return 'Hunter/Hunter-wake-up';
       default:
-        return 'problem';
+        throw new Error(`${segment satisfies never} start audio doesn't exist`);
     }
   };
 
@@ -93,7 +119,7 @@ const makeAudioManager = Effect.gen(function* () {
   const isLoverAudioRunning = () => loverAudioRunning;
 
   const playSegmentStart = Effect.fn('playSegmentStart')(function* (
-    segment: SegmentType
+    segment: AudioManagerSegment
   ) {
     const audioFile = getSegmentStartAudio(segment);
     yield* Effect.log(`playing audio ${audioFile} for segment ${segment}`);
@@ -106,7 +132,7 @@ const makeAudioManager = Effect.gen(function* () {
   });
 
   const playSegmentEnd = Effect.fn('playSegmentEnd')(function* (
-    segment: Exclude<SegmentType, 'WITCH'>
+    segment: AudioManagerSegment
   ) {
     const audioFile = getSegmentEndAudio(segment);
     yield* Effect.log(`end audio: ${audioFile}`);

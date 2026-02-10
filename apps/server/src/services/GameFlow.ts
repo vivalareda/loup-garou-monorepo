@@ -481,6 +481,11 @@ const makeGameFlow = Effect.gen(function* () {
   const confirmAndAlertSingleDeath = Effect.fn('confirmAndAlertSingleDeath')(
     function* (playerSid: string, cause: DeathCause, isSheriffVote = false) {
       const player = yield* game.getPlayerBySocketId(playerSid);
+      const isSheriff = yield* game.isSheriff(playerSid);
+      if (isSheriff) {
+        yield* game.setSheriffPlayer;
+      }
+
       const isHunter = player.getRole() === 'HUNTER';
       if (cause === 'DAY_VOTE') {
         yield* handleDayVoteDeath(playerSid, isHunter);

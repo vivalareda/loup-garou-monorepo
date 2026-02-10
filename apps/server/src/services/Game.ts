@@ -27,14 +27,18 @@ const makeGame = Effect.gen(function* () {
     }
   };
 
-  const playerIsDead = (sid: string) =>
-    Effect.sync(() => {
-      const player = players.get(sid);
-      if (player) {
-        deadPlayers.push(player);
-        players.delete(sid);
-      }
-    });
+  const playerIsDead = Effect.fn('playerIsDead')(function* (sid: string) {
+    const wasSheriff = sheriffPlayerSid === sid;
+    const player = players.get(sid);
+    if (player) {
+      deadPlayers.push(player);
+      players.delete(sid);
+    }
+
+    if (wasSheriff) {
+      yield* setSheriffPlayer;
+    }
+  });
 
   const startGame = Effect.gen(function* () {
     const lobbyPlayers = yield* lobby.getAllPlayers;
@@ -50,11 +54,18 @@ const makeGame = Effect.gen(function* () {
   });
 
   const setSheriffPlayer = Effect.sync(() => {
+    if (players.size === 0) {
+      sheriffPlayerSid = null;
+      return;
+    }
+
     const random = Math.floor(Math.random() * players.size);
-    sheriffPlayerSid = Array.from(players.keys())[random];
+    sheriffPlayerSid = Array.from(players.keys())[random] ?? null;
   });
 
   const getSheriffPlayer = Effect.sync(() => sheriffPlayerSid);
+  const isSheriff = (playerSid: string) =>
+    Effect.sync(() => playerSid === sheriffPlayerSid);
 
   const setPlayers = Effect.fn('setPlayers')(function* (
     mockScenario: MockScenario
@@ -80,13 +91,11 @@ const makeGame = Effect.gen(function* () {
       setSpecialRolePlayer(player, player.getRole());
     });
 
-    // Ensure sheriff player is set for debug scenarios.
     const sheriffSlot = mockScenario.sheriffPlayerSlot;
     if (sheriffSlot !== undefined) {
       const sheriffLobbyPlayer = sortedLobbyPlayers[sheriffSlot];
       sheriffPlayerSid = sheriffLobbyPlayer?.sid ?? null;
     } else {
-      // Deterministic fallback for scenarios that don't specify a sheriff player.
       sheriffPlayerSid = sortedLobbyPlayers[0]?.sid ?? null;
     }
   });
@@ -163,21 +172,26 @@ const makeGame = Effect.gen(function* () {
   );
 
   const getPartner = (socketId: string) =>
-    Effect.sync(() => {
+    Effect.gen(function* () {
       if (!lovers) {
-        return null;
+        return yield* new LoversNullError();
       }
       const player = players.get(socketId);
       if (!player) {
-        return null;
+        return yield* new PlayerNotFoundError({
+          socketId,
+          message: 'player not found while trying to get partner',
+        });
       }
+
       if (lovers[0] === player) {
         return lovers[1];
       }
+
       if (lovers[1] === player) {
         return lovers[0];
       }
-      return null;
+      return yield* new LoversNullError();
     });
 
   const isPlayerLover = (socketId: string) =>
@@ -200,6 +214,8 @@ const makeGame = Effect.gen(function* () {
     startGame,
     setPlayers,
     getSheriffPlayer,
+    isSheriff,
+    setSheriffPlayer,
     getPlayers,
     getDeadPlayers,
     getPlayerBySocketId,

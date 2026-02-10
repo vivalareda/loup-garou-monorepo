@@ -47,7 +47,18 @@ const makeSocketAction = Effect.gen(function* () {
 
   const handleWerewolfUpdateVote = Effect.fn('handleWerewolfUpdateVote')(
     function* (socketId: string, victim: string) {
-      yield* werewolvesVotes.updateWerewolfVote(socketId, victim);
+      const target = yield* werewolvesVotes.updateWerewolfVote(
+        socketId,
+        victim
+      );
+
+      if (target && typeof target === 'string') {
+        yield* gameFlow.completeWerewolfVote(target);
+        yield* werewolvesVotes.clear;
+        return { shouldFinish: true, target };
+      }
+
+      return { shouldFinish: false };
     }
   );
 

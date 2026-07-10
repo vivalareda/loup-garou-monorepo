@@ -9,6 +9,10 @@ import type { DeathManager } from '@/core/death-manager';
 import { Player } from '@/core/player';
 import type { SocketType } from '@/server/sockets';
 
+export type DayVoteResult =
+  | { kind: 'elimination'; player: Player }
+  | { kind: 'tie'; tiedPlayerNames: string[] };
+
 export class Game {
   private readonly io: SocketType;
   private readonly players: Map<string, Player>;
@@ -616,52 +620,36 @@ export class Game {
     return this.dayVotes.size === expectedVoters.length;
   }
 
-  getDayVoteTarget() {
+  getDayVoteResult(): DayVoteResult {
     const tallies = this.calculateDayVoteTallies();
     console.log('day vote tallies', tallies);
 
-    let maxVotes = 0;
-    let targetSid: string | null = null;
-    let tieCount = 0;
+    const maxVotes = Math.max(0, ...Object.values(tallies));
+    const leadingSids = Object.entries(tallies)
+      .filter(([, votes]) => votes === maxVotes)
+      .map(([sid]) => sid);
 
-    // Find player(s) with most votes
-    for (const [playerSid, votes] of Object.entries(tallies)) {
-      if (votes > maxVotes) {
-        maxVotes = votes;
-        targetSid = playerSid;
-        tieCount = 1;
-      } else if (votes === maxVotes && maxVotes > 0) {
-        tieCount++;
-      }
-    }
-
-    // Handle tie case (throw error for now as requested)
-    if (tieCount > 1) {
-      throw new Error('Tie in day vote - will be implemented later');
-    }
-
-    if (!targetSid) {
+    if (maxVotes === 0 || leadingSids.length === 0) {
       throw new Error('No valid target found in day vote');
     }
 
-    const player = this.players.get(targetSid);
+    if (leadingSids.length > 1) {
+      const tiedPlayerNames = leadingSids.map(
+        (sid) => this.players.get(sid)?.getName() ?? sid
+      );
+      return { kind: 'tie', tiedPlayerNames };
+    }
+
+    const player = this.players.get(leadingSids[0]);
 
     if (!player) {
-      throw new Error(`Player with sid ${targetSid} not found`);
+      throw new Error(`Player with sid ${leadingSids[0]} not found`);
     }
 
-    return player;
+    return { kind: 'elimination', player };
   }
 
-  handleDayVotePlayer(votedPlayer: Player) {
-    if (!votedPlayer) {
-      throw new Error(`Player with sid ${votedPlayer} not found`);
-    }
-
-    // Use new unified death handling
-    this.handlePlayerDeath(votedPlayer);
-
-    // Clear votes for next round
+  clearDayVotes() {
     this.dayVotes.clear();
   }
 

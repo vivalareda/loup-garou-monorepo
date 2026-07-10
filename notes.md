@@ -5,10 +5,10 @@
 - [x] First lover dies and is the hunter 
 
 ## Post day vote
-- [ ] Village killed hunter
-- [ ] Village killed lover
-- [ ] Village killed lover which is the hunter
-- [ ] Village killed lover but second lover is hunter
+- [x] Village killed hunter
+- [x] Village killed lover
+- [x] Village killed lover which is the hunter
+- [x] Village killed lover but second lover is hunter
 ---
 
 - Werewolves finish vote

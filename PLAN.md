@@ -47,36 +47,48 @@ scenarios, see `notes.md`) is the vehicle to finish that part of the migration.
       mp3 — for checking segment/audio ordering without sitting through recordings
 - [x] Server no longer crashes without a TTY (`setRawMode` guard in `index.ts`)
 
-## Step 2 — Effect segment runner (driven by the post-day-vote feature)
+## Step 2 — Effect day-vote resolution (the Deferred payoff) — DONE
 
-Port the segment *orchestration* layer to Effect. Do not wrap the remaining old code in
-`Effect.sync` for completeness — `Game`'s pure logic (tallies, win checks) stays plain.
+Implemented as `src/server/day-vote-resolution.ts`: one linear Effect program that
+resolves a day-vote elimination — the kill, lover grief deaths, dead hunters' revenge
+shots, recursively (a revenge target can itself be a lover). `Game`'s pure logic
+(tallies, win checks) stays plain classes.
 
-- [ ] Model a segment run as an Effect program with `Deferred`-based waits:
-      emit `hunter:pick-required`, then `Deferred.await(hunterPick)`; the socket
-      handler completes the Deferred. Same pattern for the lover-grief chain.
-- [ ] Delete the `hunterKilledDuringDayVote` flag in `events-actions.ts` — day-vote vs
-      night context becomes lexical (the code around the await), not mutable state.
-- [ ] Implement the four unchecked scenarios from `notes.md` as linear sequences:
-  - [ ] Village killed hunter
-  - [ ] Village killed lover
-  - [ ] Village killed lover which is the hunter
-  - [ ] Village killed lover but second lover is hunter
+- [x] `Deferred`-based wait: the program emits `hunter:pick-required` and parks on
+      `Deferred.await`; the `hunter:killed-player` socket handler completes it via
+      `submitHunterPick` (returns false when the pick belongs to the night flow)
+- [x] Deleted the `hunterKilledDuringDayVote` flag — day-vote vs night context is
+      now the program's position, not mutable state
+- [x] The four scenarios from `notes.md`, each with a test:
+  - [x] Village killed hunter
+  - [x] Village killed lover
+  - [x] Village killed lover which is the hunter
+  - [x] Village killed lover but second lover is hunter
+- [x] Day-vote mock scenarios (`admin:mock-day-vote-*`) now drive the real
+      resolution path instead of smuggling DAY_VOTE causes through the night queue
+- [x] Verified end-to-end over a real socket with `DEBUG_AUDIO=1`: vote-death →
+      lover grief → pause on hunter pick → resume → next segment
 
-## Step 3 — Typed errors where they pay off first
+## Step 3 — Day-vote tie — DONE (nobody-dies rule)
 
-- [ ] `getDayVoteTarget` currently `throw`s on a tie ("will be implemented later") —
-      a real game would crash. Return `Effect<Player, DayVoteTie>` and handle the tie
-      explicitly (decision: revote between tied players, or nobody dies).
+- [x] `getDayVoteResult()` replaces the throwing `getDayVoteTarget()`; a tie returns
+      `{ kind: 'tie', tiedPlayerNames }`. Rule for now: **nobody dies** — clients get
+      a new `day:vote-tie` event (added to `@repo/types`) and the game moves to night.
+      A revote flow can replace this later (needs mobile UI).
 
-## Step 4 — Cash in the DI motivation
+## Step 4 — Tests — DONE
 
-- [ ] Provide a test layer with a silent `AudioManager` so scenario tests don't play
-      real audio (this is probably what's timing out `segments.test.ts`)
-- [ ] One test per post-day-vote scenario, in the style of `single-hunter-test`
+- [x] `sound-play` is module-mocked in tests, so all AudioManager logic stays real
+      and audio *order* is asserted without playing mp3s
+- [x] `day-vote-scenarios.test.ts`: one test per scenario + grief-cascade on the
+      revenge target + tie + night-flow fallback (52 tests total, all green)
 
 ## Later / parked
 
+- Full port of the segment runner (`SegmentsManager`) to Effect — the day-vote chain
+  proves the pattern; night flow (`handleHunterPlayerPick` etc.) still uses the queue
+- Revote-on-tie instead of nobody-dies (needs mobile UI for `day:vote-tie`)
+- Mobile UI for the `day:vote-tie` event
 - Game restart in the Effect entry point (`index.effect.ts` logs "not yet implemented")
-- Intro audio TODO in `segments-manager.ts:106`
+- Intro audio TODO in `segments-manager.ts`
 - Switch `dev` script to the Effect entry point once it reaches parity

@@ -148,75 +148,89 @@ export class MockScenario {
   // Village killed hunter (post day vote)
   runDayVoteKillHunter() {
     const hunter = this.game.addPlayer('Hunter', 'mock-hunter-id');
+    const villager = this.game.addPlayer('Villager', 'mock-villager-id');
+    const werewolf = this.game.addPlayer('Werewolf', 'mock-werewolf-id');
+
     hunter.setRole('HUNTER');
     this.game.setSpecialRolePlayer(hunter);
+    villager.setRole('VILLAGER');
+    werewolf.setRole('WEREWOLF');
 
-    this.game.addPendingDeath('mock-hunter-id', 'DAY_VOTE');
+    this.game.setPlayerTeams(hunter);
+    this.game.setPlayerTeams(villager);
+    this.game.setPlayerTeams(werewolf);
 
-    const daySegmentIndex = this.segmentsManager.segments.findIndex(
-      (s) => s.type === 'DAY'
-    );
-    this.segmentsManager.currentSegment = daySegmentIndex;
-    this.segmentsManager.playSegment();
+    // The village voted the hunter out — resolution pauses until the
+    // hunter sends hunter:killed-player
+    this.eventsActions.resolveDayVote(hunter);
   }
 
   // Village killed lover (post day vote)
   runDayVoteKillLover() {
     const player1 = this.game.addPlayer('Player1', 'mock-id-1');
     const player2 = this.game.addPlayer('Player2', 'mock-id-2');
+    const player3 = this.game.addPlayer('Player3', 'mock-id-3');
+    const werewolf = this.game.addPlayer('Werewolf', 'mock-werewolf-id');
 
     player1.setRole('VILLAGER');
     player2.setRole('VILLAGER');
+    player3.setRole('VILLAGER');
+    werewolf.setRole('WEREWOLF');
+
+    this.game.setPlayerTeams(player1);
+    this.game.setPlayerTeams(player2);
+    this.game.setPlayerTeams(player3);
+    this.game.setPlayerTeams(werewolf);
 
     this.game.setLovers(['mock-id-1', 'mock-id-2']);
 
-    this.game.addPendingDeath('mock-id-1', 'DAY_VOTE');
-
-    const daySegmentIndex = this.segmentsManager.segments.findIndex(
-      (s) => s.type === 'DAY'
-    );
-    this.segmentsManager.currentSegment = daySegmentIndex;
-    this.segmentsManager.playSegment();
+    this.eventsActions.resolveDayVote(player1);
   }
 
   // Village killed lover which is the hunter (post day vote)
   runDayVoteKillLoverWhoIsHunter() {
     const player1 = this.game.addPlayer('Player1', 'mock-id-1');
     const player2 = this.game.addPlayer('Player2', 'mock-id-2');
+    const player3 = this.game.addPlayer('Player3', 'mock-id-3');
+    const werewolf = this.game.addPlayer('Werewolf', 'mock-werewolf-id');
 
     player1.setRole('HUNTER');
     this.game.setSpecialRolePlayer(player1);
     player2.setRole('VILLAGER');
+    player3.setRole('VILLAGER');
+    werewolf.setRole('WEREWOLF');
+
+    this.game.setPlayerTeams(player1);
+    this.game.setPlayerTeams(player2);
+    this.game.setPlayerTeams(player3);
+    this.game.setPlayerTeams(werewolf);
 
     this.game.setLovers(['mock-id-1', 'mock-id-2']);
 
-    this.game.addPendingDeath('mock-id-1', 'DAY_VOTE');
-
-    const daySegmentIndex = this.segmentsManager.segments.findIndex(
-      (s) => s.type === 'DAY'
-    );
-    this.segmentsManager.currentSegment = daySegmentIndex;
-    this.segmentsManager.playSegment();
+    this.eventsActions.resolveDayVote(player1);
   }
 
   // Village killed lover but second lover is hunter (post day vote)
   runDayVoteKillLoverSecondIsHunter() {
     const player1 = this.game.addPlayer('Player1', 'mock-id-1');
     const player2 = this.game.addPlayer('Player2', 'mock-id-2');
+    const player3 = this.game.addPlayer('Player3', 'mock-id-3');
+    const werewolf = this.game.addPlayer('Werewolf', 'mock-werewolf-id');
 
     player1.setRole('VILLAGER');
     player2.setRole('HUNTER');
     this.game.setSpecialRolePlayer(player2);
+    player3.setRole('VILLAGER');
+    werewolf.setRole('WEREWOLF');
+
+    this.game.setPlayerTeams(player1);
+    this.game.setPlayerTeams(player2);
+    this.game.setPlayerTeams(player3);
+    this.game.setPlayerTeams(werewolf);
 
     this.game.setLovers(['mock-id-1', 'mock-id-2']);
 
-    this.game.addPendingDeath('mock-id-1', 'DAY_VOTE');
-
-    const daySegmentIndex = this.segmentsManager.segments.findIndex(
-      (s) => s.type === 'DAY'
-    );
-    this.segmentsManager.currentSegment = daySegmentIndex;
-    this.segmentsManager.playSegment();
+    this.eventsActions.resolveDayVote(player1);
   }
 
   // Hunter dies, then picks a lover as revenge target

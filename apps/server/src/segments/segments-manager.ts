@@ -277,8 +277,17 @@ export class SegmentsManager {
   }
 
   async finishSegment() {
+    await this.advanceSegment();
+  }
+
+  // playEndAudio: false lets callers that already narrated the segment's
+  // outcome (day-vote resolution, tie) move on without the generic end audio
+  async advanceSegment({ playEndAudio = true }: { playEndAudio?: boolean } = {}) {
     const segment = this.segments[this.currentSegment];
-    await this.audioManager.playSegmentAudio(segment.type, false);
+
+    if (playEndAudio) {
+      await this.audioManager.playSegmentAudio(segment.type, false);
+    }
 
     this.markFirstNightSegment(segment);
 

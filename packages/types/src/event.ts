@@ -57,6 +57,7 @@ const serverEventSchemas = {
 
   // Day phase events
   'day:voting-phase-start': null as unknown as () => void,
+  'day:vote-tie': null as unknown as (tiedPlayerNames: string[]) => void,
 
   'hunter:pick-required': null as unknown as () => void,
 

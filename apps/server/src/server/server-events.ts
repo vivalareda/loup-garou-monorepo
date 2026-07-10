@@ -182,6 +182,11 @@ export class GameEvents {
     socket: Socket<ClientToServerEvents, ServerToClientEvents>
   ) {
     socket.on('hunter:killed-player', (targetSid: string) => {
+      // A paused day-vote resolution takes priority; otherwise this is
+      // the night-death hunter flow
+      if (this.eventsActions.submitHunterPick(targetSid)) {
+        return;
+      }
       this.eventsActions.handleHunterPlayerPick(targetSid);
     });
   }

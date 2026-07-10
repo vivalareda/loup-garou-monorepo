@@ -111,15 +111,21 @@ export class Game {
     const shuffledRoles = this.shuffleArray(this.availableRoles);
     console.log(`Shuffled roles: ${shuffledRoles}`);
 
-    // TODO: remove this for testing only
+    // Dev-only: force a specific player to be the hunter by setting
+    // DEV_FORCE_HUNTER=<player name> when starting the server
+    const forcedHunterName = process.env.DEV_FORCE_HUNTER;
+
     for (const player of this.players.values()) {
-      if (player.getName() === 'Reda') {
+      if (forcedHunterName && player.getName() === forcedHunterName) {
         const role: Role = 'HUNTER';
         player.assignRole(role);
-        shuffledRoles.splice(shuffledRoles.indexOf(role), 1);
+        const hunterIndex = shuffledRoles.indexOf(role);
+        // Keep role count in sync with player count whether or not
+        // HUNTER was part of the generated role list
+        shuffledRoles.splice(hunterIndex !== -1 ? hunterIndex : 0, 1);
         this.setPlayerTeams(player);
         this.setSpecialRolePlayer(player);
-        return;
+        continue;
       }
       const role = shuffledRoles.pop();
       if (!role) {
@@ -453,7 +459,7 @@ export class Game {
         playerName: player.getName(),
         cause: pendingDeath.cause,
         timestamp: new Date(),
-        metadata: pendingDeath.metadata,
+        ...(pendingDeath.metadata ? { metadata: pendingDeath.metadata } : {}),
       };
 
       deathInfos.push(deathInfo);

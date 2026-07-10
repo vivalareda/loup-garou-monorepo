@@ -1,5 +1,10 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Never play real audio in tests — sound.play blocks until the mp3 finishes
+vi.mock('sound-play', () => ({
+  default: { play: vi.fn().mockResolvedValue(undefined) },
+}));
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
@@ -51,12 +56,14 @@ describe('Audio segment order', () => {
 
       game.assignRoles();
 
+      const segmentAudioSpy = vi.spyOn(audioManager, 'playSegmentAudio');
+
       segmentsManager.startGame();
 
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(segmentsManager.getCurrentSegmentType()).toBe('CUPID');
-      expect(audioManager.playSegmentAudio).toHaveBeenCalledWith('CUPID', true);
+      expect(segmentAudioSpy).toHaveBeenCalledWith('CUPID', true);
     });
   });
 
@@ -91,8 +98,8 @@ describe('Audio segment order', () => {
 
       expect(calls).toEqual([
         'Night-end/Wake-up-everyone',
-        'Night-end/Deaths',
-        'Segment-transition/day-vote-start',
+        'Night-end/one-death',
+        'day-vote-start',
       ]);
     });
 

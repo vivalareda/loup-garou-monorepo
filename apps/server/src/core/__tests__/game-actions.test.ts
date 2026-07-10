@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
+import type { AudioManager } from '@/segments/audio-manager';
 import type { SocketType } from '@/server/sockets';
 
 describe('GameActions', () => {
@@ -11,11 +12,11 @@ describe('GameActions', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
-  test('should alert werewolves as winners when they win after day action', () => {
+  test('should alert werewolves as winners when they win after day action', async () => {
     const mockGame = {
       processPendingDeaths: vi.fn(),
       checkIfWinner: vi.fn().mockReturnValue('werewolves'),
-      alertWinner: vi.fn(),
+      alertWinnersAndLosers: vi.fn(),
     } as unknown as Game;
 
     const mockIo = {
@@ -23,14 +24,17 @@ describe('GameActions', () => {
       emit: vi.fn(),
     } as unknown as SocketType;
 
-    const gameActions = new GameActions(mockGame, mockIo);
+    const mockAudioManager = {
+      playWinnerAudio: vi.fn().mockResolvedValue(undefined),
+    } as unknown as AudioManager;
 
-    gameActions.dayAction();
+    const gameActions = new GameActions(mockGame, mockIo, mockAudioManager);
 
-    vi.advanceTimersByTime(7000);
+    await gameActions.dayAction();
 
     expect(mockGame.processPendingDeaths).toHaveBeenCalled();
     expect(mockGame.checkIfWinner).toHaveBeenCalled();
-    expect(mockGame.alertWinner).toHaveBeenCalledWith('werewolves');
+    expect(mockAudioManager.playWinnerAudio).toHaveBeenCalledWith('werewolves');
+    expect(mockGame.alertWinnersAndLosers).toHaveBeenCalledWith('werewolves');
   });
 });

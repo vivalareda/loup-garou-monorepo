@@ -288,7 +288,7 @@ export class MockScenario {
   }
 
   private createPlayer(name: string, sid: string, role: Role) {
-    const player = new Player(name, sid);
+    const player = new Player(name, sid, this.io);
     player.setRole(role);
     return player;
   }

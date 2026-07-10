@@ -184,7 +184,7 @@ export class AudioManager {
       return;
     }
 
-    this.playWerewolvesWonAudio();
+    await this.playVillagersWonAudio();
   }
 
   async playAudio(file: string) {

@@ -33,7 +33,7 @@ export class SegmentsManager {
     this.audioManager = audioManager;
     this.gameActions = new GameActions(game, io, audioManager);
     this.specialScenarios = specialScenarios;
-    this.currentSegment = 2;
+    this.currentSegment = 0;
     this.initializeSegments();
   }
 

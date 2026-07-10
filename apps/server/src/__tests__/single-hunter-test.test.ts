@@ -49,10 +49,10 @@ describe('Single Hunter Test', () => {
       mockSpecialScenarios
     );
 
-    eventsActions = new EventsActions(game, segmentsManager);
+    eventsActions = new EventsActions(game, segmentsManager, mockIo);
   });
 
-  it('should kill partner when lover (who is hunter) dies', () => {
+  it('should kill partner when lover (who is hunter) dies', async () => {
     // Setup - mirrors runWerewolfKillLoverWhoIsHunter()
     const player1 = game.addPlayer('Player1', 'mock-id-1');
     const player2 = game.addPlayer('Player2', 'mock-id-2');
@@ -67,7 +67,7 @@ describe('Single Hunter Test', () => {
     game.addPendingDeath('mock-id-1', 'WEREWOLVES');
 
     // Act - Hunter picks target
-    eventsActions.handleHunterPlayerPick('mock-id-3');
+    await eventsActions.handleHunterPlayerPick('mock-id-3');
 
     // Assert - Check death queue has correct entries
     const deathQueue = game.getDeathQueue();
@@ -84,10 +84,11 @@ describe('Single Hunter Test', () => {
       ])
     );
 
-    // Verify players are still alive (deaths are queued, not processed yet)
+    // Hunter revenge kills its target immediately; the other deaths stay
+    // queued until processPendingDeaths runs
     expect(player1.isAlive).toBe(true);
     expect(player2.isAlive).toBe(true);
-    expect(player3.isAlive).toBe(true);
+    expect(player3.isAlive).toBe(false);
   });
 
   it('should trigger hunter revenge when lover dies and partner is hunter', () => {

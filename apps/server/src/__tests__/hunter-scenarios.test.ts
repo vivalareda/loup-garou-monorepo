@@ -50,7 +50,7 @@ describe('Scenario tests', () => {
       mockSpecialScenarios
     );
 
-    eventsActions = new EventsActions(game, segmentsManager);
+    eventsActions = new EventsActions(game, segmentsManager, mockIo);
   });
 
   it('it should kill partner if lover dies', async () => {

@@ -8,11 +8,15 @@ import { GameEvents } from '@/server/server-events';
 import { io } from '@/server/sockets';
 import { SpecialScenarios } from './core/special-scenarios';
 
-process.stdin.setRawMode(true);
-process.stdin.resume();
-process.stdin.setEncoding('utf8');
+// Raw mode only exists on a real terminal; skip the restart key when
+// running without a TTY (CI, piped output, process managers)
+if (process.stdin.isTTY) {
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.setEncoding('utf8');
 
-console.log('Press r to restart new game');
+  console.log('Press r to restart new game');
+}
 
 let game: Game;
 let audioManager: AudioManager;

@@ -34,8 +34,18 @@ scenarios, see `notes.md`) is the vehicle to finish that part of the migration.
 
 ## Step 1b — Expo upgrade (requested)
 
-- [ ] `apps/mobile`: Expo SDK 54 → latest (57), align react-native/react via
-      `expo install --fix`, verify the app typechecks
+- [x] `apps/mobile`: Expo SDK 54 → 57 via `expo install --fix` (react-native 0.86,
+      react 19.2.3, typescript ~6.0.3 as required by the SDK). Two API breakages
+      fixed: `expo-navigation-bar` lost `setButtonStyleAsync`/`setBackgroundColorAsync`
+      (edge-to-edge only now → `setStyle`), and `NodeJS.Timeout` →
+      `ReturnType<typeof setTimeout>` in `use-card-flip`.
+
+## Step 1c — Audio debugging flag (requested)
+
+- [x] `DEBUG_AUDIO=1` makes `AudioManager.playAudio` log
+      `[AUDIO] Would play: <file>` (flagging missing assets) instead of playing the
+      mp3 — for checking segment/audio ordering without sitting through recordings
+- [x] Server no longer crashes without a TTY (`setRawMode` guard in `index.ts`)
 
 ## Step 2 — Effect segment runner (driven by the post-day-vote feature)
 

@@ -188,8 +188,20 @@ export class AudioManager {
   }
 
   async playAudio(file: string) {
+    const exists = existsSync(`./assets/${file}.mp3`);
+
+    // DEBUG_AUDIO=1 logs the file that would have played instead of playing
+    // it, so segment/audio ordering can be checked without sitting through
+    // the recordings
+    if (process.env.DEBUG_AUDIO) {
+      console.log(
+        `[AUDIO] Would play: ${file}${exists ? '' : ' (missing asset!)'}`
+      );
+      return;
+    }
+
     try {
-      if (!existsSync(`./assets/${file}.mp3`)) {
+      if (!exists) {
         return;
       }
       await sound.play(`./assets/${file}.mp3`);

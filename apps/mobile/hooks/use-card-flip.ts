@@ -4,7 +4,7 @@ import { Animated } from 'react-native';
 export const useCardFlip = () => {
   const [isRevealed, setIsRevealed] = useState(false);
   const flipAnimation = useRef(new Animated.Value(0)).current;
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flipCard = useCallback(() => {
     if (isRevealed) {

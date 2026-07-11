@@ -665,7 +665,7 @@ export class Game {
       for (const player of this.deathManager.getTeamWerewolves()) {
         this.io.to(player.getSocketId()).emit('alert:player-won');
       }
-      this.alertLosers('werewolves');
+      this.alertLosers('villagers');
     }
   }
 

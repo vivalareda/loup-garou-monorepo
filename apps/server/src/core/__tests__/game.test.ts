@@ -366,6 +366,60 @@ describe('Game class', () => {
     });
   });
 
+  describe('Win/Loss Alerts', () => {
+    // Per-socket emit spies: the shared `emit: vi.fn()` mock from the
+    // outer beforeEach can't prove which socket received an event, so
+    // `to(sid)` here returns an object carrying its own `emit` spy.
+    let socketEmit: Map<string, ReturnType<typeof vi.fn>>;
+
+    beforeEach(() => {
+      socketEmit = new Map();
+      mockIo = {
+        to: vi.fn((sid: string) => {
+          let emit = socketEmit.get(sid);
+          if (!emit) {
+            emit = vi.fn();
+            socketEmit.set(sid, emit);
+          }
+          return { emit };
+        }),
+        emit: vi.fn(),
+      } as unknown as SocketType;
+      deathManager = new DeathManager();
+      game = new Game(mockIo, deathManager);
+
+      for (let i = 0; i < 4; i++) {
+        game.addPlayer(`Player${i}`, `socket-${i}`);
+      }
+      game.assignRoles();
+    });
+
+    it('alerts villagers (not werewolves) of loss on werewolf win', () => {
+      const werewolves = game.getWerewolfList();
+      const villagers = deathManager.getTeamVillagers();
+      expect(werewolves.length).toBeGreaterThan(0);
+      expect(villagers.length).toBeGreaterThan(0);
+
+      game.alertWinnersAndLosers('werewolves');
+
+      // Villagers (the losers) each get alert:player-lost exactly once
+      for (const villager of villagers) {
+        const spy = socketEmit.get(villager.getSocketId());
+        expect(spy).toBeDefined();
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy).toHaveBeenCalledWith('alert:player-lost');
+      }
+
+      // Werewolves (the winners) get alert:player-won, NOT alert:player-lost
+      for (const werewolf of werewolves) {
+        const spy = socketEmit.get(werewolf.getSocketId());
+        expect(spy).toBeDefined();
+        expect(spy).toHaveBeenCalledWith('alert:player-won');
+        expect(spy).not.toHaveBeenCalledWith('alert:player-lost');
+      }
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle empty game state', () => {
       expect(game.getPlayerList().size).toBe(0);

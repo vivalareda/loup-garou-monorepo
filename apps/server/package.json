@@ -13,6 +13,7 @@
     "lint:fix": "biome format --write .",
     "test": "vitest",
     "test:run": "vitest run",
+    "check-types": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "prepare": "effect-tsgo patch"
   },

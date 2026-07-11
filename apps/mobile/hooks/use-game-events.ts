@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useModalStore } from '@/hooks/use-modal-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
 import { socket } from '@/utils/sockets';
@@ -10,6 +10,15 @@ export function useGameEvents() {
   const { playerIsDead } = usePlayerStore();
   const { setModalState, modalState } = useModalStore();
   const router = useRouter();
+
+  // Keep latest modalState.open accessible inside long-lived socket
+  // handlers without re-subscribing listeners on every open/close toggle
+  // (the previous dep array re-ran the effect on every modal change,
+  // stacking the 5 listeners that weren't cleaned up).
+  const modalOpenRef = useRef(modalState.open);
+  useEffect(() => {
+    modalOpenRef.current = modalState.open;
+  }, [modalState.open]);
 
   useEffect(() => {
     socket.once('cupid:pick-required', () => {
@@ -52,7 +61,7 @@ export function useGameEvents() {
     socket.on('alert:player-is-dead', () => {
       playerIsDead();
 
-      if (modalState.open) {
+      if (modalOpenRef.current) {
         setPendingRedirect(true);
       } else {
         router.replace('/death-screen');
@@ -70,11 +79,16 @@ export function useGameEvents() {
     });
 
     return () => {
+      socket.off('cupid:pick-required');
+      socket.off('alert:player-is-lover');
       socket.off('werewolf:pick-required');
+      socket.off('witch:can-heal');
+      socket.off('hunter:pick-required');
+      socket.off('alert:player-is-dead');
       socket.off('alert:player-won');
       socket.off('alert:player-lost');
     };
-  }, [modalState.open, setModalState, playerIsDead, router]);
+  }, [setModalState, playerIsDead, router]);
 
   return {
     werewolvesVictim,

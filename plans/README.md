@@ -43,6 +43,7 @@ execute the verification-baseline and least-risky first.
 | 021  | Fix README references to nonexistent scripts | P3 | S | — | TODO |
 | 026  | Delete or repoint stale `admin:simulate-day-vote` no-op | P3 | S | — | TODO |
 | 027  | Design spike — revote-on-tie instead of nobody-dies (direction) | P3 | L | 024 | TODO |
+| 028  | Rapid game simulation + audio-sequence validation across random games | P2 | M | — | DONE |
 | 001  | Port the night/dawn death flow to the Deferred-based resolution pattern | (prior) | M | — | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)

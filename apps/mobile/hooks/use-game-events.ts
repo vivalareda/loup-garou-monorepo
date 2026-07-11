@@ -58,6 +58,10 @@ export function useGameEvents() {
       });
     });
 
+    socket.on('day:voting-phase-start', () => {
+      setModalState({ type: 'DAY-VOTE', open: true });
+    });
+
     socket.on('alert:player-is-dead', () => {
       playerIsDead();
 
@@ -84,6 +88,7 @@ export function useGameEvents() {
       socket.off('werewolf:pick-required');
       socket.off('witch:can-heal');
       socket.off('hunter:pick-required');
+      socket.off('day:voting-phase-start');
       socket.off('alert:player-is-dead');
       socket.off('alert:player-won');
       socket.off('alert:player-lost');

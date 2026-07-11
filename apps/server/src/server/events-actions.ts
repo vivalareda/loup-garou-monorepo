@@ -18,53 +18,19 @@ export class EventsActions {
   }
 
   /**
-   * Routes a hunter pick to a paused day-vote resolution if one is
-   * waiting on it. Returns false when the pick belongs to the night flow.
+   * Routes a hunter pick to whichever resolution is paused waiting for
+   * it. Returns false when neither is waiting.
    */
   submitHunterPick(targetSid: string) {
-    return this.dayVoteResolution.submitHunterPick(targetSid);
+    return (
+      this.dayVoteResolution.submitHunterPick(targetSid) ||
+      this.segmentsManager.nightDawnResolution.submitHunterPick(targetSid)
+    );
   }
 
   /** Direct entry into the elimination chain, used by mock scenarios. */
   resolveDayVote(player: Player) {
     return this.dayVoteResolution.run(player);
-  }
-
-  /** Night flow: hunter died during the night, revealed at dawn. */
-  async handleHunterPlayerPick(targetSid: string) {
-    // Step 1: Kill the hunter's revenge target
-    this.game.killHunterRevenge(targetSid);
-
-    // Step 2: Check if the victim is a lover → trigger partner suicide
-    if (this.game.isHunterVictimInLove(targetSid)) {
-      console.log(`🎯💕 [HUNTER] Hunter killed a lover: ${targetSid}`);
-
-      const lover = this.game.getPlayerBySocketId(targetSid);
-      if (!lover) {
-        throw new Error(`Target ${targetSid} not found`);
-      }
-
-      const partner = this.game.getPartner(lover);
-      if (!partner) {
-        throw new Error(`Partner not found for ${targetSid}`);
-      }
-
-      console.log(
-        `🎯💕 [HUNTER] Partner ${partner.getSocketId()} will also die`
-      );
-
-      // Add partner to death queue
-      this.game.addPendingDeath(partner.getSocketId(), 'PARTNER_SUICIDE');
-
-      // Play special audio for hunter killing lover
-      await this.segmentsManager.audioManager.playHunterKilledLover();
-    }
-
-    // Step 3: Check if the HUNTER had a lover → trigger partner suicide
-    this.game.isHunterInLove();
-
-    // Step 4: Continue to the day action
-    this.segmentsManager.continueDayAction();
   }
 
   handleWerewolfVote(werewolfSid: string, targetSid: string) {

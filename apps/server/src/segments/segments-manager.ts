@@ -3,12 +3,14 @@ import type { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
 import type { SpecialScenarios } from '@/core/special-scenarios';
 import type { AudioManager } from '@/segments/audio-manager';
+import { NightDawnResolution } from '@/server/night-dawn-resolution';
 import type { SocketType } from '@/server/sockets';
 
 export class SegmentsManager {
   io: SocketType;
   game: Game;
   gameActions: GameActions;
+  nightDawnResolution: NightDawnResolution;
   audioManager: AudioManager;
   currentSegment: number;
   segments: Segment[] = [];
@@ -32,6 +34,7 @@ export class SegmentsManager {
     this.game = game;
     this.audioManager = audioManager;
     this.gameActions = new GameActions(game, io, audioManager);
+    this.nightDawnResolution = new NightDawnResolution(game, this, io);
     this.specialScenarios = specialScenarios;
     this.currentSegment = 0;
     this.initializeSegments();
@@ -147,41 +150,11 @@ export class SegmentsManager {
     return segment.type;
   }
 
-  async runHunterSegment() {
-    console.log('running hunter segment');
-    const hunter = this.game.getSpecialRolePlayer('HUNTER');
-    if (!hunter) {
-      throw new Error(
-        'tried to play hunter segment but hunter player not found'
-      );
-    }
-    const isLover = this.game.isPlayerLover(hunter);
-
-    if (isLover) {
-      const partner = this.game.getPartner(hunter);
-      if (!partner) {
-        throw new Error('lover could not be found');
-      }
-      this.game.addPartnerSuicide(hunter.getSocketId(), partner.getSocketId());
-      await this.specialScenarios.hunterIsLover();
-    } else {
-      await this.audioManager.playHunterAudio();
-    }
-
-    // Mark that hunter died first so the correct audio plays after hunter's revenge
-    this.specialScenarios.hunterDiedFirst = true;
-
-    // Direct property access - no need to find()
-    this.game.updateHunterPlayerList();
-    this.hunterSegment.action();
-  }
-
   isHunterInDeathQueue() {
     return this.game.hunterIsInDeathQueue();
   }
 
   markWitchPoisonAsSkipped() {
-    // Direct property access - no need to find()
     this.witchPoisonSegment.skip = true;
   }
 
@@ -189,72 +162,20 @@ export class SegmentsManager {
     return this.game.isOneOfLoversInDeathQueue();
   }
 
-  async runLoverSegment() {
-    const segment = this.segments[this.currentSegment];
-    await this.audioManager.playLoverAudio();
-    if (!this.isGameOver()) {
-      segment.action();
-    }
-  }
-
-  checkPostDayVoteScenarios(): boolean {
-    if (this.isHunterInDeathQueue()) {
-      console.log('[CONSOLE AUDIO] Would play Hunter audio files');
-      this.runHunterSegment();
-      return true;
-    }
-
-    if (this.isOneOfLoversInDeathQueue()) {
-      if (this.game.isPartnerHunter()) {
-        console.log(
-          '[CONSOLE AUDIO] Would play lover-hunter special scenario audio'
-        );
-        this.specialScenarios.partnerIsHunter();
-        return true;
-      }
-      console.log('[CONSOLE AUDIO] Would play lover death audio');
-      this.runLoverSegment();
-      return true;
-    }
-
-    return false;
-  }
-
   async playSegment() {
     const segment = this.segments[this.currentSegment];
     console.log(`[SEGMENT] Playing segment: ${segment.type}`);
 
     if (segment.type === 'DAY') {
-      console.log('isHunterInDeathQueue', this.isHunterInDeathQueue());
-      if (this.isHunterInDeathQueue()) {
-        this.runHunterSegment();
-        return;
-      }
-
-      if (this.isOneOfLoversInDeathQueue()) {
-        if (this.game.isPartnerHunter()) {
-          // Direct property access - no need to find()
-          this.specialScenarios.partnerIsHunter();
-          this.game.updateHunterPlayerList();
-          this.hunterSegment.action();
-          return;
-        }
-        this.runLoverSegment();
-        return;
-      }
-    }
-
-    await this.audioManager.playSegmentAudio(segment.type, true);
-    segment.action();
-  }
-
-  continueDayAction() {
-    if (this.isGameOver()) {
+      // Dawn (night-death reveal + day start) runs as one resolution
+      // program; it pauses internally when the hunter must pick
+      this.nightDawnResolution.run().catch((error) => {
+        console.error('night dawn resolution failed:', error);
+      });
       return;
     }
 
-    this.audioManager.playDayVoteAudio();
-    const segment = this.segments[this.currentSegment];
+    await this.audioManager.playSegmentAudio(segment.type, true);
     segment.action();
   }
 

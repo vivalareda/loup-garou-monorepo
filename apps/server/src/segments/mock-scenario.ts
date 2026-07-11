@@ -94,9 +94,9 @@ export class MockScenario {
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();
     setTimeout(() => {
-      this.eventsActions.handleHunterPlayerPick('mock-id-3');
+      this.eventsActions.submitHunterPick('mock-id-3');
       console.log(
-        'After handleHunterPlayerPick, death queue:',
+        'After submitHunterPick, death queue:',
         this.game.getDeathQueue()
       );
     }, 35_000);
@@ -137,9 +137,9 @@ export class MockScenario {
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();
     setTimeout(() => {
-      this.eventsActions.handleHunterPlayerPick('mock-id-3');
+      this.eventsActions.submitHunterPick('mock-id-3');
       console.log(
-        'After handleHunterPlayerPick, death queue:',
+        'After submitHunterPick, death queue:',
         this.game.getDeathQueue()
       );
     }, 20_000);
@@ -296,7 +296,7 @@ export class MockScenario {
         'Before hunter pick, death queue:',
         this.game.getDeathQueue()
       );
-      this.eventsActions.handleHunterPlayerPick('mock-lover-1');
+      this.eventsActions.submitHunterPick('mock-lover-1');
       console.log('After hunter pick, death queue:', this.game.getDeathQueue());
     }, 20_000); // Adjust timing based on audio length
   }

@@ -220,8 +220,8 @@ export const handleHunterKilledPlayer = (targetSid: string) =>
   Effect.gen(function* () {
     const { eventsActions } = yield* GameState;
 
-    yield* Effect.promise(() =>
-      eventsActions.handleHunterPlayerPick(targetSid)
+    yield* Effect.sync(() =>
+      eventsActions.submitHunterPick(targetSid)
     );
   });
 

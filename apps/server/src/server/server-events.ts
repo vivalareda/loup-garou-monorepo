@@ -43,7 +43,7 @@ export class GameEvents {
         if (this.game.getPlayerList().size >= MAX_PLAYERCOUNT) {
           this.game.assignRoles();
           this.game.alertPlayersOfRoles();
-          socket.emit('lobby:villagers-list', this.game.getVillagersList());
+          this.io.emit('lobby:villagers-list', this.game.getVillagersList());
           this.segmentsManager.startGame();
         }
       });
@@ -57,7 +57,7 @@ export class GameEvents {
         console.log('🎮 Admin starting game manually');
         this.game.assignRandomRoles();
         this.game.alertPlayersOfRoles();
-        socket.emit('lobby:villagers-list', this.game.getVillagersList());
+        this.io.emit('lobby:villagers-list', this.game.getVillagersList());
         this.segmentsManager.startGame();
       });
 

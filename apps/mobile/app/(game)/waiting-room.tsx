@@ -5,14 +5,19 @@ import { useGameStore } from '@/hooks/use-game-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
 
 export default function WaitingRoom() {
-  const { playersList, roleAssigned, initializeSocketListeners } =
-    useGameStore();
+  const {
+    playersList,
+    roleAssigned,
+    initializeSocketListeners,
+    cleanupSocketListeners,
+  } = useGameStore();
   const { player } = usePlayerStore();
   const router = useRouter();
 
   useEffect(() => {
     initializeSocketListeners();
-  }, [initializeSocketListeners]);
+    return cleanupSocketListeners;
+  }, [initializeSocketListeners, cleanupSocketListeners]);
 
   useEffect(() => {
     if (roleAssigned) {

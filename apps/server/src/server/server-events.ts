@@ -50,6 +50,7 @@ export class GameEvents {
 
       socket.on('disconnect', () => {
         console.log('Player disconnected:', socket.id);
+        this.game.handleDisconnect(socket.id);
       });
 
       // Admin/Dashboard events for testing

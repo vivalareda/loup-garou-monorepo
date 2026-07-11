@@ -347,7 +347,11 @@ export class Game {
 
   hasAllWerewolvesAgreed() {
     const werewolves = this.getWerewolfList();
-    const werewolfSids = werewolves.map((werewolf) => werewolf.getSocketId());
+    // Only alive werewolves must vote — a disconnected werewolf is treated
+    // as dead (handleDisconnect) and must not stall the phase forever.
+    const werewolfSids = werewolves
+      .filter((werewolf) => werewolf.isAlive)
+      .map((werewolf) => werewolf.getSocketId());
 
     // Check if all werewolves have voted
     const allVoted = werewolfSids.every((sid) => this.werewolfVotes.has(sid));
@@ -518,6 +522,46 @@ export class Game {
     if (player.getRole() === 'WITCH') {
       this.witchHasHealPotion = false;
       this.witchHasPoisonPotion = false;
+    }
+  }
+
+  /**
+   * A player's socket dropped. Treat it as a death (not removal) so the
+   * game stays completable: alive counts and win checks keep working, and
+   * the leaver's role stays registered so e.g. a disconnected hunter still
+   * triggers the dawn revenge flow. Stale vote entries are cleared so the
+   * werewolf/day phases don't deadlock waiting on a vote that will never
+   * arrive. A disconnected lover's partner gets a PARTNER_SUICIDE queued,
+   * flushed by the next dayAction()/dawn run.
+   */
+  handleDisconnect(socketId: string) {
+    const player = this.players.get(socketId);
+    if (!player) {
+      return; // unknown socket (never joined as a player)
+    }
+
+    // Idempotent: a socket.io adapter can emit disconnect twice
+    if (!player.isAlive) {
+      return;
+    }
+
+    console.log(
+      `Player ${player.getName()} (${socketId}) disconnected — treating as death`
+    );
+
+    this.handlePlayerDeath(player);
+
+    this.werewolfVotes.delete(socketId);
+    this.dayVotes.delete(socketId);
+
+    if (this.isPlayerLover(player)) {
+      const partner = this.getPartner(player);
+      if (partner?.isAlive) {
+        this.deathManager.addPartnerSuicide(
+          partner.getSocketId(),
+          player.getSocketId()
+        );
+      }
     }
   }
 

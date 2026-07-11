@@ -27,6 +27,10 @@ let eventsActions: EventsActions;
 let specialScenarios: SpecialScenarios;
 
 const initGame = () => {
+  // Each restart registers a fresh io.on('connection') handler on the
+  // singleton io; clear the previous one first so handlers don't stack
+  // (stale Game/SegmentsManager instances would fire on every connect).
+  io.removeAllListeners('connection');
   deathManager = new DeathManager();
   game = new Game(io, deathManager);
   audioManager = new AudioManager(deathManager);

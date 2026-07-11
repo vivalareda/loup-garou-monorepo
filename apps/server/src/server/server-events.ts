@@ -111,6 +111,11 @@ export class GameEvents {
 
   setupCupidEvents(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
     socket.on('cupid:lovers-pick', (selectedPlayers: string[]) => {
+      const cupid = this.game.getSpecialRolePlayer('CUPID');
+      if (!cupid || cupid.getSocketId() !== socket.id) {
+        console.warn(`cupid:lovers-pick rejected from ${socket.id} (not cupid)`);
+        return;
+      }
       this.game.setLovers(selectedPlayers);
       this.segmentsManager.finishSegment();
     });
@@ -149,22 +154,41 @@ export class GameEvents {
 
   setupWitchEvents(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
     socket.on('witch:healed-player', () => {
+      const witch = this.game.getSpecialRolePlayer('WITCH');
+      if (!witch || witch.getSocketId() !== socket.id || !this.game.canWitchHeal()) {
+        console.warn(`witch:healed-player rejected from ${socket.id}`);
+        return;
+      }
       this.game.healWerewolfVictim();
       this.segmentsManager.finishSegment();
     });
 
     socket.on('witch:poisoned-player', (playerSid: string) => {
+      const witch = this.game.getSpecialRolePlayer('WITCH');
+      if (!witch || witch.getSocketId() !== socket.id || !this.game.canWitchPoison()) {
+        console.warn(`witch:poisoned-player rejected from ${socket.id}`);
+        return;
+      }
       this.game.witchKill(playerSid);
-      this.segmentsManager;
       this.segmentsManager.finishSegment();
     });
 
     socket.on('witch:skipped-heal', () => {
+      const witch = this.game.getSpecialRolePlayer('WITCH');
+      if (!witch || witch.getSocketId() !== socket.id) {
+        console.warn(`witch:skipped-heal rejected from ${socket.id}`);
+        return;
+      }
       console.log('🧙 Witch skipped heal action');
       this.segmentsManager.finishSegment();
     });
 
     socket.on('witch:skipped-poison', () => {
+      const witch = this.game.getSpecialRolePlayer('WITCH');
+      if (!witch || witch.getSocketId() !== socket.id) {
+        console.warn(`witch:skipped-poison rejected from ${socket.id}`);
+        return;
+      }
       console.log('🧙 Witch skipped poison action');
       this.segmentsManager.finishSegment();
     });
@@ -182,6 +206,11 @@ export class GameEvents {
     socket: Socket<ClientToServerEvents, ServerToClientEvents>
   ) {
     socket.on('hunter:killed-player', (targetSid: string) => {
+      const hunter = this.game.getSpecialRolePlayer('HUNTER');
+      if (!hunter || hunter.getSocketId() !== socket.id) {
+        console.warn(`hunter:killed-player rejected from ${socket.id} (not hunter)`);
+        return;
+      }
       if (!this.eventsActions.submitHunterPick(targetSid)) {
         console.warn(
           `hunter pick for ${targetSid} received but no resolution is waiting`

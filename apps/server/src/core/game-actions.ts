@@ -44,6 +44,10 @@ export class GameActions {
   }
 
   werewolfAction() {
+    // Clear last night's votes so a werewolf that has since died doesn't
+    // leave a stale entry that makes hasAllWerewolvesAgreed() return false
+    // forever (the surviving werewolves would never reach agreement).
+    this.game.clearWerewolfVotes();
     for (const werewolf of this.game.getWerewolfList()) {
       this.io.to(werewolf.getSocketId()).emit('werewolf:pick-required');
     }
@@ -127,7 +131,7 @@ export class GameActions {
 
     setTimeout(() => {
       this.io.emit('day:voting-phase-start');
-    }, 7000);
+    }, Number(process.env.DAY_VOTE_DELAY_MS ?? 7000));
   }
 
   hunterAction() {

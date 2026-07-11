@@ -697,6 +697,10 @@ export class Game {
     this.dayVotes.clear();
   }
 
+  clearWerewolfVotes() {
+    this.werewolfVotes.clear();
+  }
+
   alertWinnersAndLosers(winner: 'villagers' | 'werewolves') {
     if (winner === 'villagers') {
       for (const player of this.deathManager.getTeamVillagers()) {
@@ -740,6 +744,17 @@ export class Game {
 
     if (werewolves.length === 0) {
       return 'villagers';
+    }
+
+    // No villagers left means the werewolves have overrun the village. The
+    // production loop reaches this state through a lover-grief cascade at
+    // dawn (two villagers die at once) and previously deadlocked because the
+    // 1-v-1 / 0-werewolf checks below don't catch it. processPendingDeaths
+    // drains the whole queue before this runs, so this does NOT short-circuit
+    // the grief cascade (the 2-werewolves-+-1-villager mid-cascade state stays
+    // `null` and the cascade completes).
+    if (villagers.length === 0) {
+      return 'werewolves';
     }
 
     if (werewolves.length === 1 && villagers.length === 1) {

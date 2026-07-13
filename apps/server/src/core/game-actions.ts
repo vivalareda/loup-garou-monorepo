@@ -148,6 +148,11 @@ export class GameActions {
   }
 
   hunterAction() {
-    this.io.emit('hunter:pick-required');
+    // Emit only to the dead Hunter, not every connected client — other
+    // players (and spectators) must not see the revenge-pick prompt.
+    const hunter = this.game.getSpecialRolePlayer('HUNTER');
+    if (hunter) {
+      this.io.to(hunter.getSocketId()).emit('hunter:pick-required');
+    }
   }
 }

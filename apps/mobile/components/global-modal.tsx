@@ -41,6 +41,11 @@ export function GlobalModal() {
     closeModal();
   }, [modalData, selection, closeModal]);
 
+  const handleSkip = useCallback(() => {
+    modalData?.onSkip?.();
+    closeModal();
+  }, [modalData, closeModal]);
+
   const handleYesClick = useCallback(() => {
     if (modalData?.onConfirm) {
       modalData.onConfirm('yes');
@@ -65,6 +70,15 @@ export function GlobalModal() {
       return () => clearTimeout(timer);
     }
   }, [modalData?.buttonDelay]);
+
+  // Reset the selection whenever a modal opens, closes, or its data changes,
+  // so a prior modal's selection can't leak into a later one and submit a
+  // stale target. (selection is component state, not store state, so the
+  // store's closeModal doesn't touch it.)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isOpen/modalData are intentional triggers — the reset must run on every modal transition even though the body doesn't read them
+  useEffect(() => {
+    setSelection([]);
+  }, [isOpen, modalData]);
 
   useEffect(() => {
     if (modalData?.werewolfModal && isVotingComplete) {
@@ -211,18 +225,31 @@ export function GlobalModal() {
     }
 
     return (
-      <TouchableOpacity
-        className={clsx(
-          'mt-4 rounded-lg px-4 py-2',
-          isButtonDisabled() ? 'bg-gray-500 opacity-50' : 'bg-blue-500'
+      <View className="mt-4 flex-row space-x-3">
+        {modalData.onSkip && (
+          <TouchableOpacity
+            className="flex-1 rounded-lg bg-slate-500 px-4 py-2"
+            onPress={handleSkip}
+          >
+            <Text className="py-2 text-center font-medium text-white">
+              {modalData.skipLabel ?? 'Passer'}
+            </Text>
+          </TouchableOpacity>
         )}
-        disabled={isButtonDisabled()}
-        onPress={handleModalClose}
-      >
-        <Text className="py-2 text-center font-medium text-white">
-          Confirm Selection
-        </Text>
-      </TouchableOpacity>
+
+        <TouchableOpacity
+          className={clsx(
+            'flex-1 rounded-lg px-4 py-2',
+            isButtonDisabled() ? 'bg-gray-500 opacity-50' : 'bg-blue-500'
+          )}
+          disabled={isButtonDisabled()}
+          onPress={handleModalClose}
+        >
+          <Text className="py-2 text-center font-medium text-white">
+            Confirm Selection
+          </Text>
+        </TouchableOpacity>
+      </View>
     );
   };
 

@@ -1,17 +1,20 @@
-import { Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { EndGamePanel } from '@/components/end-game-panel';
+import { useGameStore } from '@/hooks/use-game-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
 
 export default function LoserScreen() {
   const { player } = usePlayerStore();
+  const { gameResult } = useGameStore();
 
   return (
     <SafeAreaView className="flex-1 bg-red-900">
-      <View className="flex-1 items-center justify-center px-6">
-        <View className="items-center">
+      <ScrollView contentContainerClassName="flex-grow items-center justify-center px-6 py-8">
+        <View className="w-full items-center">
           <Text className="mb-4 text-8xl">😞</Text>
 
-          <View className="mb-8 items-center">
+          <View className="mb-4 items-center">
             <Text className="mb-2 text-3xl font-bold text-red-400">
               Défaite
             </Text>
@@ -23,8 +26,10 @@ export default function LoserScreen() {
               Votre équipe a perdu la partie
             </Text>
           </View>
+
+          <EndGamePanel result={gameResult} />
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

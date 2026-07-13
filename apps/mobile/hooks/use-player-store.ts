@@ -9,6 +9,8 @@ type PlayerStore = {
   setRole: (role: Role) => void;
   playerIsDead: () => void;
   getPlayerRole: () => Role;
+  /** Full reset back to the join screen (server emitted game:restarted). */
+  reset: () => void;
 };
 
 export const usePlayerStore = create<PlayerStore>((set, get) => ({
@@ -16,6 +18,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   isAlive: true,
   setPlayer: (player) => set({ player }),
   playerIsDead: () => set({ isAlive: false }),
+  reset: () => set({ player: null, isAlive: true }),
   setRole: (role) =>
     set((state) => {
       if (!state.player) {
@@ -26,6 +29,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
         type: 'game',
         name: state.player.name,
         socketId: state.player.socketId,
+        sessionToken: state.player.sessionToken,
         isAlive: true,
         role,
       };

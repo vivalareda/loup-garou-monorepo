@@ -23,6 +23,11 @@ type ModalData = {
   werewolfModal?: boolean;
   autoConfirm?: boolean;
   hideConfirmButton?: boolean;
+  /** Optional skip action (e.g. the witch may skip poison). When present, the
+   * modal renders a Skip button alongside Confirm. */
+  onSkip?: () => void;
+  /** Label for the optional Skip button. */
+  skipLabel?: string;
   onConfirm?: (...args: any[]) => any;
   disableButtonCondition?: (...args: any[]) => any;
 };

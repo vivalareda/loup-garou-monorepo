@@ -1,6 +1,7 @@
 import type { ClientToServerEvents, ServerToClientEvents } from '@repo/types';
 import { Effect } from 'effect';
 import type { Socket } from 'socket.io';
+import { resolvePlayerCount } from '@/config';
 import { GameState, incrementLoversAlertCount } from './game-service.effect';
 import { broadcastFrom } from './socket-io.effect';
 
@@ -236,7 +237,7 @@ export const handleGetPlayersList = (
 
     yield* Effect.sync(() => {
       const playersArray = game.getClientPlayerList();
-      socket.emit('lobby:players-list', playersArray);
+      socket.emit('lobby:players-list', playersArray, resolvePlayerCount());
     });
   });
 

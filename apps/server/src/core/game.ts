@@ -1,6 +1,7 @@
 import type {
   DeathCause,
   DeathInfo,
+  GameEndResult,
   PlayerListItem,
   Role,
   WerewolvesVoteState,
@@ -23,17 +24,32 @@ export class Game {
   private readonly dayVotes: Map<string, string> = new Map(); // voterSid → targetSid
   private witchHasHealPotion = true;
   private witchHasPoisonPotion = true;
+  /** The reveal payload of the finished game, kept for reconnect snapshots. */
+  private lastGameResult: GameEndResult | null = null;
+  /** Injectable for tests that need deterministic role assignment. */
+  private readonly shuffleRoles: (roles: Role[]) => Role[];
 
   availableRoles: Role[] = [];
 
-  constructor(io: SocketType, deathManager: DeathManager) {
+  constructor(
+    io: SocketType,
+    deathManager: DeathManager,
+    options?: { shuffleRoles?: (roles: Role[]) => Role[] }
+  ) {
     this.io = io;
     this.deathManager = deathManager;
     this.players = new Map<string, Player>();
     this.lovers = [];
+    this.shuffleRoles =
+      options?.shuffleRoles ?? ((items) => this.shuffleArray(items));
   }
 
   addPlayer(name: string, sid: string) {
+    const existing = this.players.get(sid);
+    if (existing) {
+      return existing;
+    }
+
     const player = new Player(name, sid, this.io);
     this.players.set(sid, player);
     console.log(
@@ -42,11 +58,108 @@ export class Game {
     return player;
   }
 
+  resetForNewGame() {
+    this.specialRolePlayers.clear();
+    this.deathManager.reset();
+    this.lovers.length = 0;
+    this.werewolfVotes.clear();
+    this.dayVotes.clear();
+    this.availableRoles = [];
+    this.witchHasHealPotion = true;
+    this.witchHasPoisonPotion = true;
+    this.lastGameResult = null;
+
+    for (const player of this.players.values()) {
+      player.role = null;
+      player.isAlive = true;
+    }
+  }
+
+  /** Full lobby reset: everyone must join again (phone-triggered restart). */
+  removeAllPlayers() {
+    this.players.clear();
+  }
+
   getClientPlayerList(): PlayerListItem[] {
     return Array.from(this.players.values()).map((player) => ({
       name: player.getName(),
       socketId: player.getSocketId(),
     }));
+  }
+
+  /** Public roster for snapshots: names, socket IDs, and alive state only. */
+  getRosterForClient() {
+    return Array.from(this.players.values()).map((player) => ({
+      name: player.getName(),
+      socketId: player.getSocketId(),
+      isAlive: player.isAlive,
+    }));
+  }
+
+  /** Remove a player entirely (lobby leave before the game starts). */
+  removePlayer(socketId: string) {
+    return this.players.delete(socketId);
+  }
+
+  getPlayerBySessionToken(sessionToken: string) {
+    return Array.from(this.players.values()).find(
+      (player) => player.sessionToken === sessionToken
+    );
+  }
+
+  reconnectPlayer(sessionToken: string, newSocketId: string) {
+    const player = this.getPlayerBySessionToken(sessionToken);
+    if (!player) {
+      return null;
+    }
+
+    const oldSocketId = player.getSocketId();
+    this.players.delete(oldSocketId);
+    player.setSocketId(newSocketId);
+    player.isConnected = true;
+    this.players.set(newSocketId, player);
+    this.remapSocketId(oldSocketId, newSocketId);
+    return player;
+  }
+
+  /**
+   * Socket IDs are (still) the working player identity, so every structure
+   * keyed by or holding one must follow a reconnecting player to their new
+   * socket, or their past votes/pending deaths would dangle forever.
+   */
+  private remapSocketId(oldSid: string, newSid: string) {
+    if (oldSid === newSid) {
+      return;
+    }
+
+    for (const votes of [this.werewolfVotes, this.dayVotes]) {
+      const ownVote = votes.get(oldSid);
+      if (ownVote !== undefined) {
+        votes.delete(oldSid);
+        votes.set(newSid, ownVote);
+      }
+      for (const [voterSid, targetSid] of votes.entries()) {
+        if (targetSid === oldSid) {
+          votes.set(voterSid, newSid);
+        }
+      }
+    }
+
+    this.deathManager.remapSocketId(oldSid, newSid);
+  }
+
+  /**
+   * Transport dropped: the player enters their grace period. They are no
+   * longer required for phase completion, but nothing is killed or cleared
+   * yet — a reconnect within the grace fully restores them.
+   */
+  markDisconnected(socketId: string) {
+    const player = this.players.get(socketId);
+    if (!player) {
+      return null;
+    }
+    player.isConnected = false;
+    return player;
   }
 
   initRolesList() {
@@ -112,7 +225,7 @@ export class Game {
 
   assignRoles() {
     this.initRolesList();
-    const shuffledRoles = this.shuffleArray(this.availableRoles);
+    const shuffledRoles = this.shuffleRoles(this.availableRoles);
     console.log(`Shuffled roles: ${shuffledRoles}`);
 
     // Dev-only: force a specific player to be the hunter by setting
@@ -213,6 +326,7 @@ export class Game {
   }
 
   setLovers(selectedPlayers: string[]) {
+    this.lovers.length = 0;
     for (const sid of selectedPlayers) {
       const player = this.players.get(sid);
       if (!player) {
@@ -319,7 +433,7 @@ export class Game {
   calculateWerewolfVoteTallies() {
     const tallies: WerewolvesVoteState = {};
 
-    for (const targetSid of this.werewolfVotes.values()) {
+    for (const targetSid of this.getRequiredWerewolfVotes().votes) {
       tallies[targetSid] = (tallies[targetSid] || 0) + 1;
     }
 
@@ -345,22 +459,32 @@ export class Game {
     return player.getRole() === 'HUNTER';
   }
 
-  hasAllWerewolvesAgreed() {
-    const werewolves = this.getWerewolfList();
-    // Only alive werewolves must vote — a disconnected werewolf is treated
-    // as dead (handleDisconnect) and must not stall the phase forever.
-    const werewolfSids = werewolves
-      .filter((werewolf) => werewolf.isAlive)
+  /**
+   * The votes that count: those of living, connected werewolves. A wolf in
+   * their disconnect grace period neither blocks agreement nor has their
+   * stale vote counted — reconnecting makes them required again.
+   */
+  private getRequiredWerewolfVotes() {
+    const requiredSids = this.getWerewolfList()
+      .filter((werewolf) => werewolf.isAlive && werewolf.isConnected)
       .map((werewolf) => werewolf.getSocketId());
 
-    // Check if all werewolves have voted
-    const allVoted = werewolfSids.every((sid) => this.werewolfVotes.has(sid));
-    if (!allVoted) {
+    return {
+      requiredSids,
+      votes: requiredSids
+        .filter((sid) => this.werewolfVotes.has(sid))
+        .map((sid) => this.werewolfVotes.get(sid) as string),
+    };
+  }
+
+  hasAllWerewolvesAgreed() {
+    const { requiredSids, votes } = this.getRequiredWerewolfVotes();
+
+    if (requiredSids.length === 0 || votes.length !== requiredSids.length) {
       return false;
     }
 
     // Check if they all agree (all votes are for the same target)
-    const votes = Array.from(this.werewolfVotes.values());
     const firstVote = votes[0];
     return votes.every((vote) => vote === firstVote);
   }
@@ -471,6 +595,11 @@ export class Game {
       };
 
       deathInfos.push(deathInfo);
+
+      if (!player.isAlive) {
+        this.deathManager.removePendingDeath(pendingDeath.playerId);
+        continue;
+      }
 
       // Use new unified death handling
       this.handlePlayerDeath(player);
@@ -652,16 +781,28 @@ export class Game {
   }
 
   hasAllPlayersVoted() {
-    // For simplicity, we can determine this by checking expected number of votes
-    // The frontend will send votes from all eligible players
-    const expectedVoters = Array.from(this.players.keys()).filter(
-      (playerId) => {
-        const player = this.players.get(playerId);
-        return player?.isAlive;
-      }
+    // A player in their disconnect grace period is not waited on; when they
+    // reconnect they become required again (and get re-prompted).
+    const expectedVoters = Array.from(this.players.values()).filter(
+      (player) => player.isAlive && player.isConnected
     );
 
-    return this.dayVotes.size === expectedVoters.length;
+    return (
+      expectedVoters.length > 0 &&
+      expectedVoters.every((player) => this.dayVotes.has(player.getSocketId()))
+    );
+  }
+
+  hasAnyDayVote() {
+    return this.dayVotes.size > 0;
+  }
+
+  hasPlayerDayVoted(socketId: string) {
+    return this.dayVotes.has(socketId);
+  }
+
+  getWerewolfVoteOf(socketId: string) {
+    return this.werewolfVotes.get(socketId);
   }
 
   getDayVoteResult(): DayVoteResult {
@@ -701,32 +842,55 @@ export class Game {
     this.werewolfVotes.clear();
   }
 
+  /**
+   * The reveal payload sent with the game-end events. Only built once a
+   * winner exists — roles are secret until the game is finished.
+   */
+  buildGameEndResult(winner: 'villagers' | 'werewolves'): GameEndResult {
+    return {
+      winningFaction: winner,
+      players: Array.from(this.players.values()).map((player) => ({
+        name: player.getName(),
+        socketId: player.getSocketId(),
+        role: player.role,
+        isAlive: player.isAlive,
+      })),
+    };
+  }
+
+  getLastGameResult() {
+    return this.lastGameResult;
+  }
+
   alertWinnersAndLosers(winner: 'villagers' | 'werewolves') {
+    const result = this.buildGameEndResult(winner);
+    this.lastGameResult = result;
+
     if (winner === 'villagers') {
       for (const player of this.deathManager.getTeamVillagers()) {
-        this.io.to(player.getSocketId()).emit('alert:player-won');
+        this.io.to(player.getSocketId()).emit('alert:player-won', result);
       }
-      this.alertLosers('werewolves');
+      this.alertLosers('werewolves', result);
     }
 
     if (winner === 'werewolves') {
       for (const player of this.deathManager.getTeamWerewolves()) {
-        this.io.to(player.getSocketId()).emit('alert:player-won');
+        this.io.to(player.getSocketId()).emit('alert:player-won', result);
       }
-      this.alertLosers('villagers');
+      this.alertLosers('villagers', result);
     }
   }
 
-  alertLosers(loser: 'villagers' | 'werewolves') {
+  alertLosers(loser: 'villagers' | 'werewolves', result: GameEndResult) {
     if (loser === 'villagers') {
       for (const player of this.deathManager.getTeamVillagers()) {
-        this.io.to(player.getSocketId()).emit('alert:player-lost');
+        this.io.to(player.getSocketId()).emit('alert:player-lost', result);
       }
     }
 
     if (loser === 'werewolves') {
       for (const player of this.deathManager.getTeamWerewolves()) {
-        this.io.to(player.getSocketId()).emit('alert:player-lost');
+        this.io.to(player.getSocketId()).emit('alert:player-lost', result);
       }
     }
   }

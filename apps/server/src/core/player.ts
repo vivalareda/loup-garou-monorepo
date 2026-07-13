@@ -6,19 +6,26 @@ import type {
   WaitingRoomPlayer,
 } from '@repo/types';
 import type { SocketType } from '@/server/sockets';
+import { randomUUID } from 'node:crypto';
 
 export class Player implements PlayerGetters, PlayerSetters {
   readonly name: string;
-  readonly socketId: string;
+  socketId: string;
+  readonly sessionToken: string;
   readonly io: SocketType;
   role: Role | null;
   isAlive: boolean;
+  /** False while the player's transport is down and their grace period is
+   * running. A disconnected player is not required for phase completion. */
+  isConnected: boolean;
 
   constructor(name: string, sid: string, io: SocketType) {
     this.name = name;
     this.role = null;
     this.isAlive = true;
+    this.isConnected = true;
     this.socketId = sid;
+    this.sessionToken = randomUUID();
     this.io = io;
   }
 
@@ -35,6 +42,7 @@ export class Player implements PlayerGetters, PlayerSetters {
       type: 'waiting',
       name: this.name,
       socketId: this.socketId,
+      sessionToken: this.sessionToken,
     };
     return waitingRoomPlayer;
   }
@@ -52,6 +60,10 @@ export class Player implements PlayerGetters, PlayerSetters {
 
   getSocketId() {
     return this.socketId;
+  }
+
+  setSocketId(socketId: string) {
+    this.socketId = socketId;
   }
 
   getName() {

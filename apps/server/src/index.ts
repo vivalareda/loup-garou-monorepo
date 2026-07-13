@@ -1,3 +1,4 @@
+import { resolvePlayerCount } from '@/config';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { AudioManager } from '@/segments/audio-manager';
@@ -7,6 +8,9 @@ import { startServer } from '@/server/http-server';
 import { GameEvents } from '@/server/server-events';
 import { io } from '@/server/sockets';
 import { SpecialScenarios } from './core/special-scenarios';
+
+// Fail fast on a bad PLAYER_COUNT before any socket is accepted
+console.log(`Game starts at ${resolvePlayerCount()} players`);
 
 // Raw mode only exists on a real terminal; skip the restart key when
 // running without a TTY (CI, piped output, process managers)
@@ -27,10 +31,6 @@ let eventsActions: EventsActions;
 let specialScenarios: SpecialScenarios;
 
 const initGame = () => {
-  // Each restart registers a fresh io.on('connection') handler on the
-  // singleton io; clear the previous one first so handlers don't stack
-  // (stale Game/SegmentsManager instances would fire on every connect).
-  io.removeAllListeners('connection');
   deathManager = new DeathManager();
   game = new Game(io, deathManager);
   audioManager = new AudioManager(deathManager);
@@ -50,8 +50,10 @@ process.stdin.on('data', (key: string) => {
   const keyPressed = key.toString().toLowerCase();
 
   if (keyPressed === 'r') {
+    // In-place reset: the same handler objects keep serving the existing
+    // sockets, so no second 'connection' handler is ever registered
     console.log('Resetting game state...');
-    initGame();
+    events.resetGame();
   }
 });
 

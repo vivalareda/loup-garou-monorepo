@@ -25,22 +25,31 @@ export class GameActions {
 
   loversAction() {
     const lovers = this.game.getLovers();
+    // Overridable so headless tests don't sit through real-time delays
+    const alertDelayMs = Number(process.env.LOVER_ALERT_DELAY_MS ?? 4000);
 
     // Wait a few seconds before prompting the cupid to pick lovers since lover audio file isn't awaited
     setTimeout(() => {
       this.io
         .to(lovers[0].getSocketId())
-        .emit('alert:player-is-lover', lovers[1].getSocketId());
+        .emit('alert:player-is-lover', lovers[1].getName());
       this.io
         .to(lovers[1].getSocketId())
-        .emit('alert:player-is-lover', lovers[0].getSocketId());
-    }, 4000);
+        .emit('alert:player-is-lover', lovers[0].getName());
+    }, alertDelayMs);
 
     // *This is for the dashboard only* Enable the close button after a delay, like in the mobile app
-    setTimeout(() => {
-      this.io.to(lovers[0].getSocketId()).emit('alert:lovers-can-close-alert');
-      this.io.to(lovers[1].getSocketId()).emit('alert:lovers-can-close-alert');
-    }, 3000); // 3 second delay to match mobile app timing
+    setTimeout(
+      () => {
+        this.io
+          .to(lovers[0].getSocketId())
+          .emit('alert:lovers-can-close-alert');
+        this.io
+          .to(lovers[1].getSocketId())
+          .emit('alert:lovers-can-close-alert');
+      },
+      Math.min(alertDelayMs, 3000)
+    );
   }
 
   werewolfAction() {
@@ -121,7 +130,11 @@ export class GameActions {
   }
 
   async dayAction() {
-    this.game.processPendingDeaths();
+    const deaths = this.game.processPendingDeaths();
+    if (deaths.length > 0) {
+      this.announceNightDeaths(deaths);
+    }
+
     const winner = this.game.checkIfWinner();
     if (winner) {
       await this.audioManager.playWinnerAudio(winner);

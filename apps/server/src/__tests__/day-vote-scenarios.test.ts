@@ -56,7 +56,10 @@ describe('Post day-vote death scenarios (notes.md)', () => {
     return player;
   };
 
-  const emittedEvents = () => emitSpy.mock.calls.map((call) => call[0]);
+  const targetedSockets = () =>
+    (mockIo.to as unknown as ReturnType<typeof vi.fn>).mock.calls.map(
+      (call) => call[0]
+    );
   const playedAudio = () => playAudioSpy.mock.calls.map((call) => call[0]);
 
   it('village killed hunter → pauses for revenge pick, then kills the target', async () => {
@@ -73,7 +76,7 @@ describe('Post day-vote death scenarios (notes.md)', () => {
 
     // Hunter is dead and the flow is parked, waiting for his pick
     expect(hunter.isAlive).toBe(false);
-    expect(emittedEvents()).toContain('hunter:pick-required');
+    expect(targetedSockets()).toContain('h-id');
     expect(werewolf.isAlive).toBe(true);
 
     const consumed = eventsActions.submitHunterPick('w-id');
@@ -130,7 +133,7 @@ describe('Post day-vote death scenarios (notes.md)', () => {
     // Both lovers are dead before the hunter takes his shot
     expect(hunterLover.isAlive).toBe(false);
     expect(partner.isAlive).toBe(false);
-    expect(emittedEvents()).toContain('hunter:pick-required');
+    expect(targetedSockets()).toContain('h-id');
 
     eventsActions.submitHunterPick('w-id');
     await resolution;
@@ -160,7 +163,7 @@ describe('Post day-vote death scenarios (notes.md)', () => {
 
     expect(lover.isAlive).toBe(false);
     expect(hunterPartner.isAlive).toBe(false);
-    expect(emittedEvents()).toContain('hunter:pick-required');
+    expect(targetedSockets()).toContain('h-id');
 
     eventsActions.submitHunterPick('w-id');
     await resolution;
@@ -223,5 +226,31 @@ describe('Post day-vote death scenarios (notes.md)', () => {
 
   it('hunter pick with no pending day-vote resolution falls back to the night flow', () => {
     expect(eventsActions.submitHunterPick('anyone')).toBe(false);
+  });
+
+  it('hunter revenge times out after 60s and skips the revenge kill', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const hunter = addPlayer('Hunter', 'h-id', 'HUNTER');
+      const villagerA = addPlayer('VillagerA', 'a-id', 'VILLAGER');
+      const villagerB = addPlayer('VillagerB', 'b-id', 'VILLAGER');
+      const werewolf = addPlayer('Werewolf', 'w-id', 'WEREWOLF');
+      vi.spyOn(segmentsManager, 'advanceSegment').mockResolvedValue(undefined);
+
+      eventsActions.handleDayVote('a-id', 'h-id');
+      eventsActions.handleDayVote('b-id', 'h-id');
+      eventsActions.handleDayVote('w-id', 'h-id');
+      const resolution = eventsActions.handleDayVote('h-id', 'a-id');
+      await vi.advanceTimersByTimeAsync(60_000);
+      await resolution;
+
+      expect(hunter.isAlive).toBe(false);
+      expect(werewolf.isAlive).toBe(true);
+      expect(villagerA.isAlive).toBe(true);
+      expect(villagerB.isAlive).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

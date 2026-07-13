@@ -1,4 +1,4 @@
-import { Deferred, Effect } from 'effect';
+import { Deferred, Duration, Effect } from 'effect';
 import type { Game } from '@/core/game';
 import type { Player } from '@/core/player';
 import type { SegmentsManager } from '@/segments/segments-manager';
@@ -38,6 +38,10 @@ export class DayVoteResolution {
     this.pendingHunterPick = null;
     Deferred.unsafeDone(pick, Effect.succeed(targetSid));
     return true;
+  }
+
+  hasPendingPick() {
+    return this.pendingHunterPick !== null;
   }
 
   /** The village voted `votedPlayer` out — run the full death chain. */
@@ -86,6 +90,11 @@ export class DayVoteResolution {
         yield* this.play('Day-vote/Hunter');
 
         const targetSid = yield* this.awaitHunterPick();
+
+        if (targetSid === null) {
+          return;
+        }
+
         const target = this.game.getPlayerBySocketId(targetSid);
 
         if (target?.isAlive) {
@@ -96,12 +105,27 @@ export class DayVoteResolution {
     });
   }
 
-  private awaitHunterPick() {
+  private awaitHunterPick(): Effect.Effect<string | null> {
     return Effect.gen(this, function* () {
       const pick = yield* Deferred.make<string>();
       this.pendingHunterPick = pick;
-      this.io.emit('hunter:pick-required');
-      return yield* Deferred.await(pick);
+      const hunter = this.game.getSpecialRolePlayer('HUNTER');
+      if (hunter) {
+        this.io.to(hunter.getSocketId()).emit('hunter:pick-required');
+      }
+
+      const result = yield* Effect.timeoutOption(
+        Deferred.await(pick),
+        Duration.seconds(60)
+      );
+      this.pendingHunterPick = null;
+
+      if (result._tag === 'None') {
+        console.warn('Hunter pick timed out — skipping revenge kill');
+        return null;
+      }
+
+      return result.value;
     });
   }
 

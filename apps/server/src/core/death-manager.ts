@@ -20,6 +20,30 @@ export class DeathManager {
     this.teamVillagers.push(player);
   }
 
+  reset() {
+    this.teamWerewolves.length = 0;
+    this.teamVillagers.length = 0;
+    this.pendingDeaths.clear();
+  }
+
+  /** Follow a reconnecting player's pending death (and any metadata
+   * referencing them) to their new socket ID. */
+  remapSocketId(oldSid: string, newSid: string) {
+    for (const [playerId, death] of Array.from(this.pendingDeaths.entries())) {
+      if (death.metadata?.hunterId === oldSid) {
+        death.metadata.hunterId = newSid;
+      }
+      if (death.metadata?.loverId === oldSid) {
+        death.metadata.loverId = newSid;
+      }
+
+      if (playerId === oldSid) {
+        this.pendingDeaths.delete(playerId);
+        this.pendingDeaths.set(newSid, { ...death, playerId: newSid });
+      }
+    }
+  }
+
   getTeamWerewolves(): Player[] {
     return this.teamWerewolves;
   }

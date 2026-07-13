@@ -82,5 +82,10 @@ describe('Night dawn: hunter who is a lover dies during the night', () => {
     expect(partner.isAlive).toBe(false);
     expect(werewolf.isAlive).toBe(true);
     expect(game.getDeathQueue()).toHaveLength(0);
+
+    const lobbyDeathCallsForRevengeTarget = emitSpy.mock.calls.filter(
+      (call) => call[0] === 'lobby:player-died' && call[1] === 'mock-id-3'
+    );
+    expect(lobbyDeathCallsForRevengeTarget).toHaveLength(1);
   });
 });

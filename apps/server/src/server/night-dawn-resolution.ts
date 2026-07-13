@@ -1,4 +1,4 @@
-import { Deferred, Effect } from 'effect';
+import { Deferred, Duration, Effect } from 'effect';
 import type { Game } from '@/core/game';
 import type { SegmentsManager } from '@/segments/segments-manager';
 import type { SocketType } from '@/server/sockets';
@@ -45,6 +45,10 @@ export class NightDawnResolution {
     return true;
   }
 
+  hasPendingPick() {
+    return this.pendingHunterPick !== null;
+  }
+
   private resolveDawn(): Effect.Effect<void> {
     return Effect.gen(this, function* () {
       const audioManager = this.segmentsManager.audioManager;
@@ -71,6 +75,9 @@ export class NightDawnResolution {
           yield* Effect.promise(() => specialScenarios.hunterIsLover());
         } else {
           yield* Effect.promise(() => audioManager.playHunterAudio());
+          if (this.game.isOneOfLoversInDeathQueue()) {
+            yield* Effect.promise(() => audioManager.playLoverAudio());
+          }
         }
 
         this.game.updateHunterPlayerList();
@@ -117,6 +124,19 @@ export class NightDawnResolution {
       // Pause until the socket handler feeds in the pick
       const targetSid = yield* this.awaitHunterPick();
 
+      if (targetSid === null) {
+        console.warn('Night-dawn hunter pick timed out — skipping revenge kill');
+        if (this.segmentsManager.isGameOver()) {
+          return;
+        }
+
+        yield* Effect.promise(() => audioManager.playDayVoteAudio());
+        yield* Effect.promise(() =>
+          this.segmentsManager.getGameActions().dayAction()
+        );
+        return;
+      }
+
       // Post-pick consequences
       this.game.killHunterRevenge(targetSid);
 
@@ -148,12 +168,26 @@ export class NightDawnResolution {
     });
   }
 
-  private awaitHunterPick() {
+  private awaitHunterPick(): Effect.Effect<string | null> {
     return Effect.gen(this, function* () {
       const pick = yield* Deferred.make<string>();
       this.pendingHunterPick = pick;
-      this.io.emit('hunter:pick-required');
-      return yield* Deferred.await(pick);
+      const hunter = this.game.getSpecialRolePlayer('HUNTER');
+      if (hunter) {
+        this.io.to(hunter.getSocketId()).emit('hunter:pick-required');
+      }
+
+      const result = yield* Effect.timeoutOption(
+        Deferred.await(pick),
+        Duration.seconds(60)
+      );
+      this.pendingHunterPick = null;
+
+      if (result._tag === 'None') {
+        return null;
+      }
+
+      return result.value;
     });
   }
 }

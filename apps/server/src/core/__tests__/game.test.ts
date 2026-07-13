@@ -402,21 +402,48 @@ describe('Game class', () => {
 
       game.alertWinnersAndLosers('werewolves');
 
+      const expectedResult = game.buildGameEndResult('werewolves');
+
       // Villagers (the losers) each get alert:player-lost exactly once
       for (const villager of villagers) {
         const spy = socketEmit.get(villager.getSocketId());
         expect(spy).toBeDefined();
         expect(spy).toHaveBeenCalledTimes(1);
-        expect(spy).toHaveBeenCalledWith('alert:player-lost');
+        expect(spy).toHaveBeenCalledWith('alert:player-lost', expectedResult);
       }
 
       // Werewolves (the winners) get alert:player-won, NOT alert:player-lost
       for (const werewolf of werewolves) {
         const spy = socketEmit.get(werewolf.getSocketId());
         expect(spy).toBeDefined();
-        expect(spy).toHaveBeenCalledWith('alert:player-won');
-        expect(spy).not.toHaveBeenCalledWith('alert:player-lost');
+        expect(spy).toHaveBeenCalledWith('alert:player-won', expectedResult);
+        expect(spy).not.toHaveBeenCalledWith(
+          'alert:player-lost',
+          expect.anything()
+        );
       }
+    });
+
+    it('reveals every player with name, role, and alive state at game end', () => {
+      const dead = game.getPlayerBySocketId('socket-0');
+      expect(dead).toBeDefined();
+      if (dead) {
+        dead.isAlive = false;
+      }
+
+      const result = game.buildGameEndResult('villagers');
+
+      expect(result.winningFaction).toBe('villagers');
+      expect(result.players).toHaveLength(4);
+      for (const revealed of result.players) {
+        expect(revealed.name).toBeTruthy();
+        expect(revealed.role).not.toBeNull();
+        expect(typeof revealed.isAlive).toBe('boolean');
+      }
+      expect(
+        result.players.find((revealed) => revealed.socketId === 'socket-0')
+          ?.isAlive
+      ).toBe(false);
     });
   });
 

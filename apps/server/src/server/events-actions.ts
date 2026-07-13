@@ -28,6 +28,14 @@ export class EventsActions {
     );
   }
 
+  /** Is any resolution currently paused waiting on a hunter pick? */
+  hasPendingHunterPick() {
+    return (
+      this.dayVoteResolution.hasPendingPick() ||
+      this.segmentsManager.nightDawnResolution.hasPendingPick()
+    );
+  }
+
   /** Direct entry into the elimination chain, used by mock scenarios. */
   resolveDayVote(player: Player) {
     return this.dayVoteResolution.run(player);
@@ -35,10 +43,29 @@ export class EventsActions {
 
   handleWerewolfVote(werewolfSid: string, targetSid: string) {
     this.game.handleWerewolfVote(werewolfSid, targetSid);
-    if (this.game.hasAllWerewolvesAgreed()) {
-      this.game.handleAllWerewolvesAgree();
-      this.segmentsManager.finishSegment();
+    this.tryCompleteWerewolfVote();
+  }
+
+  /**
+   * Finish the werewolf phase when every required (living, connected)
+   * werewolf has voted for the same target. Also called when a werewolf
+   * disconnects or dies, since that can be the event that completes the
+   * vote. Returns whether the phase completed.
+   */
+  tryCompleteWerewolfVote() {
+    if (!this.game.hasAllWerewolvesAgreed()) {
+      return false;
     }
+
+    // No votes at all (e.g. every wolf is gone): leave it to the segment
+    // deadline rather than resolving a night with no victim
+    if (!this.game.getWerewolfTarget()) {
+      return false;
+    }
+
+    this.game.handleAllWerewolvesAgree();
+    this.segmentsManager.finishSegment();
+    return true;
   }
 
   async handleDayVote(voterSid: string, targetPlayer: string) {
@@ -57,8 +84,16 @@ export class EventsActions {
     }
 
     this.game.handleDayVote(voterSid, targetPlayer);
+    await this.tryCompleteDayVote();
+  }
 
-    if (!this.game.hasAllPlayersVoted()) {
+  /**
+   * Resolve the day vote when every required (living, connected) player
+   * has voted. Also called when a player disconnects, since that can be
+   * the event that completes the vote.
+   */
+  async tryCompleteDayVote() {
+    if (!(this.game.hasAllPlayersVoted() && this.game.hasAnyDayVote())) {
       return;
     }
 

@@ -22,7 +22,7 @@ export type WitchStrategy = 'always' | 'never' | 'random';
 export interface SimOptions {
   playerCount?: number;
   playerNames?: string[];
-  /** Force this player NAME to be the HUNTER (sets DEV_FORCE_HUNTER). */
+  /** Force this player NAME to be the HUNTER via DEV_FORCE_HUNTER. */
   forceHunterName?: string | null;
   lovers?: LoversSpec;
   witchHealStrategy?: WitchStrategy;
@@ -91,6 +91,7 @@ export class GameSimulator {
   private readonly rng: () => number;
   private readonly players: Player[] = [];
   private savedDelayEnv: string | undefined;
+  private savedHunterEnv: string | undefined;
   private savedMathRandom: () => number = Math.random;
   /** Captured dawn promise (set by the `run()` wrapper each night). */
   private pendingDawnPromise: Promise<void> | null = null;
@@ -194,6 +195,14 @@ export class GameSimulator {
     this.savedMathRandom = Math.random;
     Math.random = this.rng;
 
+    // Force a specific player to be the hunter via the real DEV_FORCE_HUNTER
+    // path (HUNTER is now in initRolesList, so indexOf('HUNTER') finds and
+    // splices the right slot — no CUPID-splice bug).
+    if (this.opts.forceHunterName) {
+      this.savedHunterEnv = process.env.DEV_FORCE_HUNTER;
+      process.env.DEV_FORCE_HUNTER = this.opts.forceHunterName;
+    }
+
     const count = this.opts.playerCount;
     for (let i = 0; i < count; i++) {
       const name = this.opts.playerNames[i] ?? `Player${i + 1}`;
@@ -203,18 +212,13 @@ export class GameSimulator {
     }
 
     // assignRoles() shuffles the role list randomly and calls
-    // setPlayerTeams + setSpecialRolePlayer internally. HUNTER is commented
-    // out of initRolesList, so no hunter is assigned here.
+    // setPlayerTeams + setSpecialRolePlayer internally. HUNTER is now part
+    // of the normal role list, so a hunter is assigned randomly. When
+    // forceHunterName is set, DEV_FORCE_HUNTER controls WHICH player gets
+    // it (indexOf('HUNTER') finds the hunter slot in the shuffled pool and
+    // splices it, so exactly one hunter is dealt — the forced one).
     this.game.assignRoles();
     this.game.alertPlayersOfRoles();
-
-    // Force a hunter by converting a villager (NOT via DEV_FORCE_HUNTER —
-    // that env var can splice CUPID out of the role list when HUNTER isn't
-    // in it, leaving the game with no cupid and crashing cupidAction). A
-    // villager→hunter conversion keeps CUPID/WITCH/werewolves intact; the
-    // player stays in teamVillagers (hunter is villager-team), so no
-    // re-teaming (addTeamVillager doesn't dedup).
-    this.ensureHunter();
 
     this.chooseLovers();
   }
@@ -226,28 +230,11 @@ export class GameSimulator {
       process.env.DAY_VOTE_DELAY_MS = this.savedDelayEnv;
     }
     Math.random = this.savedMathRandom;
-  }
-
-  /**
-   * Convert a villager to the hunter so hunter-pick audio paths run. Prefer
-   * the named player when they are a villager; otherwise any villager. Does
-   * NOT re-call setPlayerTeams (the player is already in teamVillagers and
-   * addTeamVillager doesn't dedup).
-   */
-  private ensureHunter() {
-    if (!this.opts.forceHunterName) {
-      return;
+    if (this.savedHunterEnv === undefined) {
+      delete process.env.DEV_FORCE_HUNTER;
+    } else {
+      process.env.DEV_FORCE_HUNTER = this.savedHunterEnv;
     }
-    const villagers = this.players.filter((p) => p.getRole() === 'VILLAGER');
-    const preferred = villagers.find(
-      (p) => p.getName() === this.opts.forceHunterName
-    );
-    const target = preferred ?? this.pickRandom(villagers);
-    if (!target) {
-      return; // no villager to convert (tiny player counts)
-    }
-    target.setRole('HUNTER');
-    this.game.setSpecialRolePlayer(target);
   }
 
   private chooseLovers() {

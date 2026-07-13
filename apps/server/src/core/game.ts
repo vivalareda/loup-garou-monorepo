@@ -176,7 +176,7 @@ export class Game {
       // this.availableRoles.push('SEER');
       this.availableRoles.push('CUPID');
       this.availableRoles.push('WITCH');
-      // this.availableRoles.push('HUNTER');
+      this.availableRoles.push('HUNTER');
 
       const remainingSlots = playerCount - this.availableRoles.length;
       for (let i = 0; i < remainingSlots; i++) {
@@ -229,19 +229,31 @@ export class Game {
     console.log(`Shuffled roles: ${shuffledRoles}`);
 
     // Dev-only: force a specific player to be the hunter by setting
-    // DEV_FORCE_HUNTER=<player name> when starting the server
+    // DEV_FORCE_HUNTER=<player name> when starting the server. HUNTER is
+    // now in the normal role list, so this just controls WHICH player gets
+    // it. The forced player is handled FIRST, before the loop pops roles,
+    // so the HUNTER slot is still in the shuffled pool to splice out —
+    // otherwise a random player could pop it first and the fallback
+    // splice(0, 1) would remove the wrong role, creating two hunters.
     const forcedHunterName = process.env.DEV_FORCE_HUNTER;
+    const forcedHunterPlayer = forcedHunterName
+      ? [...this.players.values()].find(
+          (p) => p.getName() === forcedHunterName
+        )
+      : undefined;
+
+    if (forcedHunterPlayer) {
+      forcedHunterPlayer.assignRole('HUNTER');
+      const hunterIndex = shuffledRoles.indexOf('HUNTER');
+      if (hunterIndex !== -1) {
+        shuffledRoles.splice(hunterIndex, 1);
+      }
+      this.setPlayerTeams(forcedHunterPlayer);
+      this.setSpecialRolePlayer(forcedHunterPlayer);
+    }
 
     for (const player of this.players.values()) {
-      if (forcedHunterName && player.getName() === forcedHunterName) {
-        const role: Role = 'HUNTER';
-        player.assignRole(role);
-        const hunterIndex = shuffledRoles.indexOf(role);
-        // Keep role count in sync with player count whether or not
-        // HUNTER was part of the generated role list
-        shuffledRoles.splice(hunterIndex !== -1 ? hunterIndex : 0, 1);
-        this.setPlayerTeams(player);
-        this.setSpecialRolePlayer(player);
+      if (player === forcedHunterPlayer) {
         continue;
       }
       const role = shuffledRoles.pop();

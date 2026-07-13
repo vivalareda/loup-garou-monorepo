@@ -52,7 +52,7 @@ describe('role distribution', () => {
   };
 
   it.each([4, 5, 6, 8])(
-    'deals exactly %i roles with floor(n / 3) werewolves',
+    'deals exactly %i roles with floor(n / 3) werewolves and one HUNTER',
     (playerCount) => {
       const game = buildGame(playerCount);
       game.initRolesList();
@@ -61,6 +61,18 @@ describe('role distribution', () => {
       expect(
         game.availableRoles.filter((role) => role === 'WEREWOLF')
       ).toHaveLength(Math.floor(playerCount / 3));
+
+      // Hunter is now part of normal role generation
+      expect(
+        game.availableRoles.filter((role) => role === 'HUNTER')
+      ).toHaveLength(1);
+      // Cupid and Witch are always present for >= 4 players
+      expect(
+        game.availableRoles.filter((role) => role === 'CUPID')
+      ).toHaveLength(1);
+      expect(
+        game.availableRoles.filter((role) => role === 'WITCH')
+      ).toHaveLength(1);
 
       // Every player ends up with exactly one role
       game.assignRoles();

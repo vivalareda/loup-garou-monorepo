@@ -27,6 +27,9 @@ function applyPendingPrompt(prompt: PendingPrompt) {
     case 'LOVERS':
       setModalState({ type: 'LOVER', open: true });
       break;
+    case 'SEER':
+      setModalState({ type: 'SEER', open: true });
+      break;
     case 'WEREWOLF':
       setModalState({ type: 'WEREWOLVES', open: true });
       break;
@@ -86,6 +89,14 @@ export function applyGameSnapshot(
       .map(({ name, socketId }) => ({ name, socketId }))
   );
   gameStore.setCurrentPhase(snapshot.phase);
+  gameStore.setCountdown(
+    snapshot.countdown
+      ? {
+          phase: snapshot.countdown.phase,
+          endsAt: Date.now() + snapshot.countdown.remainingMs,
+        }
+      : null
+  );
   if (snapshot.gameResult) {
     gameStore.setGameResult(snapshot.gameResult);
   }

@@ -6,6 +6,31 @@ import { usePlayerStore } from '@/hooks/use-player-store';
 import { clearSessionToken } from '@/utils/session';
 import { socket } from '@/utils/sockets';
 
+/** Server rejection reasons (alert:action-error), translated for the banner. */
+const ACTION_ERROR_MESSAGES: Record<string, string> = {
+  'Cannot start the vote now': 'Impossible de lancer le vote maintenant.',
+  'Cupid action is not allowed now': 'Cupidon ne peut pas agir maintenant.',
+  'Day vote is not allowed now': 'Le vote du village est fermé.',
+  'Game already started': 'La partie a déjà commencé.',
+  'Game is finished': 'La partie est terminée.',
+  'Game is not finished': "La partie n'est pas terminée.",
+  'Hunter pick is not allowed now': 'Le chasseur ne peut pas tirer maintenant.',
+  'Invalid Cupid selection': 'Sélection de Cupidon invalide.',
+  'Invalid Seer target': 'Cible de la voyante invalide.',
+  'Invalid werewolf target': 'Cible des loups-garous invalide.',
+  'Lover acknowledgement is not allowed now': 'Action impossible maintenant.',
+  'Seer action is not allowed now': 'La voyante ne peut pas agir maintenant.',
+  'Vote is out of date': 'Ce vote est obsolète.',
+  'Werewolf vote is not allowed now': 'Le vote des loups-garous est fermé.',
+  'Witch heal is not allowed now': 'La sorcière ne peut pas soigner maintenant.',
+  'Witch poison is not allowed now':
+    'La sorcière ne peut pas empoisonner maintenant.',
+};
+
+export function translateActionError(message: string) {
+  return ACTION_ERROR_MESSAGES[message] ?? message;
+}
+
 /** The only routes these listeners ever navigate to. */
 export type GameEventRoute =
   | '/'
@@ -36,9 +61,25 @@ export function registerGameEventListeners(router: GameEventRouter) {
     });
   });
 
-  socket.once('alert:player-is-lover', () => {
+  socket.once('alert:player-is-lover', (partnerName) => {
+    useGameStore.getState().setLoverPartnerName(partnerName);
     setModalState({
       type: 'LOVER',
+      open: true,
+    });
+  });
+
+  socket.on('seer:pick-required', () => {
+    setModalState({
+      type: 'SEER',
+      open: true,
+    });
+  });
+
+  socket.on('seer:vision-result', (playerName, role) => {
+    useGameStore.getState().setSeerVision({ playerName, role });
+    setModalState({
+      type: 'SEER-RESULT',
       open: true,
     });
   });
@@ -93,13 +134,24 @@ export function registerGameEventListeners(router: GameEventRouter) {
   socket.on('alert:player-won', (result) => {
     console.log('Player won the game!');
     useGameStore.getState().setGameResult(result);
+    // The game is over: any still-open prompt (e.g. a hunter pick that
+    // timed out) can no longer be answered, and a death redirect deferred
+    // behind that modal must not clobber the end screen.
+    useGameStore.getState().setPendingRedirect(false);
+    useModalStore.getState().closeModal();
     router.replace('/winner-screen');
   });
 
   socket.on('alert:player-lost', (result) => {
     console.log('Player lost the game!');
     useGameStore.getState().setGameResult(result);
+    useGameStore.getState().setPendingRedirect(false);
+    useModalStore.getState().closeModal();
     router.replace('/loser-screen');
+  });
+
+  socket.on('alert:action-error', (message) => {
+    useGameStore.getState().setActionError(translateActionError(message));
   });
 
   socket.on('game:restarted', () => {
@@ -117,6 +169,8 @@ export function registerGameEventListeners(router: GameEventRouter) {
   return () => {
     socket.off('cupid:pick-required');
     socket.off('alert:player-is-lover');
+    socket.off('seer:pick-required');
+    socket.off('seer:vision-result');
     socket.off('werewolf:pick-required');
     socket.off('witch:can-heal');
     socket.off('witch:pick-poison-player');
@@ -125,6 +179,7 @@ export function registerGameEventListeners(router: GameEventRouter) {
     socket.off('alert:player-is-dead');
     socket.off('alert:player-won');
     socket.off('alert:player-lost');
+    socket.off('alert:action-error');
     socket.off('game:restarted');
   };
 }

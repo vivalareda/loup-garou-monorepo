@@ -13,6 +13,7 @@ import type { SegmentType } from './segment';
 export type PendingPrompt =
   | { kind: 'CUPID' }
   | { kind: 'LOVERS'; partnerName: string }
+  | { kind: 'SEER' }
   | { kind: 'WEREWOLF' }
   | { kind: 'WITCH-HEAL'; victimSid: string; victimName: string }
   | { kind: 'WITCH-POISON' }
@@ -31,10 +32,15 @@ type EventType =
   | 'day'
   | 'game'
   | 'admin'
+  | 'agent'
   | Lowercase<Role>;
 
 export type WerewolvesVoteState = Record<string, number>;
 export type GamePhase = SegmentType | 'LOBBY' | 'FINISHED';
+/** What a client-visible countdown is for: a phase deadline, or the
+ * day-discussion window that precedes the vote. */
+export type CountdownPhase = GamePhase | 'DAY-DISCUSSION';
+export type Countdown = { phase: CountdownPhase; remainingMs: number };
 export type PlayerGameSnapshot = {
   phase: GamePhase;
   players: SnapshotPlayer[];
@@ -47,6 +53,8 @@ export type PlayerGameSnapshot = {
   gameResult?: GameEndResult;
   /** Only present when the game is finished. */
   didWin?: boolean;
+  /** The running deadline (or discussion window), when one is active. */
+  countdown?: Countdown;
 };
 const serverEventSchemas = {
   'lobby:player-data': null as unknown as (player: Player) => void,
@@ -66,6 +74,11 @@ const serverEventSchemas = {
   // reset, or the player was removed): the client must forget the session
   'player:rejoin-failed': null as unknown as () => void,
   'game:phase-changed': null as unknown as (phase: GamePhase) => void,
+  'game:countdown': null as unknown as (
+    phase: CountdownPhase,
+    remainingMs: number
+  ) => void,
+  'game:phase-timed-out': null as unknown as (phase: GamePhase) => void,
   // The server reset the game in place: every client must drop its local
   // game state and return to the join screen
   'game:restarted': null as unknown as () => void,
@@ -82,6 +95,12 @@ const serverEventSchemas = {
   'alert:player-won': null as unknown as (result: GameEndResult) => void,
   'alert:player-lost': null as unknown as (result: GameEndResult) => void,
   'alert:action-error': null as unknown as (message: string) => void,
+
+  'seer:pick-required': null as unknown as () => void,
+  'seer:vision-result': null as unknown as (
+    playerName: string,
+    role: Role
+  ) => void,
 
   'werewolf:pick-required': null as unknown as () => void,
   'werewolf:current-votes': null as unknown as (
@@ -113,6 +132,10 @@ export type ServerToClientEvents = typeof serverEventSchemas;
 
 const clientEventSchemas = {
   'lobby:get-players-list': null as unknown as () => void,
+  /** Agent/CLI protocol: request the complete private snapshot for this player. */
+  'agent:get-state': null as unknown as (
+    callback: (snapshot: PlayerGameSnapshot) => void
+  ) => void,
 
   'player:join': null as unknown as (playerName: string) => void,
   'player:rejoin': null as unknown as (sessionToken: string) => void,
@@ -140,6 +163,8 @@ const clientEventSchemas = {
   'cupid:lovers-pick': null as unknown as (selectedPlayers: string[]) => void,
   'alert:lover-closed-alert': null as unknown as () => void,
 
+  'seer:picked-player': null as unknown as (targetSid: string) => void,
+
   'werewolf:player-voted': null as unknown as (targetPlayer: string) => void,
 
   'witch:healed-player': null as unknown as () => void,
@@ -148,6 +173,8 @@ const clientEventSchemas = {
   'witch:skipped-poison': null as unknown as () => void,
 
   'day:player-voted': null as unknown as (targetPlayer: string) => void,
+  // Any living player may end the day discussion and open the vote
+  'day:start-vote': null as unknown as () => void,
   'alert:hunter-died': null as unknown as () => void,
   'hunter:killed-player': null as unknown as (selectedPlayer: string) => void,
 

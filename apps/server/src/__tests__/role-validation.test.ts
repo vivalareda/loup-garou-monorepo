@@ -310,6 +310,7 @@ describe('Server-side role validation', () => {
     addPlayer('C', 'c-sid', 'WEREWOLF');
     addPlayer('D', 'd-sid', 'WEREWOLF');
     setSegment('DAY');
+    segmentsManager.getGameActions().startDayVote();
 
     const voter = connect('a-sid');
     const spy = vi.spyOn(game, 'handleDayVote');

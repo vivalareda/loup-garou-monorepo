@@ -1,17 +1,29 @@
 import type { DeathInfo } from '@repo/types';
-import type { AudioManager } from '@/segments/audio-manager';
+import type { SegmentsManager } from '@/segments/segments-manager';
 import type { SocketType } from '@/server/sockets';
 import type { Game } from './game';
+
+function resolveDayDiscussionMs() {
+  const raw =
+    process.env.DAY_DISCUSSION_MS ?? process.env.DAY_VOTE_DELAY_MS ?? '';
+  if (raw === '') {
+    return 120_000;
+  }
+  return Number(raw);
+}
 
 export class GameActions {
   private readonly game: Game;
   private readonly io: SocketType;
-  private readonly audioManager: AudioManager;
+  private readonly segmentsManager: SegmentsManager;
+  private dayVotingOpen = false;
+  private discussionTimer: NodeJS.Timeout | null = null;
+  private discussionEndsAt: number | null = null;
 
-  constructor(game: Game, io: SocketType, audioManager: AudioManager) {
+  constructor(game: Game, io: SocketType, segmentsManager: SegmentsManager) {
     this.game = game;
     this.io = io;
-    this.audioManager = audioManager;
+    this.segmentsManager = segmentsManager;
   }
 
   cupidAction() {
@@ -50,6 +62,14 @@ export class GameActions {
       },
       Math.min(alertDelayMs, 3000)
     );
+  }
+
+  seerAction() {
+    const seer = this.game.getSpecialRolePlayer('SEER');
+    if (!seer) {
+      return;
+    }
+    this.io.to(seer.getSocketId()).emit('seer:pick-required');
   }
 
   werewolfAction() {
@@ -130,21 +150,73 @@ export class GameActions {
   }
 
   async dayAction() {
+    this.closeDayVote();
     const deaths = this.game.processPendingDeaths();
     if (deaths.length > 0) {
       this.announceNightDeaths(deaths);
     }
 
-    const winner = this.game.checkIfWinner();
-    if (winner) {
-      await this.audioManager.playWinnerAudio(winner);
-      this.game.alertWinnersAndLosers(winner);
+    // Delegate the victory check so the segments manager records the
+    // FINISHED state — a local checkIfWinner would end the game without
+    // marking it finished, leaving game:restart permanently rejected.
+    if (this.segmentsManager.isGameOver()) {
       return;
     }
 
-    setTimeout(() => {
-      this.io.emit('day:voting-phase-start');
-    }, Number(process.env.DAY_VOTE_DELAY_MS ?? 7000));
+    const discussionMs = resolveDayDiscussionMs();
+    if (!Number.isFinite(discussionMs) || discussionMs <= 0) {
+      this.startDayVote();
+      return;
+    }
+
+    this.discussionEndsAt = Date.now() + discussionMs;
+    this.io.emit('game:countdown', 'DAY-DISCUSSION', discussionMs);
+    this.discussionTimer = setTimeout(() => this.startDayVote(), discussionMs);
+    this.discussionTimer.unref?.();
+  }
+
+  /** Open the day vote: ends the discussion window. Idempotent. */
+  startDayVote() {
+    if (this.dayVotingOpen || !this.segmentsManager.isCurrentSegment('DAY')) {
+      return;
+    }
+
+    this.clearDiscussionTimer();
+    this.dayVotingOpen = true;
+    this.io.emit('day:voting-phase-start');
+
+    const remainingMs = this.segmentsManager.getRemainingDeadlineMs();
+    if (remainingMs !== null && remainingMs > 0) {
+      this.io.emit('game:countdown', 'DAY', remainingMs);
+    }
+  }
+
+  isDayVotingOpen() {
+    return this.dayVotingOpen;
+  }
+
+  isDiscussionActive() {
+    return this.discussionEndsAt !== null && !this.dayVotingOpen;
+  }
+
+  getDiscussionRemainingMs() {
+    if (!this.isDiscussionActive() || this.discussionEndsAt === null) {
+      return null;
+    }
+    return Math.max(0, this.discussionEndsAt - Date.now());
+  }
+
+  closeDayVote() {
+    this.clearDiscussionTimer();
+    this.dayVotingOpen = false;
+  }
+
+  private clearDiscussionTimer() {
+    if (this.discussionTimer) {
+      clearTimeout(this.discussionTimer);
+      this.discussionTimer = null;
+    }
+    this.discussionEndsAt = null;
   }
 
   hunterAction() {

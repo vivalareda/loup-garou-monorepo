@@ -149,6 +149,78 @@ describe('registerGameEventListeners', () => {
     expect(router.replace).toHaveBeenCalledWith('/');
   });
 
+  it('opens the seer pick modal and stores the vision result', async () => {
+    const { useModalStore } = await import('@/hooks/use-modal-store');
+    const { useGameStore } = await import('@/hooks/use-game-store');
+    await register();
+
+    listeners.get('seer:pick-required')?.();
+    expect(useModalStore.getState().modalState).toEqual({
+      type: 'SEER',
+      open: true,
+    });
+
+    listeners.get('seer:vision-result')?.('Bob', 'WEREWOLF');
+    expect(useGameStore.getState().seerVision).toEqual({
+      playerName: 'Bob',
+      role: 'WEREWOLF',
+    });
+    expect(useModalStore.getState().modalState).toEqual({
+      type: 'SEER-RESULT',
+      open: true,
+    });
+  });
+
+  it('closes any open prompt modal when the game ends', async () => {
+    const { useModalStore } = await import('@/hooks/use-modal-store');
+    await register();
+
+    // A hunter pick that the server timed out stays open client-side, and
+    // the player's death redirect was deferred behind it
+    const { useGameStore } = await import('@/hooks/use-game-store');
+    useModalStore.getState().setModalState({ type: 'HUNTER', open: true });
+    useGameStore.getState().setPendingRedirect(true);
+    listeners.get('alert:player-lost')?.(gameEndResult);
+
+    expect(useModalStore.getState().modalState.open).toBe(false);
+    // The stale redirect must not clobber the end screen
+    expect(useGameStore.getState().pendingRedirect).toBe(false);
+    expect(router.replace).toHaveBeenLastCalledWith('/loser-screen');
+
+    useModalStore.getState().setModalState({ type: 'DAY-VOTE', open: true });
+    listeners.get('alert:player-won')?.(gameEndResult);
+
+    expect(useModalStore.getState().modalState.open).toBe(false);
+    expect(router.replace).toHaveBeenLastCalledWith('/winner-screen');
+  });
+
+  it('surfaces server action errors, translated', async () => {
+    const { useGameStore } = await import('@/hooks/use-game-store');
+    await register();
+
+    listeners.get('alert:action-error')?.('Cannot start the vote now');
+    expect(useGameStore.getState().actionError).toBe(
+      'Impossible de lancer le vote maintenant.'
+    );
+
+    listeners.get('alert:action-error')?.('Some unknown message');
+    expect(useGameStore.getState().actionError).toBe('Some unknown message');
+  });
+
+  it('stores the partner name and opens the modal on alert:player-is-lover', async () => {
+    const { useGameStore } = await import('@/hooks/use-game-store');
+    const { useModalStore } = await import('@/hooks/use-modal-store');
+    await register();
+
+    listeners.get('alert:player-is-lover')?.('Bob');
+
+    expect(useGameStore.getState().loverPartnerName).toBe('Bob');
+    expect(useModalStore.getState().modalState).toEqual({
+      type: 'LOVER',
+      open: true,
+    });
+  });
+
   it('stops routing after cleanup runs', async () => {
     const cleanup = await register();
 

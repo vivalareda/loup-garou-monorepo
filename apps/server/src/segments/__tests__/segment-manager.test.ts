@@ -94,6 +94,9 @@ describe('SegmentsManager', () => {
     expect(segmentsManager.getCurrentSegmentType()).toBe('LOVERS');
 
     await segmentsManager.finishSegment();
+    expect(segmentsManager.getCurrentSegmentType()).toBe('SEER');
+
+    await segmentsManager.finishSegment();
     expect(segmentsManager.getCurrentSegmentType()).toBe('WEREWOLF');
 
     await segmentsManager.finishSegment();
@@ -105,8 +108,10 @@ describe('SegmentsManager', () => {
     await segmentsManager.finishSegment();
     expect(segmentsManager.getCurrentSegmentType()).toBe('DAY');
 
+    // Night two starts at the Seer: unlike Cupid and Lovers, she wakes
+    // every night
     await segmentsManager.finishSegment();
-    expect(segmentsManager.getCurrentSegmentType()).toBe('WEREWOLF');
+    expect(segmentsManager.getCurrentSegmentType()).toBe('SEER');
   });
 
   test('should play werewolf winning audio to announce win', () => {
@@ -196,7 +201,7 @@ describe('SegmentsManager', () => {
       // The Lovers deadline fires at its own, shorter duration
       schedule('LOVERS');
       await vi.advanceTimersByTimeAsync(500);
-      expect(segmentsManager.getCurrentSegmentType()).toBe('WEREWOLF');
+      expect(segmentsManager.getCurrentSegmentType()).toBe('SEER');
     } finally {
       vi.unstubAllEnvs();
       vi.useRealTimers();

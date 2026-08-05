@@ -246,7 +246,7 @@ export function GlobalModal() {
           onPress={handleModalClose}
         >
           <Text className="py-2 text-center font-medium text-white">
-            Confirm Selection
+            {modalData.confirmLabel ?? 'Confirm Selection'}
           </Text>
         </TouchableOpacity>
       </View>

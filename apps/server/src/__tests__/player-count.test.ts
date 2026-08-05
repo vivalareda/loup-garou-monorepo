@@ -74,6 +74,11 @@ describe('role distribution', () => {
         game.availableRoles.filter((role) => role === 'WITCH')
       ).toHaveLength(1);
 
+      // The Seer joins from 5 players up; at 4 there is no free slot
+      expect(
+        game.availableRoles.filter((role) => role === 'SEER')
+      ).toHaveLength(playerCount >= 5 ? 1 : 0);
+
       // Every player ends up with exactly one role
       game.assignRoles();
       for (const player of game.getPlayerList().values()) {

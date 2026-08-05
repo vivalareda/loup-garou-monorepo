@@ -1,4 +1,5 @@
 import {
+  type CountdownPhase,
   type GamePlayer,
   getRoleDescription,
   isGamePlayer,
@@ -6,7 +7,7 @@ import {
 } from '@repo/types';
 import { ImpactFeedbackStyle, impactAsync } from 'expo-haptics';
 import LottieView from 'lottie-react-native';
-import { type ReactNode, useCallback, useEffect } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -15,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ROLE_LABELS } from '@/components/end-game-panel';
 import { useCardFlip } from '@/hooks/use-card-flip';
 import { useGameStore } from '@/hooks/use-game-store';
 import { type ModalState, useModalStore } from '@/hooks/use-modal-store';
@@ -43,6 +45,7 @@ type ModalPresentContext = {
   setWaitingForPlayers: (waiting: boolean) => void;
   loverModalData: ReactNode;
   witchHealModalData: ReactNode;
+  seerResultModalData: ReactNode;
 };
 
 /** SIDs of every listed player except the local one. */
@@ -50,6 +53,50 @@ function otherPlayerSids(ctx: ModalPresentContext) {
   return ctx.playersList
     .filter((p) => p.socketId !== ctx.player.socketId)
     .map((p) => p.socketId);
+}
+
+const COUNTDOWN_LABELS: Record<string, string> = {
+  CUPID: 'Cupidon choisit',
+  LOVERS: 'Les amoureux se découvrent',
+  SEER: 'La voyante observe',
+  WEREWOLF: 'Les loups-garous chassent',
+  'WITCH-HEAL': 'La sorcière décide',
+  'WITCH-POISON': 'La sorcière décide',
+  'DAY-DISCUSSION': 'Discussion du village',
+  DAY: 'Vote du village',
+  HUNTER: 'Le chasseur vise',
+};
+
+function formatRemaining(ms: number) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function PhaseCountdown({
+  countdown,
+}: {
+  countdown: { phase: CountdownPhase; endsAt: number };
+}) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const remaining = countdown.endsAt - now;
+  if (remaining <= 0) {
+    return null;
+  }
+
+  return (
+    <Text className="mt-1 text-center text-sm text-slate-400">
+      {COUNTDOWN_LABELS[countdown.phase] ?? countdown.phase} —{' '}
+      {formatRemaining(remaining)}
+    </Text>
+  );
 }
 
 async function loverHapticAlert() {
@@ -70,6 +117,7 @@ async function presentLoverModal(ctx: ModalPresentContext) {
     title: 'Vous êtes amoureux !',
     data: ctx.loverModalData,
     buttonDelay: 7000,
+    confirmLabel: 'Compris',
     onConfirm: () => {
       ctx.setWaitingForPlayers(true);
       socket.emit('alert:lover-closed-alert');
@@ -86,6 +134,29 @@ function presentCupidModal(ctx: ModalPresentContext) {
     onConfirm: (selectedPlayers: string[]) => {
       ctx.setWaitingForPlayers(true);
       socket.emit('cupid:lovers-pick', selectedPlayers);
+    },
+  });
+}
+
+function presentSeerModal(ctx: ModalPresentContext) {
+  ctx.openModal({
+    type: 'selection',
+    title: 'Qui voulez-vous sonder?',
+    data: otherPlayerSids(ctx),
+    selectionCount: 1,
+    onConfirm: (selectedPlayer: string) => {
+      socket.emit('seer:picked-player', selectedPlayer);
+    },
+  });
+}
+
+function presentSeerResultModal(ctx: ModalPresentContext) {
+  ctx.openModal({
+    type: 'confirm',
+    title: 'Votre vision',
+    data: ctx.seerResultModalData,
+    onConfirm: () => {
+      ctx.setWaitingForPlayers(true);
     },
   });
 }
@@ -171,6 +242,9 @@ function isModalAllowed(type: OpenModalType, player: GamePlayer) {
       return true;
     case 'CUPID':
       return player.role === 'CUPID';
+    case 'SEER':
+    case 'SEER-RESULT':
+      return player.role === 'SEER' && player.isAlive;
     case 'WEREWOLVES':
       return player.role === 'WEREWOLF';
     case 'WITCH-HEAL':
@@ -190,6 +264,12 @@ function presentModalForState(type: OpenModalType, ctx: ModalPresentContext) {
       break;
     case 'CUPID':
       presentCupidModal(ctx);
+      break;
+    case 'SEER':
+      presentSeerModal(ctx);
+      break;
+    case 'SEER-RESULT':
+      presentSeerResultModal(ctx);
       break;
     case 'WEREWOLVES':
       presentWerewolfModal(ctx);
@@ -212,7 +292,7 @@ function presentModalForState(type: OpenModalType, ctx: ModalPresentContext) {
 }
 
 export default function GameInterface() {
-  const { player } = usePlayerStore();
+  const { player, isAlive } = usePlayerStore();
   const {
     playersList,
     villagersList,
@@ -223,6 +303,13 @@ export default function GameInterface() {
     setWaitingForPlayers,
     getPlayerNameFromSid,
     werewolvesVictim,
+    seerVision,
+    countdown,
+    phaseTimedOut,
+    setPhaseTimedOut,
+    actionError,
+    setActionError,
+    loverPartnerName,
   } = useGameStore();
   const { openModal, closeModal, modalState } = useModalStore();
   const { isRevealed, flipCard, animations } = useCardFlip();
@@ -241,6 +328,24 @@ export default function GameInterface() {
   useEffect(() => {
     socket.emit('lobby:get-players-list');
   }, []);
+
+  useEffect(() => {
+    if (!phaseTimedOut) {
+      return;
+    }
+    const timer = setTimeout(() => setPhaseTimedOut(null), 8000);
+    return () => clearTimeout(timer);
+  }, [phaseTimedOut, setPhaseTimedOut]);
+
+  useEffect(() => {
+    if (!actionError) {
+      return;
+    }
+    const timer = setTimeout(() => setActionError(null), 6000);
+    return () => clearTimeout(timer);
+  }, [actionError, setActionError]);
+
+  const isDiscussionActive = countdown?.phase === 'DAY-DISCUSSION';
 
   const getWitchHealModalData = useCallback((victimName: string | null) => {
     return (
@@ -276,8 +381,7 @@ export default function GameInterface() {
 
   /** Resolve the werewolf victim SID to a display name. The victim may be
    * the witch herself (werewolves can target the witch), and `playersList`
-   * excludes the current player, so fall back to the local player's name
-   * rather than throwing. */
+   * excludes the current player, so check the local player first. */
   const resolveVictimName = useCallback(
     (victimSid: string | null): string | null => {
       if (!victimSid) {
@@ -286,11 +390,7 @@ export default function GameInterface() {
       if (victimSid === player?.socketId) {
         return player?.name ?? victimSid;
       }
-      try {
-        return getPlayerNameFromSid(victimSid);
-      } catch {
-        return victimSid;
-      }
+      return getPlayerNameFromSid(victimSid);
     },
     [player, getPlayerNameFromSid]
   );
@@ -300,30 +400,49 @@ export default function GameInterface() {
       if (socketId === player?.socketId) {
         return player.name;
       }
-      try {
-        return getPlayerNameFromSid(socketId);
-      } catch {
-        return 'Joueur inconnu';
-      }
+      return getPlayerNameFromSid(socketId);
     },
     [player, getPlayerNameFromSid]
   );
 
-  const getLoverModalData = useCallback(() => {
+  const getSeerResultModalData = useCallback(() => {
+    if (!seerVision) {
+      return null;
+    }
     return (
-      <View className="my-5 h-48 w-48 items-center justify-center">
-        <LottieView
-          autoPlay
-          loop
-          source={require('../../assets/cupid-animation.json')}
-          style={{
-            width: 192,
-            height: 192,
-          }}
-        />
+      <View className="items-center justify-center py-4">
+        <Text className="text-lg text-slate-700">{seerVision.playerName}</Text>
+        <Text className="mt-2 text-2xl font-bold text-slate-900">
+          {ROLE_LABELS[seerVision.role] ?? seerVision.role}
+        </Text>
       </View>
     );
-  }, []);
+  }, [seerVision]);
+
+  const getLoverModalData = useCallback(() => {
+    return (
+      <View className="my-5 items-center justify-center">
+        <View className="h-48 w-48 items-center justify-center">
+          <LottieView
+            autoPlay
+            loop
+            source={require('../../assets/cupid-animation.json')}
+            style={{
+              width: 192,
+              height: 192,
+            }}
+          />
+        </View>
+        {loverPartnerName && (
+          <Text className="mt-2 text-center text-lg text-slate-700">
+            Vous aimez{' '}
+            <Text className="font-bold text-slate-900">{loverPartnerName}</Text>
+            {'\n'}Si l'un de vous meurt, l'autre meurt aussi.
+          </Text>
+        )}
+      </View>
+    );
+  }, [loverPartnerName]);
 
   useEffect(() => {
     if (!(player && isGamePlayer(player) && modalState.open)) {
@@ -347,6 +466,7 @@ export default function GameInterface() {
       witchHealModalData: getWitchHealModalData(
         resolveVictimName(werewolvesVictim)
       ),
+      seerResultModalData: getSeerResultModalData(),
     });
   }, [
     modalState,
@@ -357,6 +477,7 @@ export default function GameInterface() {
     closeModal,
     getLoverModalData,
     getWitchHealModalData,
+    getSeerResultModalData,
     resolveVictimName,
     emitWitch,
     setWaitingForPlayers,
@@ -387,10 +508,31 @@ export default function GameInterface() {
           <Text className="mt-2 text-center text-sm font-semibold uppercase tracking-wide text-blue-300">
             Phase: {currentPhase.replace(/_/g, ' ')}
           </Text>
+          {countdown && <PhaseCountdown countdown={countdown} />}
+          {phaseTimedOut && (
+            <Text className="mt-1 text-center text-sm text-orange-300">
+              Temps écoulé — la partie continue
+            </Text>
+          )}
+          {actionError && (
+            <Text className="mt-1 text-center text-sm font-semibold text-red-300">
+              {actionError}
+            </Text>
+          )}
           {isWaitingForPlayers && (
             <Text className="mt-2 text-center text-sm text-amber-200">
               En attente des autres joueurs...
             </Text>
+          )}
+          {isDiscussionActive && isAlive && (
+            <TouchableOpacity
+              accessibilityLabel="Passer au vote"
+              accessibilityRole="button"
+              className="mt-3 self-center rounded-lg bg-blue-500/80 px-6 py-2"
+              onPress={() => socket.emit('day:start-vote')}
+            >
+              <Text className="font-semibold text-white">Passer au vote</Text>
+            </TouchableOpacity>
           )}
         </View>
 

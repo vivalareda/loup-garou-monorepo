@@ -16,7 +16,10 @@ export default function WaitingRoom() {
   }, [router, roleAssigned]);
 
   if (!player) {
-    throw new Error('Player not found in waiting room');
+    // game:restarted resets the player store a tick before its
+    // router.replace('/') unmounts this screen — render nothing for that
+    // frame instead of crashing the whole app.
+    return null;
   }
 
   // playersList excludes the local player

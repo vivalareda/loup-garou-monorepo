@@ -334,8 +334,8 @@ export function PlayerView() {
                     {activePlayer.player.isAlive ? (
                       <div className="rounded bg-purple-50 p-2">
                         <p className="text-xs text-purple-800">
-                          Witch modals will appear automatically when the
-                          server prompts you.
+                          Witch modals will appear automatically when the server
+                          prompts you.
                         </p>
                         <p className="mt-1 text-xs text-purple-600">
                           Heal: Save werewolf victim • Poison: Eliminate any
@@ -362,12 +362,14 @@ export function PlayerView() {
                       🎯 Hunter Actions
                     </h3>
                     <p className="mb-2 text-xs text-gray-600">
-                      When you die, you may take one player with you to the grave.
+                      When you die, you may take one player with you to the
+                      grave.
                     </p>
                     {activePlayer.player.isAlive ? (
                       <div className="rounded bg-orange-50 p-2">
                         <p className="text-xs text-orange-800">
-                          The hunter modal will appear automatically when you die.
+                          The hunter modal will appear automatically when you
+                          die.
                         </p>
                         <p className="mt-1 text-xs text-orange-600">
                           You'll have 18 seconds to choose your revenge target.

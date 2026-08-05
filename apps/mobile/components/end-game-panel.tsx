@@ -2,7 +2,7 @@ import type { GameEndResult } from '@repo/types';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { socket } from '@/utils/sockets';
 
-const ROLE_LABELS: Record<string, string> = {
+export const ROLE_LABELS: Record<string, string> = {
   WEREWOLF: 'Loup-Garou',
   VILLAGER: 'Villageois',
   WITCH: 'Sorcière',

@@ -87,7 +87,15 @@ describe('Audio segment order', () => {
       );
       segmentsManager.currentSegment = daySegmentIndex;
 
-      game.addPendingDeath(players[2].getSocketId(), 'WEREWOLVES');
+      // A hunter victim would park the dawn on the revenge pick; this test
+      // covers the plain death-announcement path
+      const victim = players.find(
+        (player, index) => index >= 2 && player.getRole() !== 'HUNTER'
+      );
+      if (!victim) {
+        throw new Error('no non-hunter victim available');
+      }
+      game.addPendingDeath(victim.getSocketId(), 'WEREWOLVES');
 
       const playAudioSpy = vi.spyOn(audioManager, 'playAudio');
 

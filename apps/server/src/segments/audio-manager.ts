@@ -21,6 +21,8 @@ export class AudioManager {
         return 'Cupidon/Cupidon-1';
       case 'LOVERS':
         return 'Lovers/combined_lover';
+      case 'SEER':
+        return 'Seer/Seer-wake-up';
       case 'WEREWOLF':
         return 'Werewolves/Werewolves-1';
       case 'WITCH-HEAL':
@@ -44,6 +46,8 @@ export class AudioManager {
         return 'Cupidon/Cupidon-2';
       case 'LOVERS':
         return 'Lovers/Lover-3';
+      case 'SEER':
+        return 'Seer/Seer-end';
       case 'WEREWOLF':
         return 'Werewolves/Werewolves-2';
       case 'WITCH-HEAL':

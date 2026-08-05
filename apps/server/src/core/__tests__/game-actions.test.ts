@@ -1,8 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
-import type { AudioManager } from '@/segments/audio-manager';
+import type { SegmentsManager } from '@/segments/segments-manager';
 import type { SocketType } from '@/server/sockets';
+
+const makeSegmentsManager = (gameOver: boolean) =>
+  ({
+    isCurrentSegment: vi.fn().mockReturnValue(true),
+    getRemainingDeadlineMs: vi.fn().mockReturnValue(null),
+    isGameOver: vi.fn().mockReturnValue(gameOver),
+  }) as unknown as SegmentsManager;
 
 describe('GameActions', () => {
   beforeEach(() => {
@@ -12,11 +19,9 @@ describe('GameActions', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
-  test('should alert werewolves as winners when they win after day action', async () => {
+  test('dayAction ends via the segments manager when a faction has won', async () => {
     const mockGame = {
       processPendingDeaths: vi.fn().mockReturnValue([]),
-      checkIfWinner: vi.fn().mockReturnValue('werewolves'),
-      alertWinnersAndLosers: vi.fn(),
     } as unknown as Game;
 
     const mockIo = {
@@ -24,18 +29,19 @@ describe('GameActions', () => {
       emit: vi.fn(),
     } as unknown as SocketType;
 
-    const mockAudioManager = {
-      playWinnerAudio: vi.fn().mockResolvedValue(undefined),
-    } as unknown as AudioManager;
-
-    const gameActions = new GameActions(mockGame, mockIo, mockAudioManager);
+    const segmentsManager = makeSegmentsManager(true);
+    const gameActions = new GameActions(mockGame, mockIo, segmentsManager);
 
     await gameActions.dayAction();
 
-    expect(mockGame.processPendingDeaths).toHaveBeenCalled();
-    expect(mockGame.checkIfWinner).toHaveBeenCalled();
-    expect(mockAudioManager.playWinnerAudio).toHaveBeenCalledWith('werewolves');
-    expect(mockGame.alertWinnersAndLosers).toHaveBeenCalledWith('werewolves');
+    // isGameOver is the only victory path: it records the FINISHED state
+    // that game:restart checks. No discussion may start after a win.
+    expect(segmentsManager.isGameOver).toHaveBeenCalled();
+    expect(mockIo.emit).not.toHaveBeenCalledWith(
+      'game:countdown',
+      'DAY-DISCUSSION',
+      expect.anything()
+    );
   });
 
   test('dayAction announces night deaths before checking the winner', async () => {
@@ -49,15 +55,15 @@ describe('GameActions', () => {
     ];
     const mockGame = {
       processPendingDeaths: vi.fn().mockReturnValue(deaths),
-      checkIfWinner: vi.fn().mockReturnValue(null),
     } as unknown as Game;
     const mockIo = {
       emit: vi.fn(),
     } as unknown as SocketType;
-    const mockAudioManager = {
-      playDayStartAudio: vi.fn().mockResolvedValue(undefined),
-    } as unknown as AudioManager;
-    const gameActions = new GameActions(mockGame, mockIo, mockAudioManager);
+    const gameActions = new GameActions(
+      mockGame,
+      mockIo,
+      makeSegmentsManager(false)
+    );
 
     await gameActions.dayAction();
 
@@ -83,7 +89,7 @@ describe('GameActions', () => {
     const gameActions = new GameActions(
       mockGame,
       mockIo,
-      {} as unknown as AudioManager
+      makeSegmentsManager(false)
     );
 
     gameActions.loversAction();

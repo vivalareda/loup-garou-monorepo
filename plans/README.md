@@ -27,8 +27,8 @@ execute the verification-baseline and least-risky first.
 | 011  | Fix `waiting-room.tsx` missing `cleanupSocketListeners` | P1 | S | — | DONE |
 | 023  | Restrict Socket.io CORS from `origin: '*'` + `credentials: true` | P1 | S | 022 | TODO |
 | 024  | Wire `day:voting-phase-start` into mobile (direction) | P1 | M | 010, 011 | DONE |
-| 008  | Fix `killHunterRevenge` double-kill on `processPendingDeaths` | P2 | M | — | TODO |
-| 009  | Add timeout to hunter `Deferred` (no infinite hang) | P2 | M | — | TODO |
+| 008  | Fix `killHunterRevenge` double-kill on `processPendingDeaths` | P2 | M | — | DONE |
+| 009  | Add timeout to hunter `Deferred` (no infinite hang) | P2 | M | — | DONE |
 | 012  | Use per-field Zustand selectors in mobile (perf) | P2 | S | — | TODO |
 | 013  | Reconcile duplicate `GameState` Context.Tags (Effect landmine) | P2 | S | — | TODO |
 | 015  | Delete dead/duplicate code in `Game` (commented block, clones, alias) | P2 | S | — | TODO |

@@ -1,5 +1,6 @@
 import type {
   ClientToServerEvents,
+  Countdown,
   GamePhase,
   PendingPrompt,
   PlayerGameSnapshot,
@@ -118,6 +119,7 @@ export class GameEvents {
       this.setupGettersEvents(socket);
       this.setupCupidEvents(socket);
       this.setupLoversEvents(socket);
+      this.setupSeerEvents(socket);
       this.setupWerewolfEvents(socket);
       this.setupWitchEvents(socket);
       this.setupDayVoteEvents(socket);
@@ -132,6 +134,19 @@ export class GameEvents {
     socket.on('lobby:get-players-list', () => {
       const playersArray = this.game.getClientPlayerList();
       socket.emit('lobby:players-list', playersArray, this.requiredPlayerCount);
+    });
+
+    socket.on('agent:get-state', (callback) => {
+      const player = this.game.getPlayerBySocketId(socket.id);
+      if (!player) {
+        callback({
+          phase: this.segmentsManager.getCurrentSegmentType(),
+          players: this.game.getRosterForClient(),
+          self: { type: 'waiting', name: '', socketId: socket.id },
+        });
+        return;
+      }
+      callback(this.buildSnapshotFor(player));
     });
 
     socket.on('player:rejoin', (sessionToken: string) => {
@@ -152,10 +167,16 @@ export class GameEvents {
     socket: Socket<ClientToServerEvents, ServerToClientEvents>,
     name: string
   ) {
+    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    if (!trimmedName) {
+      socket.emit('lobby:join-rejected', 'Invalid name');
+      return;
+    }
+
     if (this.segmentsManager.hasStarted()) {
       // Same name, disconnected seat → this is the player coming back
       // (lost token, reloaded app, different phone). Restore, don't reject.
-      if (this.reclaimSeatByName(name, socket)) {
+      if (this.reclaimSeatByName(trimmedName, socket)) {
         return;
       }
       socket.emit('lobby:join-rejected', 'Game already started');
@@ -172,14 +193,20 @@ export class GameEvents {
       return;
     }
 
-    const player = this.game.addPlayer(name, socket.id);
+    // Unique names keep the reclaim-seat-by-name recovery unambiguous
+    if (this.isNameTaken(trimmedName)) {
+      socket.emit('lobby:join-rejected', 'Name already taken');
+      return;
+    }
+
+    const player = this.game.addPlayer(trimmedName, socket.id);
     socket.emit('lobby:player-data', player.getWaitingRoomData());
     socket.broadcast.emit(
       'lobby:update-players-list',
       player.getPlayerForClient()
     );
     console.log(
-      `Player joined: ${name} (ID: ${socket.id}), player count: ${this.game.getPlayerList()}`
+      `Player joined: ${trimmedName} (ID: ${socket.id}), player count: ${this.game.getPlayerList()}`
     );
 
     if (this.game.getPlayerList().size === this.requiredPlayerCount) {
@@ -188,6 +215,13 @@ export class GameEvents {
       this.io.emit('lobby:villagers-list', this.game.getVillagersList());
       this.segmentsManager.startGame();
     }
+  }
+
+  private isNameTaken(trimmedName: string) {
+    const wanted = trimmedName.toLowerCase();
+    return Array.from(this.game.getPlayerList().values()).some(
+      (candidate) => candidate.getName().trim().toLowerCase() === wanted
+    );
   }
 
   /**
@@ -318,6 +352,32 @@ export class GameEvents {
       if (this.pendingLoverAcks.size === 0) {
         this.segmentsManager.finishSegment();
       }
+    });
+  }
+
+  setupSeerEvents(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
+    socket.on('seer:picked-player', (targetSid: string) => {
+      const seer = this.game.getSpecialRolePlayer('SEER');
+      if (
+        !this.segmentsManager.isCurrentSegment('SEER') ||
+        !seer ||
+        seer.getSocketId() !== socket.id ||
+        !seer.isAlive
+      ) {
+        socket.emit('alert:action-error', 'Seer action is not allowed now');
+        console.warn(`seer:picked-player rejected from ${socket.id}`);
+        return;
+      }
+
+      const target = this.game.getPlayerBySocketId(targetSid);
+      if (!target || !target.isAlive || target === seer) {
+        socket.emit('alert:action-error', 'Invalid Seer target');
+        console.warn(`seer:picked-player rejected: invalid target ${targetSid}`);
+        return;
+      }
+
+      socket.emit('seer:vision-result', target.getName(), target.getRole());
+      this.segmentsManager.finishSegment();
     });
   }
 
@@ -465,12 +525,31 @@ export class GameEvents {
     socket: Socket<ClientToServerEvents, ServerToClientEvents>
   ) {
     socket.on('day:player-voted', (targetPlayer: string) => {
-      if (!this.segmentsManager.isCurrentSegment('DAY')) {
+      if (
+        !this.segmentsManager.isCurrentSegment('DAY') ||
+        !this.segmentsManager.getGameActions().isDayVotingOpen()
+      ) {
         socket.emit('alert:action-error', 'Day vote is not allowed now');
         return;
       }
 
       this.eventsActions.handleDayVote(socket.id, targetPlayer);
+    });
+
+    socket.on('day:start-vote', () => {
+      const gameActions = this.segmentsManager.getGameActions();
+      const player = this.game.getPlayerBySocketId(socket.id);
+      if (
+        !player?.isAlive ||
+        !this.segmentsManager.isCurrentSegment('DAY') ||
+        !gameActions.isDiscussionActive()
+      ) {
+        socket.emit('alert:action-error', 'Cannot start the vote now');
+        return;
+      }
+
+      console.log(`☀ ${player.getName()} ended the discussion early`);
+      gameActions.startDayVote();
     });
   }
 
@@ -705,6 +784,14 @@ export class GameEvents {
         break;
       }
 
+      case 'SEER': {
+        const seer = this.game.getSpecialRolePlayer('SEER');
+        if (!seer?.isAlive) {
+          this.segmentsManager.finishSegment();
+        }
+        break;
+      }
+
       default:
         break;
     }
@@ -746,8 +833,24 @@ export class GameEvents {
               (player.role === 'WEREWOLF'),
           }
         : {}),
+      ...this.buildCountdown(phase),
       ...this.buildPendingPrompt(player, phase),
     };
+  }
+
+  private buildCountdown(phase: GamePhase): { countdown?: Countdown } {
+    const discussionMs = this.segmentsManager
+      .getGameActions()
+      .getDiscussionRemainingMs();
+    if (phase === 'DAY' && discussionMs !== null) {
+      return { countdown: { phase: 'DAY-DISCUSSION', remainingMs: discussionMs } };
+    }
+
+    const remainingMs = this.segmentsManager.getRemainingDeadlineMs();
+    if (remainingMs === null || phase === 'LOBBY' || phase === 'FINISHED') {
+      return {};
+    }
+    return { countdown: { phase, remainingMs } };
   }
 
   private buildPendingPrompt(
@@ -771,6 +874,8 @@ export class GameEvents {
         return this.cupidPrompt(player);
       case 'LOVERS':
         return this.loversPrompt(player);
+      case 'SEER':
+        return player.role === 'SEER' ? { kind: 'SEER' } : undefined;
       case 'WEREWOLF':
         return player.role === 'WEREWOLF' ? { kind: 'WEREWOLF' } : undefined;
       case 'WITCH-HEAL':
@@ -824,6 +929,9 @@ export class GameEvents {
     const hunterPrompt = this.hunterPrompt(player);
     if (hunterPrompt) {
       return hunterPrompt;
+    }
+    if (!this.segmentsManager.getGameActions().isDayVotingOpen()) {
+      return;
     }
     return this.game.hasPlayerDayVoted(player.getSocketId())
       ? undefined

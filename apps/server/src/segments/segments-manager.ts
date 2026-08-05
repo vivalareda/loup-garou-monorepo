@@ -15,6 +15,7 @@ const SEGMENT_TIMEOUTS: Record<string, { defaultMs: number; envVar: string }> =
   {
     CUPID: { defaultMs: 120_000, envVar: 'CUPID_TIMEOUT_MS' },
     LOVERS: { defaultMs: 60_000, envVar: 'LOVERS_TIMEOUT_MS' },
+    SEER: { defaultMs: 60_000, envVar: 'SEER_TIMEOUT_MS' },
     WEREWOLF: { defaultMs: 120_000, envVar: 'WEREWOLF_TIMEOUT_MS' },
     'WITCH-HEAL': { defaultMs: 60_000, envVar: 'WITCH_HEAL_TIMEOUT_MS' },
     'WITCH-POISON': { defaultMs: 60_000, envVar: 'WITCH_POISON_TIMEOUT_MS' },
@@ -50,12 +51,14 @@ export class SegmentsManager {
 
   private cupidSegment!: Segment;
   private loversSegment!: Segment;
+  private seerSegment!: Segment;
   private werewolfSegment!: Segment;
   private witchHealSegment!: Segment;
   private witchPoisonSegment!: Segment;
   private daySegment!: Segment;
   private hunterSegment!: Segment;
   private segmentDeadline: NodeJS.Timeout | null = null;
+  private deadlineEndsAt: number | null = null;
 
   constructor(
     game: Game,
@@ -66,7 +69,7 @@ export class SegmentsManager {
     this.io = io;
     this.game = game;
     this.audioManager = audioManager;
-    this.gameActions = new GameActions(game, io, audioManager);
+    this.gameActions = new GameActions(game, io, this);
     this.nightDawnResolution = new NightDawnResolution(game, this, io);
     this.specialScenarios = specialScenarios;
     this.currentSegment = 0;
@@ -97,6 +100,12 @@ export class SegmentsManager {
     this.loversSegment = {
       type: 'LOVERS',
       action: () => this.gameActions.loversAction(),
+      skip: false,
+    };
+
+    this.seerSegment = {
+      type: 'SEER',
+      action: () => this.gameActions.seerAction(),
       skip: false,
     };
 
@@ -132,6 +141,7 @@ export class SegmentsManager {
 
     this.initializeSegment(this.cupidSegment);
     this.initializeSegment(this.loversSegment);
+    this.initializeSegment(this.seerSegment);
     this.initializeSegment(this.werewolfSegment);
     this.initializeSegment(this.witchHealSegment);
     this.initializeSegment(this.witchPoisonSegment);
@@ -210,6 +220,7 @@ export class SegmentsManager {
 
   resetForNewGame() {
     this.clearDeadline();
+    this.gameActions.closeDayVote();
     this.currentSegment = 0;
     this.gameStarted = false;
     this.gameFinished = false;
@@ -254,6 +265,11 @@ export class SegmentsManager {
   }
 
   private shouldAutoSkipSegment(segmentType: string) {
+    if (segmentType === 'SEER') {
+      const seer = this.game.getSpecialRolePlayer('SEER');
+      return !seer || !seer.isAlive;
+    }
+
     if (segmentType === 'WITCH-HEAL') {
       const witch = this.game.getSpecialRolePlayer('WITCH');
       return (
@@ -279,6 +295,12 @@ export class SegmentsManager {
     }
 
     this.clearDeadline();
+    this.deadlineEndsAt = Date.now() + timeoutMs;
+    if (segmentType !== 'DAY') {
+      // DAY announces its own countdowns: first the discussion window,
+      // then the vote's remaining time
+      this.io.emit('game:countdown', segmentType as GamePhase, timeoutMs);
+    }
     this.segmentDeadline = setTimeout(() => {
       if (this.getCurrentSegmentType() !== segmentType) {
         return;
@@ -295,9 +317,19 @@ export class SegmentsManager {
       clearTimeout(this.segmentDeadline);
       this.segmentDeadline = null;
     }
+    this.deadlineEndsAt = null;
+  }
+
+  getRemainingDeadlineMs() {
+    if (this.deadlineEndsAt === null) {
+      return null;
+    }
+    return Math.max(0, this.deadlineEndsAt - Date.now());
   }
 
   private async handleSegmentTimeout(segmentType: string) {
+    this.io.emit('game:phase-timed-out', segmentType as GamePhase);
+
     if (segmentType === 'DAY') {
       // Whatever partial votes exist are dropped: nobody dies, the night
       // begins. Matches the nobody-dies tie rule in spirit.

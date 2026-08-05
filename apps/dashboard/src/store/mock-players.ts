@@ -267,7 +267,7 @@ function createPlayerSocket(
       });
     } else {
       console.log(
-        `🎯 [HUNTER] Skipping hunter modal - player is not a hunter or not found`
+        '🎯 [HUNTER] Skipping hunter modal - player is not a hunter or not found'
       );
     }
   });

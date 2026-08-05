@@ -7,7 +7,8 @@ type HunterVoteModalProps = {
 };
 
 export const HunterVoteModal = ({ playerId }: HunterVoteModalProps) => {
-  const { players, killPlayerAsHunter, closeHunterModal } = useMockPlayerStore();
+  const { players, killPlayerAsHunter, closeHunterModal } =
+    useMockPlayerStore();
   const player = players.get(playerId);
 
   if (!player?.showHunterModal) {
@@ -32,10 +33,13 @@ export const HunterVoteModal = ({ playerId }: HunterVoteModalProps) => {
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🎯</span>
-          <h2 className="text-xl font-bold">Hunter's Revenge - {player.name}</h2>
+          <h2 className="text-xl font-bold">
+            Hunter's Revenge - {player.name}
+          </h2>
         </div>
         <p className="text-gray-600">
-          You have been killed! As the Hunter, you may take one player with you to the grave.
+          You have been killed! As the Hunter, you may take one player with you
+          to the grave.
         </p>
         <p className="text-sm text-orange-600 font-medium">
           Choose your revenge target:

@@ -229,6 +229,7 @@ describe('disconnect grace period and reconnection', () => {
     addPlayer('B', 'b-sid', 'VILLAGER');
     const victim = addPlayer('E', 'e-sid', 'VILLAGER');
     setSegment('DAY');
+    segmentsManager.getGameActions().startDayVote();
     const sockets = ['wolf1-sid', 'wolf2-sid', 'a-sid', 'b-sid'].map(connect);
     const lateSocket = connect('e-sid');
 
@@ -312,6 +313,9 @@ describe('disconnect grace period and reconnection', () => {
     });
 
     setSegment('DAY');
+    // During the discussion window nobody is prompted to vote yet
+    expect(gameEvents.buildSnapshotFor(villager).pendingPrompt).toBeUndefined();
+    segmentsManager.getGameActions().startDayVote();
     expect(gameEvents.buildSnapshotFor(villager).pendingPrompt).toEqual({
       kind: 'DAY-VOTE',
     });

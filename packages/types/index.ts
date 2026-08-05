@@ -5,6 +5,8 @@ export type {
 } from './src/death';
 export type {
   ClientToServerEvents,
+  Countdown,
+  CountdownPhase,
   GamePhase,
   PendingPrompt,
   PlayerGameSnapshot,

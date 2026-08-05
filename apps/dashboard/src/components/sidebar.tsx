@@ -303,7 +303,8 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
                   </div>
                   {player.playersList.length > 0 && (
                     <div className="text-xs text-gray-500">
-                      {player.playersList.length} player{player.playersList.length !== 1 ? 's' : ''} in room
+                      {player.playersList.length} player
+                      {player.playersList.length !== 1 ? 's' : ''} in room
                     </div>
                   )}
                 </div>

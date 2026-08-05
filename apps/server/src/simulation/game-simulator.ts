@@ -281,6 +281,7 @@ export class GameSimulator {
       this.rounds < this.opts.maxRounds
     ) {
       this.rounds++;
+      await this.playSeerPhase();
       await this.playWerewolfPhase();
       if (this.game.checkIfWinner() !== null) {
         break;
@@ -292,6 +293,14 @@ export class GameSimulator {
         break;
       }
     }
+  }
+
+  private async playSeerPhase() {
+    if (this.segmentsManager.getCurrentSegmentType() !== 'SEER') {
+      return;
+    }
+    await this.segmentsManager.finishSegment();
+    await this.flush();
   }
 
   private async playWerewolfPhase() {

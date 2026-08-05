@@ -173,10 +173,13 @@ export class Game {
         this.availableRoles.push('WEREWOLF');
       }
 
-      // this.availableRoles.push('SEER');
       this.availableRoles.push('CUPID');
       this.availableRoles.push('WITCH');
       this.availableRoles.push('HUNTER');
+      // The Seer joins from 5 players up: at 4 there is no free slot left
+      if (playerCount > this.availableRoles.length) {
+        this.availableRoles.push('SEER');
+      }
 
       const remainingSlots = playerCount - this.availableRoles.length;
       for (let i = 0; i < remainingSlots; i++) {
@@ -194,10 +197,14 @@ export class Game {
   }
 
   getVillagersList() {
+    // Living villagers only: this is the werewolves' target list
     const villagersList = this.deathManager.getTeamVillagers();
     const villagers: PlayerListItem[] = [];
 
     for (const player of villagersList) {
+      if (!player.isAlive) {
+        continue;
+      }
       villagers.push({
         socketId: player.getSocketId(),
         name: player.getName(),
@@ -908,6 +915,12 @@ export class Game {
   }
 
   checkIfWinner() {
+    // The game is only decided once every queued death has been resolved:
+    // alive counts are meaningless while victims are still in the queue
+    if (this.deathManager.getPendingDeaths().length > 0) {
+      return null;
+    }
+
     const villagers = this.deathManager
       .getTeamVillagers()
       .filter((p) => p.isAlive);
@@ -918,27 +931,21 @@ export class Game {
     console.log('villagers alive', villagers.length);
     console.log('werewolves alive', werewolves.length);
 
+    // An empty lobby has no winner; a total wipe still counts as a village
+    // win below — eradicating the werewolves is the village's win condition
+    if (this.players.size === 0) {
+      return null;
+    }
+
     if (werewolves.length === 0) {
       return 'villagers';
     }
 
-    // No villagers left means the werewolves have overrun the village. The
-    // production loop reaches this state through a lover-grief cascade at
-    // dawn (two villagers die at once) and previously deadlocked because the
-    // 1-v-1 / 0-werewolf checks below don't catch it. processPendingDeaths
-    // drains the whole queue before this runs, so this does NOT short-circuit
-    // the grief cascade (the 2-werewolves-+-1-villager mid-cascade state stays
-    // `null` and the cascade completes).
-    if (villagers.length === 0) {
-      return 'werewolves';
-    }
-
-    if (werewolves.length === 1 && villagers.length === 1) {
-      const lastVillager = villagers[0];
-      if (
-        lastVillager.getRole() === 'WITCH' &&
-        (this.witchHasHealPotion || this.witchHasPoisonPotion)
-      ) {
+    // Parity: wolves control every day vote from here, unless a living
+    // witch can still swing the numbers at night with a potion
+    if (werewolves.length >= villagers.length) {
+      const witch = villagers.find((player) => player.role === 'WITCH');
+      if (witch && (this.witchHasHealPotion || this.witchHasPoisonPotion)) {
         return null; // Game continues
       }
       return 'werewolves';

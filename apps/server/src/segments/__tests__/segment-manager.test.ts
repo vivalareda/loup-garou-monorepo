@@ -4,6 +4,7 @@ import {
   afterEach,
   beforeEach,
   describe,
+  expect,
   type MockedFunction,
   test,
   vi,
@@ -11,7 +12,10 @@ import {
 import type { Game } from '@/core/game';
 import type { SpecialScenarios } from '@/core/special-scenarios';
 import type { AudioManager } from '@/segments/audio-manager';
-import { SegmentsManager } from '@/segments/segments-manager';
+import {
+  resolveSegmentTimeoutMs,
+  SegmentsManager,
+} from '@/segments/segments-manager';
 import type { SocketType } from '@/server/sockets';
 
 vi.mock('sound-play');
@@ -32,7 +36,21 @@ describe('SegmentsManager', () => {
           { getSocketId: () => 'werewolf1-socket-id' },
           { getSocketId: () => 'werewolf2-socket-id' },
         ]),
-      processPendingDeaths: vi.fn(),
+      getSpecialRolePlayer: vi.fn().mockReturnValue({ getSocketId: () => 'cupid-sid' }),
+      getAlivePlayers: vi.fn().mockReturnValue([
+        { getSocketId: () => 'cupid-sid' },
+        { getSocketId: () => 'p2-sid' },
+        { getSocketId: () => 'p3-sid' },
+      ]),
+      setLovers: vi.fn(),
+      canWitchHeal: vi.fn().mockReturnValue(true),
+      canWitchPoison: vi.fn().mockReturnValue(true),
+      getWerewolfTarget: vi.fn().mockReturnValue('victim-sid'),
+      getLovers: vi.fn().mockReturnValue([
+        { getSocketId: () => 'p2-sid', getName: () => 'P2' },
+        { getSocketId: () => 'p3-sid', getName: () => 'P3' },
+      ]),
+      processPendingDeaths: vi.fn().mockReturnValue([]),
       checkIfWinner: vi.mocked('werewolves'),
     } as unknown as Game;
     mockFs = vi.mocked(existsSync);
@@ -65,30 +83,141 @@ describe('SegmentsManager', () => {
     vi.restoreAllMocks();
   });
 
-  // test('should play correct Cupid audio files in sequence', async () => {
-  //   segmentsManager.currentSegment = 0;
-  //
-  //   await segmentsManager.finishSegment();
-  //
-  //   expect(mockSoundPlay).toHaveBeenCalledWith(
-  //     './assets/Cupidon/Cupidon-2.mp3'
-  //   );
-  // });
+  test('runs Cupid and Lovers once on night one, then skips them later', async () => {
+    vi.spyOn(segmentsManager, 'playSegment').mockResolvedValue(undefined);
 
-  // test('should play Werewolf first audio file after lovers segment', async () => {
-  //   vi.spyOn(segmentsManager, 'playSegment').mockImplementation(async () => {});
-  //   vi.spyOn(segmentsManager.gameActions, 'werewolfAction').mockImplementation(
-  //     () => {}
-  //   );
-  //
-  //   segmentsManager.currentSegment = 2;
-  //   await segmentsManager.finishSegment();
-  //
-  //   expect(mockSoundPlay).toHaveBeenCalledWith(
-  //     './assets/Werewolves/Werewolves-2.mp3'
-  //   );
-  // });
+    expect(segmentsManager.getCurrentSegmentType()).toBe('LOBBY');
+    segmentsManager.startGame();
+    expect(segmentsManager.getCurrentSegmentType()).toBe('CUPID');
+
+    await segmentsManager.finishSegment();
+    expect(segmentsManager.getCurrentSegmentType()).toBe('LOVERS');
+
+    await segmentsManager.finishSegment();
+    expect(segmentsManager.getCurrentSegmentType()).toBe('SEER');
+
+    await segmentsManager.finishSegment();
+    expect(segmentsManager.getCurrentSegmentType()).toBe('WEREWOLF');
+
+    await segmentsManager.finishSegment();
+    expect(segmentsManager.getCurrentSegmentType()).toBe('WITCH-HEAL');
+
+    await segmentsManager.finishSegment();
+    expect(segmentsManager.getCurrentSegmentType()).toBe('WITCH-POISON');
+
+    await segmentsManager.finishSegment();
+    expect(segmentsManager.getCurrentSegmentType()).toBe('DAY');
+
+    // Night two starts at the Seer: unlike Cupid and Lovers, she wakes
+    // every night
+    await segmentsManager.finishSegment();
+    expect(segmentsManager.getCurrentSegmentType()).toBe('SEER');
+  });
+
   test('should play werewolf winning audio to announce win', () => {
     segmentsManager.currentSegment = 4;
+  });
+
+  test('emits client-safe phase changes when a segment starts', async () => {
+    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
+
+    await SegmentsManager.prototype.playSegment.call(segmentsManager);
+
+    expect(mockIo.emit).toHaveBeenCalledWith('game:phase-changed', 'CUPID');
+  });
+
+  test('Cupid timeout chooses the first two eligible players and advances', async () => {
+    vi.useFakeTimers();
+    process.env.SEGMENT_TIMEOUT_MS = '1000';
+    vi.spyOn(segmentsManager, 'playSegment').mockResolvedValue(undefined);
+    vi.mocked(mockGame.getLovers).mockReturnValue([]);
+
+    try {
+      segmentsManager.startGame();
+      (
+        segmentsManager as unknown as { scheduleDeadline: (segment: string) => void }
+      ).scheduleDeadline('CUPID');
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(mockGame.setLovers).toHaveBeenCalledWith(['p2-sid', 'p3-sid']);
+      expect(segmentsManager.getCurrentSegmentType()).toBe('LOVERS');
+    } finally {
+      delete process.env.SEGMENT_TIMEOUT_MS;
+      vi.useRealTimers();
+    }
+  });
+
+  test('each segment resolves its own deadline duration', () => {
+    // Defaults are per-segment, not one shared value
+    expect(resolveSegmentTimeoutMs('CUPID')).toBe(120_000);
+    expect(resolveSegmentTimeoutMs('LOVERS')).toBe(60_000);
+    expect(resolveSegmentTimeoutMs('WEREWOLF')).toBe(120_000);
+    expect(resolveSegmentTimeoutMs('WITCH-HEAL')).toBe(60_000);
+    expect(resolveSegmentTimeoutMs('WITCH-POISON')).toBe(60_000);
+    expect(resolveSegmentTimeoutMs('DAY')).toBe(600_000);
+    expect(resolveSegmentTimeoutMs('HUNTER')).toBe(60_000);
+
+    // Each is overridable by its own env var without touching the others
+    vi.stubEnv('DAY_VOTE_TIMEOUT_MS', '5000');
+    try {
+      expect(resolveSegmentTimeoutMs('DAY')).toBe(5000);
+      expect(resolveSegmentTimeoutMs('CUPID')).toBe(120_000);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+
+    // The global override still wins over defaults for every segment
+    vi.stubEnv('SEGMENT_TIMEOUT_MS', '1234');
+    try {
+      expect(resolveSegmentTimeoutMs('CUPID')).toBe(1234);
+      expect(resolveSegmentTimeoutMs('DAY')).toBe(1234);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  test('two segments run on their own distinct deadline durations', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('CUPID_TIMEOUT_MS', '2000');
+    vi.stubEnv('LOVERS_TIMEOUT_MS', '500');
+    vi.spyOn(segmentsManager, 'playSegment').mockResolvedValue(undefined);
+    vi.mocked(mockGame.getLovers).mockReturnValue([]);
+    const schedule = (
+      segmentsManager as unknown as {
+        scheduleDeadline: (segment: string) => void;
+      }
+    ).scheduleDeadline.bind(segmentsManager);
+
+    try {
+      segmentsManager.startGame();
+      schedule('CUPID');
+
+      // The Cupid deadline (2000ms) must NOT fire at the Lovers duration
+      await vi.advanceTimersByTimeAsync(500);
+      expect(segmentsManager.getCurrentSegmentType()).toBe('CUPID');
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(segmentsManager.getCurrentSegmentType()).toBe('LOVERS');
+
+      // The Lovers deadline fires at its own, shorter duration
+      schedule('LOVERS');
+      await vi.advanceTimersByTimeAsync(500);
+      expect(segmentsManager.getCurrentSegmentType()).toBe('SEER');
+    } finally {
+      vi.unstubAllEnvs();
+      vi.useRealTimers();
+    }
+  });
+
+  test('auto-skips unavailable Witch phases', async () => {
+    vi.spyOn(segmentsManager, 'playSegment').mockResolvedValue(undefined);
+    vi.mocked(mockGame.getSpecialRolePlayer).mockReturnValue(undefined);
+    segmentsManager.currentSegment = segmentsManager.segments.findIndex(
+      (segment) => segment.type === 'WITCH-HEAL'
+    );
+    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
+
+    await SegmentsManager.prototype.playSegment.call(segmentsManager);
+
+    expect(segmentsManager.getCurrentSegmentType()).toBe('WITCH-POISON');
   });
 });

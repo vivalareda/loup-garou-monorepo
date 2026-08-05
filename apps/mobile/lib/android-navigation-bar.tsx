@@ -1,11 +1,9 @@
 import * as NavigationBar from "expo-navigation-bar";
 import { Platform } from "react-native";
-import { NAV_THEME } from "@/lib/constants";
 
-export async function setAndroidNavigationBar(theme: "light" | "dark") {
+export function setAndroidNavigationBar(theme: "light" | "dark") {
   if (Platform.OS !== "android") return;
-  await NavigationBar.setButtonStyleAsync(theme === "dark" ? "light" : "dark");
-  await NavigationBar.setBackgroundColorAsync(
-    theme === "dark" ? NAV_THEME.dark.background : NAV_THEME.light.background,
-  );
+  // SDK 57 is edge-to-edge only: the bar is transparent (no background color
+  // API anymore) and setStyle controls the button color for the active theme
+  NavigationBar.setStyle(theme === "dark" ? "light" : "dark");
 }

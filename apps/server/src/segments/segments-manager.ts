@@ -1,18 +1,64 @@
-import type { Segment } from '@repo/types';
+import type { GamePhase, Segment } from '@repo/types';
 import type { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
 import type { SpecialScenarios } from '@/core/special-scenarios';
 import type { AudioManager } from '@/segments/audio-manager';
+import { NightDawnResolution } from '@/server/night-dawn-resolution';
 import type { SocketType } from '@/server/sockets';
+
+/**
+ * Per-segment deadline defaults. Each is overridable by its own env var;
+ * SEGMENT_TIMEOUT_MS overrides all of them at once (used by tests and
+ * headless simulations). A resolved value <= 0 disables the deadline.
+ */
+const SEGMENT_TIMEOUTS: Record<string, { defaultMs: number; envVar: string }> =
+  {
+    CUPID: { defaultMs: 120_000, envVar: 'CUPID_TIMEOUT_MS' },
+    LOVERS: { defaultMs: 60_000, envVar: 'LOVERS_TIMEOUT_MS' },
+    SEER: { defaultMs: 60_000, envVar: 'SEER_TIMEOUT_MS' },
+    WEREWOLF: { defaultMs: 120_000, envVar: 'WEREWOLF_TIMEOUT_MS' },
+    'WITCH-HEAL': { defaultMs: 60_000, envVar: 'WITCH_HEAL_TIMEOUT_MS' },
+    'WITCH-POISON': { defaultMs: 60_000, envVar: 'WITCH_POISON_TIMEOUT_MS' },
+    // A family argues for a while before voting — leave them room
+    DAY: { defaultMs: 600_000, envVar: 'DAY_VOTE_TIMEOUT_MS' },
+    HUNTER: { defaultMs: 60_000, envVar: 'HUNTER_TIMEOUT_MS' },
+  };
+
+export function resolveSegmentTimeoutMs(segmentType: string): number {
+  const config = SEGMENT_TIMEOUTS[segmentType];
+  const rawValue =
+    (config ? process.env[config.envVar] : undefined) ??
+    process.env.SEGMENT_TIMEOUT_MS;
+
+  if (rawValue === undefined || rawValue === '') {
+    return config?.defaultMs ?? 60_000;
+  }
+
+  return Number(rawValue);
+}
 
 export class SegmentsManager {
   io: SocketType;
   game: Game;
   gameActions: GameActions;
+  nightDawnResolution: NightDawnResolution;
   audioManager: AudioManager;
   currentSegment: number;
   segments: Segment[] = [];
   specialScenarios: SpecialScenarios;
+  private gameStarted = false;
+  private gameFinished = false;
+
+  private cupidSegment!: Segment;
+  private loversSegment!: Segment;
+  private seerSegment!: Segment;
+  private werewolfSegment!: Segment;
+  private witchHealSegment!: Segment;
+  private witchPoisonSegment!: Segment;
+  private daySegment!: Segment;
+  private hunterSegment!: Segment;
+  private segmentDeadline: NodeJS.Timeout | null = null;
+  private deadlineEndsAt: number | null = null;
 
   constructor(
     game: Game,
@@ -23,7 +69,8 @@ export class SegmentsManager {
     this.io = io;
     this.game = game;
     this.audioManager = audioManager;
-    this.gameActions = new GameActions(game, io, audioManager);
+    this.gameActions = new GameActions(game, io, this);
+    this.nightDawnResolution = new NightDawnResolution(game, this, io);
     this.specialScenarios = specialScenarios;
     this.currentSegment = 0;
     this.initializeSegments();
@@ -38,68 +85,77 @@ export class SegmentsManager {
   }
 
   witchDied() {
-    const healSegment = this.segments.find((s) => s.type === 'WITCH-HEAL');
-    const poisonSegment = this.segments.find((s) => s.type === 'WITCH-POISON');
-    if (!(healSegment && poisonSegment)) {
-      throw new Error('Witch heal or poison segment not found');
-    }
-    healSegment.skip = true;
-    poisonSegment.skip = true;
+    this.witchHealSegment.skip = true;
+    this.witchPoisonSegment.skip = true;
   }
 
   initializeSegments() {
-    const cupidSegment: Segment = {
+    this.segments = [];
+    this.cupidSegment = {
       type: 'CUPID',
       action: () => this.gameActions.cupidAction(),
       skip: false,
     };
 
-    const loversSegment: Segment = {
+    this.loversSegment = {
       type: 'LOVERS',
       action: () => this.gameActions.loversAction(),
       skip: false,
     };
 
-    const werewolfSegment: Segment = {
+    this.seerSegment = {
+      type: 'SEER',
+      action: () => this.gameActions.seerAction(),
+      skip: false,
+    };
+
+    this.werewolfSegment = {
       type: 'WEREWOLF',
       action: () => this.gameActions.werewolfAction(),
       skip: false,
     };
 
-    const witchHealSegment: Segment = {
+    this.witchHealSegment = {
       type: 'WITCH-HEAL',
       action: () => this.gameActions.witchHealAction(),
-      skip: true,
+      skip: false,
     };
 
-    const witchPoisonSegment: Segment = {
+    this.witchPoisonSegment = {
       type: 'WITCH-POISON',
       action: () => this.gameActions.witchPoisonAction(),
-      skip: true,
+      skip: false,
     };
 
-    const daySegment: Segment = {
+    this.daySegment = {
       type: 'DAY',
       action: () => this.gameActions.dayAction(),
       skip: false,
     };
 
-    const hunterSegment: Segment = {
+    this.hunterSegment = {
       type: 'HUNTER',
       action: () => this.gameActions.hunterAction(),
       skip: true,
     };
 
-    this.initializeSegment(cupidSegment);
-    this.initializeSegment(loversSegment);
-    this.initializeSegment(werewolfSegment);
-    this.initializeSegment(witchHealSegment);
-    this.initializeSegment(witchPoisonSegment);
-    this.initializeSegment(daySegment);
-    this.initializeSegment(hunterSegment);
+    this.initializeSegment(this.cupidSegment);
+    this.initializeSegment(this.loversSegment);
+    this.initializeSegment(this.seerSegment);
+    this.initializeSegment(this.werewolfSegment);
+    this.initializeSegment(this.witchHealSegment);
+    this.initializeSegment(this.witchPoisonSegment);
+    this.initializeSegment(this.daySegment);
+    this.initializeSegment(this.hunterSegment);
   }
 
   startGame() {
+    if (this.gameStarted) {
+      return;
+    }
+
+    this.gameStarted = true;
+    this.gameFinished = false;
     //TODO: add intro back audio (need to put async in front of firstNightSegment)
     // await this.playAudio('Intro');
     this.playSegment();
@@ -126,8 +182,6 @@ export class SegmentsManager {
   }
 
   isFirstNightSegment(type: string) {
-    console.log('Checking if segment is first night segment:', type);
-    console.log(type === 'CUPID' || type === 'LOVERS');
     return type === 'CUPID' || type === 'LOVERS';
   }
 
@@ -138,127 +192,164 @@ export class SegmentsManager {
     segment.skip = true;
   }
 
-  getCurrentSegmentType() {
+  getCurrentSegmentType(): GamePhase {
+    if (this.gameFinished) {
+      return 'FINISHED';
+    }
+
+    if (!this.gameStarted) {
+      return 'LOBBY';
+    }
+
     const segment = this.segments[this.currentSegment];
 
     return segment.type;
   }
 
-  async runHunterSegment() {
-    const hunter = this.game.getSpecialRolePlayer('HUNTER');
-    if (!hunter) {
-      throw new Error(
-        'tried to play hunter segment but hunter player not found'
-      );
-    }
-    const isLover = this.game.isPlayerLover(hunter);
+  isCurrentSegment(type: string) {
+    return this.getCurrentSegmentType() === type;
+  }
 
-    if (isLover) {
-      const partner = this.game.getPartner(hunter);
-      if (!partner) {
-        throw new Error('lover could not be found');
-      }
-      this.game.addPartnerSuicide(hunter.getSocketId(), partner.getSocketId());
-      await this.specialScenarios.hunterIsLover();
-    } else {
-      this.audioManager.playHunterAudio();
-    }
-    const hunterSegment = this.segments.find(
-      (segment) => segment.type === 'HUNTER'
-    );
+  hasStarted() {
+    return this.gameStarted;
+  }
 
-    if (!hunterSegment) {
-      throw new Error('hunter segment not inialized');
-    }
+  hasFinished() {
+    return this.gameFinished;
+  }
 
-    this.game.updateHunterPlayerList();
-
-    setTimeout(() => {
-      hunterSegment.action();
-    }, 18_000);
+  resetForNewGame() {
+    this.clearDeadline();
+    this.gameActions.closeDayVote();
+    this.currentSegment = 0;
+    this.gameStarted = false;
+    this.gameFinished = false;
+    this.initializeSegments();
   }
 
   isHunterInDeathQueue() {
     return this.game.hunterIsInDeathQueue();
   }
 
+  markWitchPoisonAsSkipped() {
+    this.witchPoisonSegment.skip = true;
+  }
+
   isOneOfLoversInDeathQueue() {
     return this.game.isOneOfLoversInDeathQueue();
-  }
-
-  async runLoverSegment() {
-    const segment = this.segments[this.currentSegment];
-    await this.audioManager.playLoverAudio();
-    if (!this.isGameOver()) {
-      segment.action();
-    }
-  }
-
-  checkPostDayVoteScenarios(): boolean {
-    if (this.isHunterInDeathQueue()) {
-      console.log('[CONSOLE AUDIO] Would play Hunter audio files');
-      this.runHunterSegment();
-      return true;
-    }
-
-    if (this.isOneOfLoversInDeathQueue()) {
-      if (this.game.isPartnerHunter()) {
-        console.log('[CONSOLE AUDIO] Would play lover-hunter special scenario audio');
-        this.specialScenarios.partnerIsHunter();
-        return true;
-      }
-      console.log('[CONSOLE AUDIO] Would play lover death audio');
-      this.runLoverSegment();
-      return true;
-    }
-
-    return false;
   }
 
   async playSegment() {
     const segment = this.segments[this.currentSegment];
     console.log(`[SEGMENT] Playing segment: ${segment.type}`);
+    this.io.emit('game:phase-changed', this.getCurrentSegmentType());
+
+    if (this.shouldAutoSkipSegment(segment.type)) {
+      await this.advanceSegment({ playEndAudio: false });
+      return;
+    }
 
     if (segment.type === 'DAY') {
-      if (this.isHunterInDeathQueue()) {
-        this.runHunterSegment();
-        return;
-      }
-
-      if (this.isOneOfLoversInDeathQueue()) {
-        if (this.game.isPartnerHunter()) {
-          const hunterSegment = this.segments.find((s) => s.type === 'HUNTER');
-          if (!hunterSegment) {
-            throw new Error('hunter segment not inialized');
-          }
-
-          this.specialScenarios.partnerIsHunter();
-          this.game.updateHunterPlayerList();
-          hunterSegment.action();
-          return;
-        }
-        this.runLoverSegment();
-        return;
-      }
+      // Dawn (night-death reveal + day start) runs as one resolution
+      // program; it pauses internally when the hunter must pick
+      this.scheduleDeadline(segment.type);
+      this.nightDawnResolution.run().catch((error) => {
+        console.error('night dawn resolution failed:', error);
+      });
+      return;
     }
 
     await this.audioManager.playSegmentAudio(segment.type, true);
     segment.action();
+    this.scheduleDeadline(segment.type);
   }
 
-  continueDayAction() {
-    if (this.isGameOver()) {
-      return;
-    }
-    if (this.specialScenarios.hunterDiedFirst) {
-      this.audioManager.playPostHunterAudio();
-      this.specialScenarios.hunterDiedFirst = false;
-    } else {
-      this.audioManager.playDayVoteAudio();
+  private shouldAutoSkipSegment(segmentType: string) {
+    if (segmentType === 'SEER') {
+      const seer = this.game.getSpecialRolePlayer('SEER');
+      return !seer || !seer.isAlive;
     }
 
-    const segment = this.segments[this.currentSegment];
-    segment.action();
+    if (segmentType === 'WITCH-HEAL') {
+      const witch = this.game.getSpecialRolePlayer('WITCH');
+      return (
+        !witch ||
+        !witch.isAlive ||
+        !this.game.canWitchHeal() ||
+        !this.game.getWerewolfTarget()
+      );
+    }
+
+    if (segmentType === 'WITCH-POISON') {
+      const witch = this.game.getSpecialRolePlayer('WITCH');
+      return !witch || !witch.isAlive || !this.game.canWitchPoison();
+    }
+
+    return false;
+  }
+
+  private scheduleDeadline(segmentType: string) {
+    const timeoutMs = resolveSegmentTimeoutMs(segmentType);
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+      return;
+    }
+
+    this.clearDeadline();
+    this.deadlineEndsAt = Date.now() + timeoutMs;
+    if (segmentType !== 'DAY') {
+      // DAY announces its own countdowns: first the discussion window,
+      // then the vote's remaining time
+      this.io.emit('game:countdown', segmentType as GamePhase, timeoutMs);
+    }
+    this.segmentDeadline = setTimeout(() => {
+      if (this.getCurrentSegmentType() !== segmentType) {
+        return;
+      }
+
+      console.warn(`[SEGMENT] ${segmentType} timed out; applying fallback`);
+      void this.handleSegmentTimeout(segmentType);
+    }, timeoutMs);
+    this.segmentDeadline.unref?.();
+  }
+
+  private clearDeadline() {
+    if (this.segmentDeadline) {
+      clearTimeout(this.segmentDeadline);
+      this.segmentDeadline = null;
+    }
+    this.deadlineEndsAt = null;
+  }
+
+  getRemainingDeadlineMs() {
+    if (this.deadlineEndsAt === null) {
+      return null;
+    }
+    return Math.max(0, this.deadlineEndsAt - Date.now());
+  }
+
+  private async handleSegmentTimeout(segmentType: string) {
+    this.io.emit('game:phase-timed-out', segmentType as GamePhase);
+
+    if (segmentType === 'DAY') {
+      // Whatever partial votes exist are dropped: nobody dies, the night
+      // begins. Matches the nobody-dies tie rule in spirit.
+      this.game.clearDayVotes();
+    }
+
+    if (segmentType === 'CUPID' && this.game.getLovers().length === 0) {
+      const cupidSid = this.game.getSpecialRolePlayer('CUPID')?.getSocketId();
+      const lovers = this.game
+        .getAlivePlayers()
+        .filter((player) => player.getSocketId() !== cupidSid)
+        .slice(0, 2)
+        .map((player) => player.getSocketId());
+
+      if (lovers.length === 2) {
+        this.game.setLovers(lovers);
+      }
+    }
+
+    await this.advanceSegment({ playEndAudio: false });
   }
 
   isGameOver() {
@@ -267,12 +358,14 @@ export class SegmentsManager {
     if (winner === 'villagers') {
       this.audioManager.playVillagersWonAudio();
       this.game.alertWinnersAndLosers(winner);
+      this.gameFinished = true;
       return true;
     }
 
     if (winner === 'werewolves') {
       this.audioManager.playWerewolvesWonAudio();
       this.game.alertWinnersAndLosers(winner);
+      this.gameFinished = true;
       return true;
     }
 
@@ -280,8 +373,18 @@ export class SegmentsManager {
   }
 
   async finishSegment() {
+    await this.advanceSegment();
+  }
+
+  // playEndAudio: false lets callers that already narrated the segment's
+  // outcome (day-vote resolution, tie) move on without the generic end audio
+  async advanceSegment({ playEndAudio = true }: { playEndAudio?: boolean } = {}) {
+    this.clearDeadline();
     const segment = this.segments[this.currentSegment];
-    await this.audioManager.playSegmentAudio(segment.type, false);
+
+    if (playEndAudio) {
+      await this.audioManager.playSegmentAudio(segment.type, false);
+    }
 
     this.markFirstNightSegment(segment);
 

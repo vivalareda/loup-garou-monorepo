@@ -5,7 +5,6 @@ export class SpecialScenarios {
   game: Game;
   audioManager: AudioManager;
   specialScenarios: Map<string, () => void> = new Map();
-  hunterDiedFirst = false;
 
   constructor(game: Game, audioManager: AudioManager) {
     this.game = game;
@@ -13,9 +12,9 @@ export class SpecialScenarios {
   }
 
   async partnerIsHunter() {
-    this.hunterDiedFirst = true;
     await this.audioManager.nightHasEndedAudio();
-    await this.audioManager.playLoverAudio();
+    // Don't call playLoverAudio() here as it includes wake-up audio
+    await this.audioManager.playAudio('Special-death/pre-day-vote-lover-2');
     await this.audioManager.playSecondLoverIsHunterAudio();
   }
 

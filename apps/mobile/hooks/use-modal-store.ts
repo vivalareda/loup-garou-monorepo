@@ -5,6 +5,8 @@ import { create } from 'zustand';
 export type ModalState =
   | { type: 'CUPID'; open: true }
   | { type: 'LOVER'; open: true }
+  | { type: 'SEER'; open: true }
+  | { type: 'SEER-RESULT'; open: true }
   | { type: 'WEREWOLVES'; open: true }
   | { type: 'WITCH-HEAL'; open: true }
   | { type: 'WITCH-POISON'; open: true }
@@ -23,6 +25,13 @@ type ModalData = {
   werewolfModal?: boolean;
   autoConfirm?: boolean;
   hideConfirmButton?: boolean;
+  /** Optional skip action (e.g. the witch may skip poison). When present, the
+   * modal renders a Skip button alongside Confirm. */
+  onSkip?: () => void;
+  /** Label for the optional Skip button. */
+  skipLabel?: string;
+  /** Label for the Confirm button (defaults to "Confirm Selection"). */
+  confirmLabel?: string;
   onConfirm?: (...args: any[]) => any;
   disableButtonCondition?: (...args: any[]) => any;
 };

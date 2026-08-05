@@ -1,3 +1,4 @@
+import { resolvePlayerCount } from '@/config';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { AudioManager } from '@/segments/audio-manager';
@@ -8,11 +9,18 @@ import { GameEvents } from '@/server/server-events';
 import { io } from '@/server/sockets';
 import { SpecialScenarios } from './core/special-scenarios';
 
-process.stdin.setRawMode(true);
-process.stdin.resume();
-process.stdin.setEncoding('utf8');
+// Fail fast on a bad PLAYER_COUNT before any socket is accepted
+console.log(`Game starts at ${resolvePlayerCount()} players`);
 
-console.log('Press r to restart new game');
+// Raw mode only exists on a real terminal; skip the restart key when
+// running without a TTY (CI, piped output, process managers)
+if (process.stdin.isTTY) {
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.setEncoding('utf8');
+
+  console.log('Press r to restart new game');
+}
 
 let game: Game;
 let audioManager: AudioManager;
@@ -42,8 +50,10 @@ process.stdin.on('data', (key: string) => {
   const keyPressed = key.toString().toLowerCase();
 
   if (keyPressed === 'r') {
+    // In-place reset: the same handler objects keep serving the existing
+    // sockets, so no second 'connection' handler is ever registered
     console.log('Resetting game state...');
-    initGame();
+    events.resetGame();
   }
 });
 

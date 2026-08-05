@@ -1,25 +1,20 @@
-import {
-  DarkTheme,
-  DefaultTheme,
-  type Theme,
-  ThemeProvider,
-} from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import '../global.css';
 import React, { useRef } from 'react';
 import { Platform } from 'react-native';
 import { GlobalModal } from '@/components/global-modal';
+import { useSessionRecovery } from '@/hooks/use-session-recovery';
 import { setAndroidNavigationBar } from '@/lib/android-navigation-bar';
 import { NAV_THEME } from '@/lib/constants';
 import { useColorScheme } from '@/lib/use-color-scheme';
 
-const LIGHT_THEME: Theme = {
+const LIGHT_THEME = {
   ...DefaultTheme,
   colors: NAV_THEME.light,
 };
-const DARK_THEME: Theme = {
+const DARK_THEME = {
   ...DarkTheme,
   colors: NAV_THEME.dark,
 };
@@ -28,6 +23,10 @@ export default function RootLayout() {
   const hasMounted = useRef(false);
   const { colorScheme, isDarkColorScheme } = useColorScheme();
   const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false);
+
+  // Reconnect/session-recovery listeners live at the root so they survive
+  // every navigation, including back to the join screen
+  useSessionRecovery();
 
   useIsomorphicLayoutEffect(() => {
     if (hasMounted.current) {

@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import type { SegmentType } from '@repo/types';
-import sound from 'sound-play'; // Commented out for console logging only
+import sound from 'sound-play';
 import type { DeathManager } from '@/core/death-manager';
 
 export class AudioManager {
@@ -21,6 +21,8 @@ export class AudioManager {
         return 'Cupidon/Cupidon-1';
       case 'LOVERS':
         return 'Lovers/combined_lover';
+      case 'SEER':
+        return 'Seer/Seer-wake-up';
       case 'WEREWOLF':
         return 'Werewolves/Werewolves-1';
       case 'WITCH-HEAL':
@@ -44,6 +46,8 @@ export class AudioManager {
         return 'Cupidon/Cupidon-2';
       case 'LOVERS':
         return 'Lovers/Lover-3';
+      case 'SEER':
+        return 'Seer/Seer-end';
       case 'WEREWOLF':
         return 'Werewolves/Werewolves-2';
       case 'WITCH-HEAL':
@@ -74,10 +78,10 @@ export class AudioManager {
 
   getDeathAnnouncementAudio() {
     if (this.deathManager.getPendingDeaths().length > 0) {
-      return 'Night-end/Deaths';
+      return 'Night-end/one-death';
     }
 
-    return 'Night-end/No-deaths-with-start';
+    return 'Night-end/no-death';
   }
 
   async playSpecialScenarioAudio(scenario: string) {
@@ -103,23 +107,24 @@ export class AudioManager {
     if (isStarting) {
       const startAudioFile = this.getSegmentStartAudio(segment);
 
-      // Dont wait for the audio to finish if it's the lovers or day segment
-      if (segment === 'LOVERS') {
-        this.playAudio(startAudioFile);
-        return;
+      switch (segment) {
+        case 'LOVERS':
+          // Dont wait for the audio to finish if it's the lovers or day segment
+          this.playAudio(startAudioFile);
+          break;
+        case 'DAY':
+          await this.playAudio('Night-end/Wake-up-everyone');
+          await this.playAudio(this.getDeathAnnouncementAudio());
+          await this.playAudio('day-vote-start');
+          break;
+        default:
+          await this.playAudio(startAudioFile);
       }
-
-      if (segment === 'DAY') {
-        await this.playAudio('Night-end/Wake-up-everyone');
-        this.playAudio(startAudioFile);
-        return;
-      }
-
-      await this.playAudio(startAudioFile);
-
+      // Return early after playing start audio - don't play ending audio yet!
       return;
     }
 
+    // Only play ending audio when isStarting = false
     if (segment === 'HUNTER') {
       return;
     }
@@ -164,10 +169,17 @@ export class AudioManager {
 
   async playHunterIsLoverAudio() {
     await this.playAudio('Special-scenarios/hunter-is-lover');
+    await this.playAudio('day-vote-start');
+  }
+
+  async playHunterKilledLover() {
+    await this.playAudio('Night-end/hunter-killed-lover');
   }
 
   async playLoverAudio() {
+    await this.playAudio('Night-end/Wake-up-everyone');
     await this.playAudio('Special-death/pre-day-vote-lover-2');
+    await this.playAudio('day-vote-start');
   }
 
   async playWinnerAudio(winner: 'werewolves' | 'villagers') {
@@ -176,12 +188,24 @@ export class AudioManager {
       return;
     }
 
-    this.playWerewolvesWonAudio();
+    await this.playVillagersWonAudio();
   }
 
-  private async playAudio(file: string) {
+  async playAudio(file: string) {
+    const exists = existsSync(`./assets/${file}.mp3`);
+
+    // DEBUG_AUDIO=1 logs the file that would have played instead of playing
+    // it, so segment/audio ordering can be checked without sitting through
+    // the recordings
+    if (process.env.DEBUG_AUDIO) {
+      console.log(
+        `[AUDIO] Would play: ${file}${exists ? '' : ' (missing asset!)'}`
+      );
+      return;
+    }
+
     try {
-      if (!existsSync(`./assets/${file}.mp3`)) {
+      if (!exists) {
         return;
       }
       await sound.play(`./assets/${file}.mp3`);

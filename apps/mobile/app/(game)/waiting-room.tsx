@@ -5,14 +5,9 @@ import { useGameStore } from '@/hooks/use-game-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
 
 export default function WaitingRoom() {
-  const { playersList, roleAssigned, initializeSocketListeners } =
-    useGameStore();
+  const { playersList, roleAssigned, requiredPlayerCount } = useGameStore();
   const { player } = usePlayerStore();
   const router = useRouter();
-
-  useEffect(() => {
-    initializeSocketListeners();
-  }, [initializeSocketListeners]);
 
   useEffect(() => {
     if (roleAssigned) {
@@ -21,12 +16,23 @@ export default function WaitingRoom() {
   }, [router, roleAssigned]);
 
   if (!player) {
-    throw new Error('Player not found in waiting room');
+    // game:restarted resets the player store a tick before its
+    // router.replace('/') unmounts this screen — render nothing for that
+    // frame instead of crashing the whole app.
+    return null;
   }
+
+  // playersList excludes the local player
+  const joinedCount = playersList.length + 1;
 
   return (
     <SafeAreaView className="flex-1 items-center justify-center bg-slate-600 pb-24">
       <View className="w-3/4 gap-36 space-y-5 pt-32">
+        {requiredPlayerCount !== null && (
+          <Text className="text-center text-3xl font-bold text-white">
+            {joinedCount}/{requiredPlayerCount} joueurs
+          </Text>
+        )}
         <Text className="text-center text-white">
           {playersList.length === 0
             ? `Vous etes le seul dans la salle d'attente, attendez que d'autres joueurs vous rejoignent`

@@ -1,10 +1,10 @@
 export const segments = [
   'CUPID',
   'LOVERS',
+  'SEER',
   'WEREWOLF',
   'WITCH',
   'HUNTER',
-  // 'SEER',
   'DAY',
 ] as const;
 

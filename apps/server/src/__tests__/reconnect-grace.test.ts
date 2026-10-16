@@ -15,7 +15,6 @@ import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
 import type { SocketType } from '@/server/sockets';
 
-// Never play real audio in tests — sound.play blocks until the mp3 finishes
 const GRACE_MS = 90_000;
 
 type Handler = (...args: unknown[]) => void;

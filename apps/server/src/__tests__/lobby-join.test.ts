@@ -10,7 +10,6 @@ import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
 import type { SocketType } from '@/server/sockets';
 
-// Never play real audio in tests — sound.play blocks until the mp3 finishes
 type Handler = (...args: unknown[]) => void;
 
 function makeMockSocket(id: string) {

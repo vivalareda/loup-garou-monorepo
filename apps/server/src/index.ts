@@ -33,7 +33,8 @@ let eventsActions: EventsActions;
 let specialScenarios: SpecialScenarios;
 
 // NARRATOR=dashboard plays the clips in a dashboard tab instead of on this
-// machine's speakers (the only option once the server runs on Workers)
+// machine's speakers (the only option once the server runs on Workers).
+// DEBUG_AUDIO only applies to speaker playback
 const dashboardNarrator =
   process.env.NARRATOR === 'dashboard' ? new DashboardNarrator(io) : undefined;
 const narrator = dashboardNarrator ?? new LocalNarrator();

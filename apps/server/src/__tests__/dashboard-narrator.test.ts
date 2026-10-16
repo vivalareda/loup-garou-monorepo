@@ -22,6 +22,16 @@ describe('DashboardNarrator', () => {
   const lastClipId = () =>
     io.eventsOf('narrator:play').at(-1)?.args[0] as string;
 
+  /** Whether `promise` has settled once pending microtasks have run. */
+  const hasSettled = async (promise: Promise<void>) => {
+    let settled = false;
+    promise.then(() => {
+      settled = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    return settled;
+  };
+
   it('skips clips when no narrator is registered', async () => {
     await narrator.play('Intro');
     expect(io.emitted('narrator:play')).toBe(false);
@@ -29,36 +39,30 @@ describe('DashboardNarrator', () => {
 
   it('sends the clip only to the narrator and waits for done', async () => {
     narrator.attach('dash');
-    let finished = false;
-    const playing = narrator.play('Werewolves/Werewolves-1').then(() => {
-      finished = true;
-    });
+    const playing = narrator.play('Werewolves/Werewolves-1');
 
     expect(io.eventsOf('narrator:play')).toEqual([
       {
         scope: 'dash',
         event: 'narrator:play',
-        args: ['0', 'Werewolves/Werewolves-1'],
+        args: [expect.any(String), 'Werewolves/Werewolves-1'],
       },
     ]);
-    await Promise.resolve();
-    expect(finished).toBe(false);
+    expect(await hasSettled(playing)).toBe(false);
 
     narrator.complete('dash', lastClipId());
-    await playing;
-    expect(finished).toBe(true);
+    expect(await hasSettled(playing)).toBe(true);
   });
 
   it('ignores a done for an unknown clip', async () => {
     narrator.attach('dash');
-    let finished = false;
-    narrator.play('Intro').then(() => {
-      finished = true;
-    });
+    const playing = narrator.play('Intro');
 
-    narrator.complete('dash', '999');
-    await Promise.resolve();
-    expect(finished).toBe(false);
+    narrator.complete('dash', `${lastClipId()}-unknown`);
+    expect(await hasSettled(playing)).toBe(false);
+
+    narrator.complete('dash', lastClipId());
+    expect(await hasSettled(playing)).toBe(true);
   });
 
   it('moves on when the narrator never answers', async () => {
@@ -73,8 +77,10 @@ describe('DashboardNarrator', () => {
     const playing = narrator.play('Intro');
 
     narrator.detach('someone-else');
+    expect(await hasSettled(playing)).toBe(false);
+
     narrator.detach('dash');
-    await playing;
+    expect(await hasSettled(playing)).toBe(true);
 
     await narrator.play('Witch/Witch-end');
     expect(io.eventsOf('narrator:play')).toHaveLength(1);
@@ -82,14 +88,13 @@ describe('DashboardNarrator', () => {
 
   it('ignores a done from a socket the clip was not sent to', async () => {
     narrator.attach('dash');
-    let finished = false;
-    narrator.play('Intro').then(() => {
-      finished = true;
-    });
+    const playing = narrator.play('Intro');
 
     narrator.complete('player', lastClipId());
-    await Promise.resolve();
-    expect(finished).toBe(false);
+    expect(await hasSettled(playing)).toBe(false);
+
+    narrator.complete('dash', lastClipId());
+    expect(await hasSettled(playing)).toBe(true);
   });
 
   it("releases a replaced narrator's clips when it leaves", async () => {
@@ -98,10 +103,14 @@ describe('DashboardNarrator', () => {
 
     // The tab reconnects under a new socket id before the old one drops
     narrator.attach('new-tab');
-    narrator.detach('old-tab');
-    await playing;
+    expect(await hasSettled(playing)).toBe(false);
 
-    narrator.play('Witch/Witch-end');
+    narrator.detach('old-tab');
+    expect(await hasSettled(playing)).toBe(true);
+
+    const next = narrator.play('Witch/Witch-end');
     expect(io.eventsOf('narrator:play').at(-1)?.scope).toBe('new-tab');
+    narrator.complete('new-tab', lastClipId());
+    await next;
   });
 });

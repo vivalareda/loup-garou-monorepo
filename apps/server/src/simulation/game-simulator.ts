@@ -74,7 +74,9 @@ export class GameSimulator {
   readonly eventsActions: EventsActions;
 
   /** Ordered audio files that would have played. */
-  audioLog: string[] = [];
+  get audioLog(): string[] {
+    return this.narrator.clips;
+  }
   /** Ordered death socket ids (from `lobby:player-died`). */
   deathLog: string[] = [];
   winner: SimWinner = null;
@@ -464,7 +466,6 @@ export class GameSimulator {
         this.deathLog.push(sid);
       }
     }
-    this.audioLog = this.narrator.clips;
   }
 
   private pickHunterTarget(): string | undefined {

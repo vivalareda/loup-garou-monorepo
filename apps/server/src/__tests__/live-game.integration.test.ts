@@ -16,9 +16,9 @@ import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
+import type { ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
-import type { SocketType } from '@/server/sockets';
 
 /**
  * Task 28: the happy-path live-socket test. Boots the live server path
@@ -113,20 +113,20 @@ describe('live-socket happy path', () => {
     });
 
     // Same wiring as src/index.ts initGame(), with deterministic roles
-    const typedIo = io as unknown as SocketType;
+    const host: ConnectionHost = io;
     const deathManager = new DeathManager();
-    const game = new Game(typedIo, deathManager, {
+    const game = new Game(host, deathManager, {
       shuffleRoles: () => [...DETERMINISTIC_ROLES],
     });
     const audioManager = new AudioManager(deathManager);
     const segmentsManager = new SegmentsManager(
       game,
-      typedIo,
+      host,
       audioManager,
       new SpecialScenarios(game, audioManager)
     );
-    const eventsActions = new EventsActions(game, segmentsManager, typedIo);
-    new GameEvents(game, segmentsManager, typedIo, eventsActions)
+    const eventsActions = new EventsActions(game, segmentsManager, host);
+    new GameEvents(game, segmentsManager, host, eventsActions)
       .setupSocketHandlers();
 
     await new Promise<void>((resolve) => {

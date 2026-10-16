@@ -1,19 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  ClientToServerEvents,
-  PlayerGameSnapshot,
-  ServerToClientEvents,
-} from '@repo/types';
-import type { Socket } from 'socket.io';
+import type { PlayerGameSnapshot } from '@repo/types';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import type { Player } from '@/core/player';
 import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
+import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
-import type { SocketType } from '@/server/sockets';
 
 const GRACE_MS = 90_000;
 
@@ -31,42 +26,29 @@ function makeMockSocket(id: string) {
     broadcast: { emit: vi.fn() },
   };
   return {
-    socket: socket as unknown as Socket<
-      ClientToServerEvents,
-      ServerToClientEvents
-    >,
+    socket: socket as unknown as Connection,
     fire: (event: string, ...args: unknown[]) => handlers.get(event)?.(...args),
   };
 }
 
 describe('disconnect grace period and reconnection', () => {
-  let mockIo: SocketType;
+  let mockIo: ConnectionHost;
   let game: Game;
   let segmentsManager: SegmentsManager;
   let eventsActions: EventsActions;
   let gameEvents: GameEvents;
-  let connectionHandler:
-    | ((socket: Socket<ClientToServerEvents, ServerToClientEvents>) => void)
-    | undefined;
+  let connectionHandler: ((socket: Connection) => void) | undefined;
 
   beforeEach(() => {
     mockIo = {
-      on: vi.fn(
-        (
-          event: string,
-          cb: (
-            socket: Socket<ClientToServerEvents, ServerToClientEvents>
-          ) => void
-        ) => {
-          if (event === 'connection') {
-            connectionHandler = cb;
-          }
+      on: vi.fn((event: string, cb: (socket: Connection) => void) => {
+        if (event === 'connection') {
+          connectionHandler = cb;
         }
-      ),
+      }),
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
-      removeAllListeners: vi.fn(),
-    } as unknown as SocketType;
+    } as unknown as ConnectionHost;
 
     const deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);

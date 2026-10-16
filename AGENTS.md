@@ -103,6 +103,11 @@ Socket.io is gone from every live path. The pieces:
   `?token=` on `/room/*` (401). The token is a speed bump, not auth;
   rate limiting and real auth are listed in the worker README's "Before
   a public deploy".
+- Async game code must survive a reset: `SegmentsManager` bumps a game
+  generation on finish and reset, and anything that awaits (narration,
+  a hunter pick) or fires later captures it first and stops if it
+  changed (`server/stale-game.ts` for the Effect resolutions).
+  `advanceSegment` ends each segment once; repeated finishes are no-ops.
 - A finished game clears its deadlines, and the room resets when its
   last socket leaves a lobby or a finished game, so the Durable Object
   can be evicted; a game in progress is kept for the reconnect grace.

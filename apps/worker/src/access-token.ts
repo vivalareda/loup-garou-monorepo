@@ -1,7 +1,9 @@
 const utf8 = new TextEncoder();
 
 async function sha256(text: string) {
-  return new Uint8Array(await crypto.subtle.digest('SHA-256', utf8.encode(text)));
+  return new Uint8Array(
+    await crypto.subtle.digest('SHA-256', utf8.encode(text))
+  );
 }
 
 /**

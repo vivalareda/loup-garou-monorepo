@@ -84,10 +84,9 @@ sharing the URL beyond friends:
 - Real authentication or per-game invites instead of one shared token.
 - Origin checks for browser clients (the dashboard), so other sites
   can't open sockets from their visitors' browsers.
-- Known limitation: a reset (`game:restart` after a finished game, or a
-  room emptied) does not cancel work in flight, so a narration clip
-  still playing when it happens can resume against the new game (see
-  `reset` in `apps/server/src/game-runtime.ts`).
+- Known leftover: a hunter pick pending when its game is reset keeps
+  its 60s timeout running (it then stops without effect), holding the
+  object awake that long. Cancel it on reset if that matters.
 
 ## Things to know
 
@@ -97,6 +96,12 @@ sharing the URL beyond friends:
   last socket leaves a lobby or a finished game the room resets itself,
   so the object can be evicted. A game in progress is kept (players have
   the 90s reconnect grace), and its timers keep the object awake.
+- **Resets are safe mid-narration.** Segment transitions, the dawn/day
+  resolutions and the lovers alerts capture the game generation
+  (`SegmentsManager.getGeneration`, bumped on finish and reset) and stop
+  after any await that outlives it (`apps/server/src/server/stale-game.ts`).
+  A segment also ends only once: a repeated finish (double vote, a
+  deadline racing the last action) is ignored.
 - **Nothing is persisted.** A deploy (or an eviction) resets every live
   game; clients reconnect and are sent back to the join screen.
 - **The narrator is a dashboard tab.** There are no speakers on Workers:

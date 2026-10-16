@@ -58,6 +58,16 @@ export class SegmentsManager {
   private daySegment!: Segment;
   private hunterSegment!: Segment;
   private segmentDeadline: NodeJS.Timeout | null = null;
+  /**
+   * Bumped when the game finishes or is reset. Anything that awaits
+   * (narration, a hunter pick) or runs on a timer captures it first and
+   * gives up if it changed: that work belongs to a game that is over.
+   */
+  private generation = 0;
+  /** Bumped each time the game moves to another segment. */
+  private segmentRun = 0;
+  /** The segment run being ended by an `advanceSegment` in progress. */
+  private endingRun: number | null = null;
   private deadlineEndsAt: number | null = null;
 
   constructor(
@@ -219,6 +229,8 @@ export class SegmentsManager {
   }
 
   resetForNewGame() {
+    this.generation++;
+    this.segmentRun++;
     this.clearDeadline();
     this.gameActions.closeDayVote();
     this.currentSegment = 0;
@@ -239,7 +251,18 @@ export class SegmentsManager {
     return this.game.isOneOfLoversInDeathQueue();
   }
 
+  getGeneration() {
+    return this.generation;
+  }
+
+  /** False once the game `generation` was captured in has ended. */
+  isCurrentGeneration(generation: number) {
+    return generation === this.generation;
+  }
+
   async playSegment() {
+    const generation = this.generation;
+    const run = this.segmentRun;
     const segment = this.segments[this.currentSegment];
     console.log(`[SEGMENT] Playing segment: ${segment.type}`);
     this.io.emit('game:phase-changed', this.getCurrentSegmentType());
@@ -260,6 +283,11 @@ export class SegmentsManager {
     }
 
     await this.audioManager.playSegmentAudio(segment.type, true);
+    // Reset, finished, or already moved past (admin:next-segment) while
+    // the intro played
+    if (!this.isCurrentGeneration(generation) || run !== this.segmentRun) {
+      return;
+    }
     segment.action();
     this.scheduleDeadline(segment.type);
   }
@@ -378,6 +406,7 @@ export class SegmentsManager {
    * and keep a Durable Object awake for nothing.
    */
   private markFinished() {
+    this.generation++;
     this.gameFinished = true;
     this.clearDeadline();
     this.gameActions.closeDayVote();
@@ -389,16 +418,29 @@ export class SegmentsManager {
 
   // playEndAudio: false lets callers that already narrated the segment's
   // outcome (day-vote resolution, tie) move on without the generic end audio
+  //
+  // One transition per segment: a second call while this segment is
+  // already ending (a wolf's repeated agreeing vote, a deadline racing the
+  // last action) is a no-op
   async advanceSegment({ playEndAudio = true }: { playEndAudio?: boolean } = {}) {
+    if (this.endingRun === this.segmentRun) {
+      return;
+    }
+    this.endingRun = this.segmentRun;
+    const generation = this.generation;
     this.clearDeadline();
     const segment = this.segments[this.currentSegment];
 
     if (playEndAudio) {
       await this.audioManager.playSegmentAudio(segment.type, false);
+      if (!this.isCurrentGeneration(generation)) {
+        return;
+      }
     }
 
     this.markFirstNightSegment(segment);
 
+    this.segmentRun++;
     this.currentSegment++;
     this.findValidSegment();
 

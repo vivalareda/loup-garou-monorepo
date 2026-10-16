@@ -3,6 +3,11 @@ import type { Game } from '@/core/game';
 import type { Player } from '@/core/player';
 import type { SegmentsManager } from '@/segments/segments-manager';
 import type { Broadcaster } from '@/server/broadcaster';
+import {
+  awaitInGame,
+  runResolution,
+  type StaleGame,
+} from '@/server/stale-game';
 
 /**
  * Resolves everything that follows a day-vote elimination as one linear
@@ -44,20 +49,28 @@ export class DayVoteResolution {
     return this.pendingHunterPick !== null;
   }
 
-  /** The village voted `votedPlayer` out — run the full death chain. */
+  /**
+   * The village voted `votedPlayer` out — run the full death chain. It
+   * stops at the first await that outlives its game (finished or reset).
+   */
   run(votedPlayer: Player) {
-    return Effect.runPromise(this.resolveElimination(votedPlayer));
+    return runResolution(
+      this.resolveElimination(votedPlayer, this.segmentsManager.getGeneration())
+    );
   }
 
-  private resolveElimination(votedPlayer: Player): Effect.Effect<void> {
+  private resolveElimination(
+    votedPlayer: Player,
+    generation: number
+  ): Effect.Effect<void, StaleGame> {
     return Effect.gen(this, function* () {
       // "The village has spoken"
-      yield* this.play('Day-vote/Vote-Death');
+      yield* this.play(generation, 'Day-vote/Vote-Death');
 
       this.killPlayer(votedPlayer);
       this.game.clearDayVotes();
 
-      yield* this.resolveConsequences(votedPlayer);
+      yield* this.resolveConsequences(votedPlayer, generation);
 
       if (!this.segmentsManager.isGameOver()) {
         // The chain above already told the story of this day — skip the
@@ -74,22 +87,29 @@ export class DayVoteResolution {
    * any of the dead was the hunter he takes a revenge shot — recursively,
    * since the revenge target can itself be a lover.
    */
-  private resolveConsequences(dead: Player): Effect.Effect<void> {
+  private resolveConsequences(
+    dead: Player,
+    generation: number
+  ): Effect.Effect<void, StaleGame> {
     return Effect.gen(this, function* () {
       const partner = this.game.isPlayerLover(dead)
         ? this.game.getPartner(dead)
         : undefined;
 
       if (partner?.isAlive) {
-        yield* this.play('Day-vote/Lover');
+        yield* this.play(generation, 'Day-vote/Lover');
         this.killPlayer(partner);
-        yield* this.resolveConsequences(partner);
+        yield* this.resolveConsequences(partner, generation);
       }
 
       if (dead.getRole() === 'HUNTER') {
-        yield* this.play('Day-vote/Hunter');
+        yield* this.play(generation, 'Day-vote/Hunter');
 
-        const targetSid = yield* this.awaitHunterPick();
+        const targetSid = yield* awaitInGame(
+          this.segmentsManager,
+          generation,
+          this.awaitHunterPick()
+        );
 
         if (targetSid === null) {
           return;
@@ -99,7 +119,7 @@ export class DayVoteResolution {
 
         if (target?.isAlive) {
           this.killPlayer(target);
-          yield* this.resolveConsequences(target);
+          yield* this.resolveConsequences(target, generation);
         }
       }
     });
@@ -137,9 +157,12 @@ export class DayVoteResolution {
     this.game.handlePlayerDeath(player);
   }
 
-  private play(file: string) {
-    return Effect.promise(() =>
-      this.segmentsManager.audioManager.playAudio(file)
+  /** Plays a clip, unless the game ended meanwhile. */
+  private play(generation: number, file: string) {
+    return awaitInGame(
+      this.segmentsManager,
+      generation,
+      Effect.promise(() => this.segmentsManager.audioManager.playAudio(file))
     );
   }
 }

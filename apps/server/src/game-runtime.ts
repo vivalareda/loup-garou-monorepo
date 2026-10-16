@@ -33,12 +33,11 @@ export type GameRuntime = {
    * Starts a new game in place: the same objects keep serving the
    * connected clients, so no second `connection` handler is registered.
    *
-   * Known limitation: work already in flight is not cancelled. A segment
-   * awaiting a narration clip (or a paused resolution) resumes against
-   * the new game when it settles. Reset is only reachable once a game
-   * has finished (`game:restart`, an empty room on the Worker) or with
-   * Node's `r` key, and a finished game has no deadlines left, so in
-   * practice only a clip still playing can leak through.
+   * Work still in flight for the old game (a segment or dawn/day
+   * resolution awaiting a clip or a hunter pick, the lovers alerts) sees
+   * the game generation change and stops when it resumes, so nothing
+   * leaks into the new game. A pending hunter pick's 60s timeout still
+   * runs out on its own.
    */
   reset: () => void;
 };

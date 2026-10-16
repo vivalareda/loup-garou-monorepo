@@ -9,6 +9,8 @@ const makeSegmentsManager = (gameOver: boolean) =>
     isCurrentSegment: vi.fn().mockReturnValue(true),
     getRemainingDeadlineMs: vi.fn().mockReturnValue(null),
     isGameOver: vi.fn().mockReturnValue(gameOver),
+    getGeneration: vi.fn().mockReturnValue(0),
+    isCurrentGeneration: vi.fn().mockReturnValue(true),
   }) as unknown as SegmentsManager;
 
 describe('GameActions', () => {

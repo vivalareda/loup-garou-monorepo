@@ -1,15 +1,6 @@
 import { createRealtimeClient } from '@repo/realtime';
-import { type DeathInfo, roomUrl } from '@repo/types';
-
-if (!import.meta.env.VITE_PUBLIC_BACKEND_SERVER_URL) {
-  throw new Error('Missing VITE_PUBLIC_BACKEND_SERVER_URL env variable');
-}
-
-/** The game room's WebSocket URL, from the server's http(s) base URL. */
-export const roomSocketUrl = roomUrl(
-  import.meta.env.VITE_PUBLIC_BACKEND_SERVER_URL,
-  import.meta.env.VITE_PUBLIC_ROOM_CODE || undefined
-);
+import type { DeathInfo } from '@repo/types';
+import { roomSocketUrl } from './room-url';
 
 // Nothing is buffered before the first connection: the controls send
 // admin commands, which must never fire late on a game that moved on

@@ -1,13 +1,8 @@
 import { createRealtimeClient, type RealtimeClient } from '@repo/realtime';
 import type { Player, PlayerListItem, Role } from '@repo/types';
-import { isGamePlayer, roomUrl } from '@repo/types';
+import { isGamePlayer } from '@repo/types';
 import { create } from 'zustand';
-
-// Each mock player opens its own WebSocket to the game room
-const ROOM_URL = roomUrl(
-  import.meta.env.VITE_PUBLIC_BACKEND_SERVER_URL || 'http://localhost:3000',
-  import.meta.env.VITE_PUBLIC_ROOM_CODE || undefined
-);
+import { roomSocketUrl } from '@/utils/room-url';
 
 type MockPlayer = {
   id: string;
@@ -75,7 +70,7 @@ function createPlayerSocket(
   // biome-ignore lint/suspicious/noExplicitAny: <just for testing>
   store: any
 ): RealtimeClient {
-  const socket = createRealtimeClient(ROOM_URL, { autoConnect: false });
+  const socket = createRealtimeClient(roomSocketUrl, { autoConnect: false });
 
   socket.on('connect', () => {
     console.log(`Player ${name} connected`);

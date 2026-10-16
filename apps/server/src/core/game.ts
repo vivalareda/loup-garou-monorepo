@@ -8,14 +8,14 @@ import type {
 } from '@repo/types';
 import type { DeathManager } from '@/core/death-manager';
 import { Player } from '@/core/player';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 export type DayVoteResult =
   | { kind: 'elimination'; player: Player }
   | { kind: 'tie'; tiedPlayerNames: string[] };
 
 export class Game {
-  private readonly io: SocketType;
+  private readonly io: Broadcaster;
   private readonly players: Map<string, Player>;
   private readonly specialRolePlayers: Map<Role, Player> = new Map();
   private readonly deathManager: DeathManager;
@@ -32,7 +32,7 @@ export class Game {
   availableRoles: Role[] = [];
 
   constructor(
-    io: SocketType,
+    io: Broadcaster,
     deathManager: DeathManager,
     options?: { shuffleRoles?: (roles: Role[]) => Role[] }
   ) {

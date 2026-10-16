@@ -5,8 +5,8 @@ import type { Player } from '@/core/player';
 import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
+import type { Broadcaster } from '@/server/broadcaster';
 import { EventsActions } from '@/server/events-actions';
-import type { SocketType } from '@/server/sockets';
 import { RecordingIO } from '@/simulation/recording-io';
 
 export type SimWinner = 'villagers' | 'werewolves' | null;
@@ -97,7 +97,7 @@ export class GameSimulator {
   private pendingDawnPromise: Promise<void> | null = null;
 
   constructor(options: SimOptions = {}) {
-    const socketIo = this.io as unknown as SocketType;
+    const socketIo = this.io as unknown as Broadcaster;
     this.game = new Game(socketIo, this.deathManager);
     this.audioManager = new RecordingAudioManager(this.deathManager);
     this.specialScenarios = new SpecialScenarios(this.game, this.audioManager);

@@ -1,6 +1,6 @@
 import type { DeathInfo } from '@repo/types';
 import type { SegmentsManager } from '@/segments/segments-manager';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 import type { Game } from './game';
 
 function resolveDayDiscussionMs() {
@@ -14,13 +14,13 @@ function resolveDayDiscussionMs() {
 
 export class GameActions {
   private readonly game: Game;
-  private readonly io: SocketType;
+  private readonly io: Broadcaster;
   private readonly segmentsManager: SegmentsManager;
   private dayVotingOpen = false;
   private discussionTimer: NodeJS.Timeout | null = null;
   private discussionEndsAt: number | null = null;
 
-  constructor(game: Game, io: SocketType, segmentsManager: SegmentsManager) {
+  constructor(game: Game, io: Broadcaster, segmentsManager: SegmentsManager) {
     this.game = game;
     this.io = io;
     this.segmentsManager = segmentsManager;

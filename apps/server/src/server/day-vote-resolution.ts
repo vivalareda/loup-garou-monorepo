@@ -2,7 +2,7 @@ import { Deferred, Duration, Effect } from 'effect';
 import type { Game } from '@/core/game';
 import type { Player } from '@/core/player';
 import type { SegmentsManager } from '@/segments/segments-manager';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 /**
  * Resolves everything that follows a day-vote elimination as one linear
@@ -20,7 +20,7 @@ export class DayVoteResolution {
   constructor(
     private readonly game: Game,
     private readonly segmentsManager: SegmentsManager,
-    private readonly io: SocketType
+    private readonly io: Broadcaster
   ) {}
 
   /**

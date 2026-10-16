@@ -1,16 +1,16 @@
 import type { Game } from '@/core/game';
 import type { Player } from '@/core/player';
 import type { SegmentsManager } from '@/segments/segments-manager';
+import type { Broadcaster } from '@/server/broadcaster';
 import { DayVoteResolution } from '@/server/day-vote-resolution';
-import type { SocketType } from '@/server/sockets';
 
 export class EventsActions {
   private readonly game: Game;
   private readonly segmentsManager: SegmentsManager;
-  private readonly io: SocketType;
+  private readonly io: Broadcaster;
   private readonly dayVoteResolution: DayVoteResolution;
 
-  constructor(game: Game, segmentsManager: SegmentsManager, io: SocketType) {
+  constructor(game: Game, segmentsManager: SegmentsManager, io: Broadcaster) {
     this.game = game;
     this.segmentsManager = segmentsManager;
     this.io = io;

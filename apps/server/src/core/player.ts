@@ -5,21 +5,21 @@ import type {
   Role,
   WaitingRoomPlayer,
 } from '@repo/types';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 import { randomUUID } from 'node:crypto';
 
 export class Player implements PlayerGetters, PlayerSetters {
   readonly name: string;
   socketId: string;
   readonly sessionToken: string;
-  readonly io: SocketType;
+  readonly io: Broadcaster;
   role: Role | null;
   isAlive: boolean;
   /** False while the player's transport is down and their grace period is
    * running. A disconnected player is not required for phase completion. */
   isConnected: boolean;
 
-  constructor(name: string, sid: string, io: SocketType) {
+  constructor(name: string, sid: string, io: Broadcaster) {
     this.name = name;
     this.role = null;
     this.isAlive = true;

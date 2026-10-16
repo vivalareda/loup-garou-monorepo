@@ -1,7 +1,7 @@
 import { Deferred, Duration, Effect } from 'effect';
 import type { Game } from '@/core/game';
 import type { SegmentsManager } from '@/segments/segments-manager';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 /**
  * Resolves the night/dawn death flow as one linear Effect program:
@@ -21,7 +21,7 @@ export class NightDawnResolution {
   constructor(
     private readonly game: Game,
     private readonly segmentsManager: SegmentsManager,
-    private readonly io: SocketType
+    private readonly io: Broadcaster
   ) {}
 
   /** Kick off the dawn resolution as a background promise. */

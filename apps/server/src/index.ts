@@ -26,7 +26,9 @@ const narrator =
     ? new DashboardNarrator(host)
     : new LocalNarrator();
 
-const runtime = createGameRuntime({ host, narrator });
+// The dashboard's admin:* testing tools stay on: on Node it is a testing
+// rig (see AGENTS.md "Intentional tradeoffs")
+const runtime = createGameRuntime({ host, narrator, adminEvents: true });
 
 process.stdin.on('data', (key: string) => {
   const keyPressed = key.toString().toLowerCase();

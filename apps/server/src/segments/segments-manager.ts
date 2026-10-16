@@ -358,18 +358,29 @@ export class SegmentsManager {
     if (winner === 'villagers') {
       this.audioManager.playVillagersWonAudio();
       this.game.alertWinnersAndLosers(winner);
-      this.gameFinished = true;
+      this.markFinished();
       return true;
     }
 
     if (winner === 'werewolves') {
       this.audioManager.playWerewolvesWonAudio();
       this.game.alertWinnersAndLosers(winner);
-      this.gameFinished = true;
+      this.markFinished();
       return true;
     }
 
     return false;
+  }
+
+  /**
+   * Ends the game and stops its clocks: a pending deadline or day
+   * discussion would otherwise outlive it (the DAY one by up to 10 min)
+   * and keep a Durable Object awake for nothing.
+   */
+  private markFinished() {
+    this.gameFinished = true;
+    this.clearDeadline();
+    this.gameActions.closeDayVote();
   }
 
   async finishSegment() {

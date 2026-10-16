@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createGameRuntime } from '@/game-runtime';
 import { silentNarrator } from '@/segments/narrator';
 import { DashboardNarrator } from '@/server/dashboard-narrator';
@@ -43,7 +43,7 @@ describe('createGameRuntime', () => {
   it('wires a dashboard narrator to the client that registers', async () => {
     const host = newHost();
     const narrator = new DashboardNarrator(host);
-    createGameRuntime({ host, narrator });
+    createGameRuntime({ host, narrator, adminEvents: false });
     const dashboard = fakeSocket();
     host.accept(dashboard.socket);
 
@@ -67,7 +67,7 @@ describe('createGameRuntime', () => {
   it('stops narrating to a dashboard that disconnects', async () => {
     const host = newHost();
     const narrator = new DashboardNarrator(host);
-    createGameRuntime({ host, narrator });
+    createGameRuntime({ host, narrator, adminEvents: false });
     const dashboard = fakeSocket();
     host.accept(dashboard.socket);
     dashboard.send('narrator:register');
@@ -83,7 +83,11 @@ describe('createGameRuntime', () => {
 
   it('serves the lobby and resets the game in place', () => {
     const host = newHost();
-    const runtime = createGameRuntime({ host, narrator: silentNarrator });
+    const runtime = createGameRuntime({
+      host,
+      narrator: silentNarrator,
+      adminEvents: false,
+    });
     const player = fakeSocket();
     host.accept(player.socket);
 
@@ -97,5 +101,63 @@ describe('createGameRuntime', () => {
       event: 'game:restarted',
       args: [],
     });
+  });
+
+  it.each([
+    [true, 1],
+    [false, 0],
+  ])(
+    'with adminEvents %s, admin:start-game starts %i game',
+    (adminEvents, started) => {
+      const host = newHost();
+      const runtime = createGameRuntime({
+        host,
+        narrator: silentNarrator,
+        adminEvents,
+      });
+      for (const name of ['A', 'B', 'C', 'D']) {
+        const player = fakeSocket();
+        host.accept(player.socket);
+        player.send('player:join', name);
+      }
+      const dashboard = fakeSocket();
+      host.accept(dashboard.socket);
+
+      dashboard.send('admin:start-game');
+      expect(Number(runtime.segmentsManager.hasStarted())).toBe(started);
+    }
+  );
+});
+
+describe('a finished game', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('leaves no deadline or discussion timer running', async () => {
+    vi.useFakeTimers();
+    const host = newHost();
+    const runtime = createGameRuntime({
+      host,
+      narrator: silentNarrator,
+      adminEvents: false,
+    });
+    for (const name of ['A', 'B', 'C', 'D', 'E', 'F']) {
+      const player = fakeSocket();
+      host.accept(player.socket);
+      player.send('player:join', name);
+    }
+    expect(runtime.segmentsManager.hasStarted()).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(runtime.segmentsManager.getRemainingDeadlineMs()).not.toBeNull();
+
+    for (const player of runtime.game.getAlivePlayers()) {
+      if (player.getRole() !== 'WEREWOLF') {
+        player.kill();
+      }
+    }
+    expect(runtime.segmentsManager.isGameOver()).toBe(true);
+    expect(runtime.segmentsManager.getRemainingDeadlineMs()).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

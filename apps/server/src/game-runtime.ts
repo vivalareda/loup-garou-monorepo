@@ -17,6 +17,12 @@ export type GameRuntimeOptions = {
    * dashboard tab that registers as narrator over `host`.
    */
   narrator: Narrator;
+  /**
+   * Registers the dashboard's testing tools (`admin:*`, `admin:mock-*`),
+   * which let any client advance phases, inject players or change deaths.
+   * Off, those events are ignored.
+   */
+  adminEvents: boolean;
 };
 
 export type GameRuntime = {
@@ -26,6 +32,13 @@ export type GameRuntime = {
   /**
    * Starts a new game in place: the same objects keep serving the
    * connected clients, so no second `connection` handler is registered.
+   *
+   * Known limitation: work already in flight is not cancelled. A segment
+   * awaiting a narration clip (or a paused resolution) resumes against
+   * the new game when it settles. Reset is only reachable once a game
+   * has finished (`game:restart`, an empty room on the Worker) or with
+   * Node's `r` key, and a finished game has no deadlines left, so in
+   * practice only a clip still playing can leak through.
    */
   reset: () => void;
 };
@@ -38,6 +51,7 @@ export type GameRuntime = {
 export function createGameRuntime({
   host,
   narrator,
+  adminEvents,
 }: GameRuntimeOptions): GameRuntime {
   const deathManager = new DeathManager();
   const game = new Game(host, deathManager);
@@ -51,7 +65,7 @@ export function createGameRuntime({
   );
   const eventsActions = new EventsActions(game, segmentsManager, host);
   const events = new GameEvents(game, segmentsManager, host, eventsActions);
-  events.setupSocketHandlers();
+  events.setupSocketHandlers({ adminEvents });
 
   if (narrator instanceof DashboardNarrator) {
     wireDashboardNarrator(host, narrator);

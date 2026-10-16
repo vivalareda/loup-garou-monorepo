@@ -61,12 +61,15 @@ Socket.io is gone from every live path. The pieces:
   (`on/once/off/onAny/emit`, `connect/disconnect/connected`, reserved
   `connect`/`disconnect`/`connect_error`), reconnects with capped
   exponential backoff + jitter (1s→5s), pings every 20s and abandons the
-  socket when a pong is 10s late or a handshake takes over 10s. Emits are
-  queued only before the first connection ever opens (flushed before
-  `connect` fires); after a connection was lost they are dropped
-  (`emit` returns false) since the rejoin snapshot restores the state.
-  Anything that must reach a new connection is re-sent from a `connect`
-  listener (mobile `player:rejoin`, dashboard `narrator:register`).
+  socket when a pong is 10s late or a handshake takes over 10s. Emits
+  made while not connected are dropped (`emit` returns false) since the
+  rejoin snapshot restores the state; anything a new connection needs is
+  re-sent from a `connect` listener (mobile `player:rejoin`, dashboard
+  `narrator:register`). The only exception is the per-client
+  `bufferBeforeConnect` allowlist, queued before the FIRST connection
+  only: mobile lists `player:join` and `lobby:get-players-list`; the
+  dashboard and agent CLI list nothing. Never allowlist `admin:*`, game
+  actions or `narrator:done`.
 - `socket.io` stays a server dependency ONLY for the dead Effect files
   below (`index.effect.ts`, `socket-io.effect.ts`,
   `socket-event-router.effect.ts`, `event-handlers.effect.ts`); nothing

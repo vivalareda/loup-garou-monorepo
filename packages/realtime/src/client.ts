@@ -68,6 +68,13 @@ export type RealtimeClientOptions = {
   pingTimeoutMs?: number;
   /** A handshake still pending after this long is aborted (default 10000). */
   connectTimeoutMs?: number;
+  /**
+   * Events queued when emitted before the first connection ever opens,
+   * flushed in order before `connect` fires (default: none, every other
+   * early emit is dropped). Only list events that cannot go stale, such
+   * as a join or a read: never admin commands or game actions.
+   */
+  bufferBeforeConnect?: readonly EmitEvent[];
   /** Defaults to the global `WebSocket`. */
   WebSocket?: ClientWebSocketConstructor;
 };
@@ -114,13 +121,15 @@ function resolveWebSocket(
  * - Notices a dead connection that never reports `close` (broken network,
  *   suspended phone): it pings the server and gives up on the socket when
  *   the pong is late, or when the handshake stalls, then reconnects.
- * - Emits made before the first connection ever opens are queued and
- *   flushed, in order, before `connect` fires, so a fast first tap is not
- *   lost. Once connected, emits made while the connection is down are
- *   dropped (`emit` returns false and warns): replaying them after an
- *   outage would act on a stale game (an extra admin "next segment", a
- *   vote before the rejoin); the rejoin snapshot restores the state
- *   instead. `disconnect()` discards the queue. Acks still waiting when
+ * - Emits made while not connected are dropped (`emit` returns false and
+ *   warns): replaying them later would act on a stale game (an extra
+ *   admin "next segment" from a dashboard opened during an outage, a vote
+ *   before the rejoin); the rejoin snapshot restores the state instead,
+ *   and what a new connection needs is re-sent from `connect` listeners.
+ *   The one exception: events listed in `bufferBeforeConnect` emitted
+ *   before the first connection ever opens are queued and flushed, in
+ *   order, before `connect` fires (a fast first `player:join` tap).
+ *   `disconnect()` discards the queue. Acks still waiting when
  *   the connection drops are never called: the reply belonged to a server
  *   connection that no longer exists.
  */
@@ -134,6 +143,7 @@ export class RealtimeClient {
   private readonly pingIntervalMs: number;
   private readonly pingTimeoutMs: number;
   private readonly connectTimeoutMs: number;
+  private readonly bufferable: ReadonlySet<string>;
 
   private readonly listeners = new Map<string, ListenerEntry[]>();
   private readonly anyListeners: AnyListener[] = [];
@@ -164,6 +174,7 @@ export class RealtimeClient {
     this.pingIntervalMs = options.pingIntervalMs ?? 20_000;
     this.pingTimeoutMs = options.pingTimeoutMs ?? 10_000;
     this.connectTimeoutMs = options.connectTimeoutMs ?? 10_000;
+    this.bufferable = new Set(options.bufferBeforeConnect ?? []);
     if (options.autoConnect ?? true) {
       this.connect();
     }
@@ -274,12 +285,15 @@ export class RealtimeClient {
     return this;
   }
 
-  /** Sends now when open; else queues (never connected yet) or drops. */
+  /**
+   * Sends now when open; queues an allowlisted event before the first
+   * connection; drops anything else.
+   */
   private send(event: string, frame: string): 'sent' | 'queued' | 'dropped' {
     if (this.trySend(frame)) {
       return 'sent';
     }
-    if (!this.hasConnected) {
+    if (!this.hasConnected && this.bufferable.has(event)) {
       this.queue.push(frame);
       return 'queued';
     }

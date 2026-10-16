@@ -11,6 +11,8 @@ export const roomSocketUrl = roomUrl(
   import.meta.env.VITE_PUBLIC_ROOM_CODE || undefined
 );
 
+// Nothing is buffered before the first connection: the controls send
+// admin commands, which must never fire late on a game that moved on
 export const socket = createRealtimeClient(roomSocketUrl);
 
 // Game events state - simple global store for demo

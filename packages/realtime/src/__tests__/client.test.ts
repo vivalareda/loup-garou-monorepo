@@ -183,35 +183,57 @@ describe('RealtimeClient', () => {
       ]);
     });
 
-    it('queues emits until connected, then flushes them in order before connect fires', () => {
+    it('drops every emit made before the first connection by default', () => {
       const client = makeClient();
+      const socket = FakeWebSocket.latest();
+
+      expect(client.emit('admin:next-segment')).toBe(false);
+      expect(client.emit('player:join', 'Ana')).toBe(false);
+      socket.open();
+
+      expect(socket.sent).toEqual([]);
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('admin:next-segment')
+      );
+    });
+
+    it('queues allowlisted emits until connected, then flushes them in order before connect fires', () => {
+      const client = makeClient({
+        bufferBeforeConnect: ['player:join', 'lobby:get-players-list'],
+      });
       const socket = FakeWebSocket.latest();
       let sentWhenConnectFired: unknown[] = [];
       client.on('connect', () => {
         sentWhenConnectFired = socket.frames();
       });
 
-      client.emit('werewolf:player-voted', 'v1');
-      client.emit('player:rejoin', 'token');
+      expect(client.emit('lobby:get-players-list')).toBe(true);
+      expect(client.emit('werewolf:player-voted', 'v1')).toBe(false);
+      expect(client.emit('player:join', 'Ana')).toBe(true);
+      expect(client.emit('admin:next-segment')).toBe(false);
       expect(socket.sent).toEqual([]);
       socket.open();
 
       expect(sentWhenConnectFired).toEqual([
-        { event: 'werewolf:player-voted', args: ['v1'] },
-        { event: 'player:rejoin', args: ['token'] },
+        { event: 'lobby:get-players-list', args: [] },
+        { event: 'player:join', args: ['Ana'] },
       ]);
     });
 
-    it('reports whether an emit was sent or queued', () => {
+    it('sends any event once connected', () => {
       const client = makeClient();
-
-      expect(client.emit('player:join', 'Ana')).toBe(true);
       FakeWebSocket.latest().open();
-      expect(client.emit('player:join', 'Ana')).toBe(true);
+
+      expect(client.emit('admin:next-segment')).toBe(true);
+      expect(FakeWebSocket.latest().frames()).toEqual([
+        { event: 'admin:next-segment', args: [] },
+      ]);
     });
 
-    it('drops emits made while reconnecting after a connection was lost', () => {
-      const client = makeClient();
+    it('drops emits made while reconnecting, even allowlisted ones', () => {
+      const client = makeClient({
+        bufferBeforeConnect: ['admin:next-segment'],
+      });
       FakeWebSocket.latest().open();
       FakeWebSocket.latest().drop();
 
@@ -393,7 +415,7 @@ describe('RealtimeClient', () => {
     });
 
     it('keeps the ack of a queued emit until it is answered', () => {
-      const client = makeClient();
+      const client = makeClient({ bufferBeforeConnect: ['agent:get-state'] });
       const callback = vi.fn();
       client.emit('agent:get-state', callback);
       const socket = FakeWebSocket.latest();
@@ -698,7 +720,9 @@ describe('RealtimeClient', () => {
     });
 
     it('drops the queue and pending acks, and connect() starts over', () => {
-      const client = makeClient();
+      const client = makeClient({
+        bufferBeforeConnect: ['lobby:get-players-list', 'agent:get-state'],
+      });
       const callback = vi.fn();
       client.emit('lobby:get-players-list');
       client.emit('agent:get-state', callback);

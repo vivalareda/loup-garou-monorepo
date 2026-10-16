@@ -15,8 +15,13 @@ console.log('🔗 Connecting to:', url);
 // Reconnects on its own after a drop (locked phone, app in background,
 // network hop) and fires `connect` again: use-session-recovery rejoins
 // with the session token from there. Taps made while reconnecting are
-// dropped, not replayed: the rejoin snapshot reopens any pending prompt
-export const socket = createRealtimeClient(url);
+// dropped, not replayed: the rejoin snapshot reopens any pending prompt.
+// Before the very first connection only two emits are queued: a join
+// tapped while the app is still connecting, and the roster read the game
+// layout sends on mount. Neither can go stale; game actions never are
+export const socket = createRealtimeClient(url, {
+  bufferBeforeConnect: ['player:join', 'lobby:get-players-list'],
+});
 
 socket.on('connect', () => {
   console.log('Socket connected');

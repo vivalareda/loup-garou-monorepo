@@ -8,8 +8,8 @@ import {
   type Role,
   roomUrl,
 } from '@repo/types';
-import type { WebSocketServer } from 'ws';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { WebSocketServer } from 'ws';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
@@ -42,6 +42,10 @@ const DETERMINISTIC_ROLES: Role[] = [
 ];
 
 type Client = RealtimeClient;
+
+/** Like the mobile app: only a join may wait for the first connection. */
+const connectLikeMobile = (url: string): Client =>
+  createRealtimeClient(url, { bufferBeforeConnect: ['player:join'] });
 
 /** Buffers every incoming event so nothing is lost before we await it. */
 class EventRecorder {
@@ -100,7 +104,11 @@ describe('live-socket happy path', () => {
   const savedEnv: Record<string, string | undefined> = {};
 
   beforeAll(async () => {
-    for (const key of ['DEBUG_AUDIO', 'DAY_VOTE_DELAY_MS', 'LOVER_ALERT_DELAY_MS']) {
+    for (const key of [
+      'DEBUG_AUDIO',
+      'DAY_VOTE_DELAY_MS',
+      'LOVER_ALERT_DELAY_MS',
+    ]) {
       savedEnv[key] = process.env[key];
     }
     process.env.DEBUG_AUDIO = '1';
@@ -124,8 +132,12 @@ describe('live-socket happy path', () => {
       new SpecialScenarios(game, audioManager)
     );
     const eventsActions = new EventsActions(game, segmentsManager, host);
-    new GameEvents(game, segmentsManager, host, eventsActions)
-      .setupSocketHandlers();
+    new GameEvents(
+      game,
+      segmentsManager,
+      host,
+      eventsActions
+    ).setupSocketHandlers();
 
     await new Promise<void>((resolve) => {
       httpServer.listen(0, '127.0.0.1', () => resolve());
@@ -134,7 +146,7 @@ describe('live-socket happy path', () => {
     url = roomUrl(`http://127.0.0.1:${port}`);
 
     players = Array.from({ length: 6 }, (_, index) => {
-      const socket: Client = createRealtimeClient(url);
+      const socket = connectLikeMobile(url);
       return {
         name: `P${index + 1}`,
         socket,
@@ -229,11 +241,18 @@ describe('live-socket happy path', () => {
       // and a fresh socket recovers the seat with the session token —
       // receiving the pending werewolf prompt in the snapshot
       wolf2.socket.disconnect();
-      const recoveredSocket: Client = createRealtimeClient(url);
+      const recoveredSocket = connectLikeMobile(url);
       wolf2.socket = recoveredSocket;
       wolf2.events = new EventRecorder(recoveredSocket);
-      // An action tapped while offline is flushed from the new socket
-      // BEFORE the rejoin: the server must reject it, not crash
+      // An action tapped while offline is dropped, never replayed later
+      expect(recoveredSocket.emit('werewolf:player-voted', villager1.sid)).toBe(
+        false
+      );
+      await new Promise<void>((resolve) =>
+        recoveredSocket.once('connect', resolve)
+      );
+      // One that races the rejoin comes from a socket with no seat yet:
+      // the server must reject it, not crash
       recoveredSocket.emit('werewolf:player-voted', villager1.sid);
       recoveredSocket.emit('player:rejoin', wolf2.sessionToken);
       await wolf2.events.take('alert:action-error');
@@ -272,7 +291,9 @@ describe('live-socket happy path', () => {
       // --- Day vote: the village eliminates a werewolf ----------------------
       const aliveVoters = players.filter((player) => player !== villager1);
       await Promise.all(
-        aliveVoters.map((player) => player.events.take('day:voting-phase-start'))
+        aliveVoters.map((player) =>
+          player.events.take('day:voting-phase-start')
+        )
       );
       for (const voter of aliveVoters) {
         voter.socket.emit('day:player-voted', wolf1.sid);
@@ -280,13 +301,14 @@ describe('live-socket happy path', () => {
 
       // wolf1 is eliminated; wolf2 (the lover) dies of grief; the village wins
       const winners = [cupid, witch, villager1, ...byRole('VILLAGER').slice(1)];
-      const results = (await Promise.all(
-        winners.map(
-          (player) => player.events.take('alert:player-won') as Promise<[
-            GameEndResult,
-          ]>
+      const results = (
+        await Promise.all(
+          winners.map(
+            (player) =>
+              player.events.take('alert:player-won') as Promise<[GameEndResult]>
+          )
         )
-      )).map(([result]) => result);
+      ).map(([result]) => result);
       const [wolfResult] = (await wolf1.events.take('alert:player-lost')) as [
         GameEndResult,
       ];

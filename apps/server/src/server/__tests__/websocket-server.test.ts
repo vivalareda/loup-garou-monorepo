@@ -135,7 +135,7 @@ describe('attachWebSocketServer', () => {
     });
     clients.push({ close: () => client.disconnect() });
 
-    // Emitted before the connection opens: queued, then answered
+    await new Promise<void>((resolve) => client.once('connect', resolve));
     const snapshot = await new Promise<PlayerGameSnapshot>((resolve) => {
       client.emit('agent:get-state', resolve);
     });

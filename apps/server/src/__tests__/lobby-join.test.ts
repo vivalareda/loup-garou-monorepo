@@ -4,6 +4,7 @@ import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
+import type { Broadcaster } from '@/server/broadcaster';
 import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
@@ -22,7 +23,7 @@ function makeMockSocket(id: string) {
     broadcast: { emit: vi.fn() },
   };
   return {
-    socket: socket as unknown as Connection,
+    socket: socket satisfies Connection,
     fire: (event: string, ...args: unknown[]) => handlers.get(event)?.(...args),
   };
 }
@@ -42,7 +43,7 @@ describe('lobby join validation', () => {
       }),
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
-    } as unknown as ConnectionHost;
+    } satisfies ConnectionHost;
 
     const deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);
@@ -143,7 +144,7 @@ describe('villagers target list', () => {
     const mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
-    } as unknown as ConnectionHost;
+    } satisfies Broadcaster;
     const deathManager = new DeathManager();
     const game = new Game(mockIo, deathManager);
 

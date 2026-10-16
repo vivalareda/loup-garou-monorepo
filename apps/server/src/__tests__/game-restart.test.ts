@@ -22,7 +22,7 @@ function makeMockSocket(id: string) {
     broadcast: { emit: vi.fn() },
   };
   return {
-    socket: socket as unknown as Connection,
+    socket: socket satisfies Connection,
     fire: (event: string, ...args: unknown[]) => handlers.get(event)?.(...args),
   };
 }
@@ -43,7 +43,7 @@ describe('in-place game restart', () => {
       }),
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
-    } as unknown as ConnectionHost;
+    } satisfies ConnectionHost;
 
     const deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);

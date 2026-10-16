@@ -5,6 +5,7 @@ import { Game } from '@/core/game';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
 import { SpecialScenarios } from '@/core/special-scenarios';
+import type { Broadcaster } from '@/server/broadcaster';
 import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
@@ -36,7 +37,7 @@ describe('role distribution', () => {
     const mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
-    } as unknown as ConnectionHost;
+    } satisfies Broadcaster;
     const game = new Game(mockIo, new DeathManager());
     for (let index = 0; index < playerCount; index++) {
       game.addPlayer(`Player${index}`, `socket-${index}`);
@@ -99,7 +100,7 @@ describe('PLAYER_COUNT driven auto-start', () => {
       broadcast: { emit: vi.fn() },
     };
     return {
-      socket: socket as unknown as Connection,
+      socket: socket satisfies Connection,
       fire: (event: string, ...args: unknown[]) =>
         handlers.get(event)?.(...args),
     };
@@ -116,7 +117,7 @@ describe('PLAYER_COUNT driven auto-start', () => {
       }),
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
-    } as unknown as ConnectionHost;
+    } satisfies ConnectionHost;
 
     const deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);

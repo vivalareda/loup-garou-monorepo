@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Connection } from '@/server/connection';
-import { WebSocketHost, type WebSocketLike } from '@/server/websocket-host';
+import {
+  DEFAULT_IDLE_TIMEOUT_MS,
+  DEFAULT_MAX_FRAME_BYTES,
+  type HostTimers,
+  WebSocketHost,
+  type WebSocketLike,
+} from '@/server/websocket-host';
 
 const OPEN = 1;
 const CLOSED = 3;
@@ -17,6 +23,7 @@ class FakeSocket implements WebSocketLike {
   readyState = OPEN;
   readonly sent: string[] = [];
   closeCalls = 0;
+  closeCode: number | undefined;
   failSends = false;
   private readonly listeners = new Map<string, FakeListener[]>();
 
@@ -27,8 +34,9 @@ class FakeSocket implements WebSocketLike {
     this.sent.push(data);
   }
 
-  close() {
+  close(code?: number) {
     this.closeCalls += 1;
+    this.closeCode = code;
     this.readyState = CLOSED;
   }
 
@@ -449,6 +457,166 @@ describe('WebSocketHost', () => {
       socket.fire('close');
 
       expect(after).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('heartbeat', () => {
+    it('answers a ping with a pong, dispatching nothing', () => {
+      const { socket, connection } = connect(host);
+      const listener = vi.fn();
+      connection.on('game:restart', listener);
+
+      socket.receiveFrame({ ping: 7 });
+
+      expect(socket.frames()).toEqual([{ pong: 7 }]);
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('idle timeout', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      host = new WebSocketHost();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('drops a silent connection whose socket never closes', () => {
+      const { socket, connection } = connect(host);
+      const onDisconnect = vi.fn();
+      connection.on('disconnect', onDisconnect);
+
+      vi.advanceTimersByTime(DEFAULT_IDLE_TIMEOUT_MS - 1);
+      expect(onDisconnect).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+
+      expect(onDisconnect).toHaveBeenCalledOnce();
+      expect(socket.closeCode).toBe(4000);
+      expect(host.size).toBe(0);
+      // Its eventual `close` is the same disconnect
+      socket.fire('close');
+      expect(onDisconnect).toHaveBeenCalledOnce();
+    });
+
+    it('restarts the countdown on every inbound frame, pings included', () => {
+      const { socket, connection } = connect(host);
+      const onDisconnect = vi.fn();
+      connection.on('disconnect', onDisconnect);
+
+      vi.advanceTimersByTime(40_000);
+      socket.receiveFrame({ ping: 1 });
+      vi.advanceTimersByTime(40_000);
+      socket.receive('garbage');
+      vi.advanceTimersByTime(40_000);
+      expect(onDisconnect).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(5000);
+
+      expect(onDisconnect).toHaveBeenCalledOnce();
+    });
+
+    it('cancels its timer when the connection closes', () => {
+      const { socket } = connect(host);
+
+      socket.fire('close');
+
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('can be turned off', () => {
+      host = new WebSocketHost({ idleTimeoutMs: 0 });
+      connect(host);
+
+      vi.advanceTimersByTime(10 * DEFAULT_IDLE_TIMEOUT_MS);
+
+      expect(host.size).toBe(1);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('runs on injected timers', () => {
+      const pending = new Map<number, () => void>();
+      let nextHandle = 0;
+      const timers: HostTimers = {
+        setTimeout: (callback) => {
+          nextHandle += 1;
+          pending.set(nextHandle, callback);
+          return nextHandle;
+        },
+        clearTimeout: (handle) => pending.delete(handle as number),
+      };
+      host = new WebSocketHost({ idleTimeoutMs: 1000, timers });
+      const { connection } = connect(host);
+      const onDisconnect = vi.fn();
+      connection.on('disconnect', onDisconnect);
+
+      for (const callback of [...pending.values()]) {
+        callback();
+      }
+
+      expect(onDisconnect).toHaveBeenCalledOnce();
+      expect(pending.size).toBe(0);
+    });
+  });
+
+  describe('frame size limit', () => {
+    const frameOfSize = (bytes: number, char = 'a') => {
+      const empty = JSON.stringify({ event: 'player:join', args: [''] });
+      const padding = Math.floor((bytes - empty.length) / char.length);
+      return JSON.stringify({
+        event: 'player:join',
+        args: [char.repeat(padding)],
+      });
+    };
+
+    it('accepts a frame at the limit', () => {
+      const { socket, connection } = connect(host);
+      const listener = vi.fn();
+      connection.on('player:join', listener);
+      const frame = frameOfSize(DEFAULT_MAX_FRAME_BYTES);
+      expect(frame.length).toBe(DEFAULT_MAX_FRAME_BYTES);
+
+      socket.receive(frame);
+
+      expect(listener).toHaveBeenCalledOnce();
+    });
+
+    it('closes the connection on a larger frame, before parsing it', () => {
+      const { socket, connection } = connect(host);
+      const listener = vi.fn();
+      const onDisconnect = vi.fn();
+      connection.on('player:join', listener);
+      connection.on('disconnect', onDisconnect);
+
+      socket.receive(frameOfSize(DEFAULT_MAX_FRAME_BYTES + 1));
+
+      expect(listener).not.toHaveBeenCalled();
+      expect(onDisconnect).toHaveBeenCalledOnce();
+      expect(socket.closeCode).toBe(1009);
+    });
+
+    it('counts UTF-8 bytes, not characters', () => {
+      const { socket, connection } = connect(host);
+      const listener = vi.fn();
+      connection.on('player:join', listener);
+      // 3 bytes per character: under the limit in length, over it in bytes
+      const frame = frameOfSize(DEFAULT_MAX_FRAME_BYTES / 2, '€');
+      expect(frame.length).toBeLessThan(DEFAULT_MAX_FRAME_BYTES);
+
+      socket.receive(frame);
+
+      expect(listener).not.toHaveBeenCalled();
+      expect(socket.closeCode).toBe(1009);
+    });
+
+    it('honors a configured limit', () => {
+      host = new WebSocketHost({ maxFrameBytes: 100 });
+      const { socket } = connect(host);
+
+      socket.receive(frameOfSize(101));
+
+      expect(socket.closeCode).toBe(1009);
+      expect(host.size).toBe(0);
     });
   });
 });

@@ -109,9 +109,7 @@ describe('live-socket happy path', () => {
 
     httpServer = createServer();
     const host = new WebSocketHost();
-    wss = attachWebSocketServer(httpServer, host, {
-      heartbeatIntervalMs: 60_000,
-    });
+    wss = attachWebSocketServer(httpServer, host);
 
     // Same wiring as src/index.ts initGame(), with deterministic roles
     const deathManager = new DeathManager();

@@ -16,8 +16,9 @@ import type { EventsActions } from '@/server/events-actions';
  * How long a disconnected player keeps their seat before the game treats
  * the disconnect as a death (same consequences as before: votes cleared,
  * a lover's partner grieves). Long enough to cover a locked phone or an
- * app hop, the server heartbeat noticing a dead socket, and the client's
- * reconnect backoff (capped at 5s, see @repo/realtime).
+ * app hop, the heartbeat noticing a dead socket (the host's 45s idle
+ * timeout), and the client's reconnect backoff (capped at 5s, see
+ * @repo/realtime).
  */
 function resolveDisconnectGraceMs() {
   const raw = process.env.DISCONNECT_GRACE_MS;

@@ -40,9 +40,9 @@ This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
 Socket.io is gone from every live path. The pieces:
 - Wire protocol (`packages/types/src/wire.ts`): one JSON text frame per
   message — server→client `{ event, args }`, client→server
-  `{ event, args, ack? }`, ack reply `{ ack, args }`. Event names are
-  checked against the event maps (`isClientEvent` / `isServerEvent`),
-  payloads are not.
+  `{ event, args, ack? }`, ack reply `{ ack, args }`, and the heartbeat
+  `{ ping: n }` → `{ pong: n }`. Event names are checked against the
+  event maps (`isClientEvent` / `isServerEvent`), payloads are not.
 - Endpoint: `ws(s)://<host>/room/<code>`; clients derive it with
   `roomUrl(baseUrl, code)` from the http(s) base URL env var plus an
   optional room code env var (`EXPO_PUBLIC_ROOM_CODE`,
@@ -51,14 +51,22 @@ Socket.io is gone from every live path. The pieces:
 - Server: `WebSocketHost` (`apps/server/src/server/websocket-host.ts`)
   implements `ConnectionHost` over any socket with `send` / `close` /
   `readyState` / `addEventListener` (the `ws` package's and the Workers
-  runtime's both fit) and imports nothing Node-only.
-  `websocket-server.ts` attaches it to the Node http server and pings
-  every client each 25s, terminating one that missed the previous pong.
+  runtime's both fit) and imports nothing Node-only. It answers pings,
+  closes a connection silent for 45s (`idleTimeoutMs`) and one sending a
+  frame over 64 KiB (`maxFrameBytes`, close code 1009).
+  `websocket-server.ts` attaches it to the Node http server (`ws`
+  `maxPayload` = the host's limit, no protocol-level pings: liveness is
+  the app-level heartbeat only, the same as in a Durable Object).
 - Client: `@repo/realtime` mirrors the Socket.io client API the apps used
   (`on/once/off/onAny/emit`, `connect/disconnect/connected`, reserved
   `connect`/`disconnect`/`connect_error`), reconnects with capped
-  exponential backoff + jitter (1s→5s), and queues emits while
-  disconnected (flushed before `connect` fires; `disconnect()` drops them).
+  exponential backoff + jitter (1s→5s), pings every 20s and abandons the
+  socket when a pong is 10s late or a handshake takes over 10s. Emits are
+  queued only before the first connection ever opens (flushed before
+  `connect` fires); after a connection was lost they are dropped
+  (`emit` returns false) since the rejoin snapshot restores the state.
+  Anything that must reach a new connection is re-sent from a `connect`
+  listener (mobile `player:rejoin`, dashboard `narrator:register`).
 - `socket.io` stays a server dependency ONLY for the dead Effect files
   below (`index.effect.ts`, `socket-io.effect.ts`,
   `socket-event-router.effect.ts`, `event-handlers.effect.ts`); nothing

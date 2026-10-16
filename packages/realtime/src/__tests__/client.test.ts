@@ -202,19 +202,159 @@ describe('RealtimeClient', () => {
       ]);
     });
 
-    it('queues emits made while reconnecting', () => {
+    it('reports whether an emit was sent or queued', () => {
+      const client = makeClient();
+
+      expect(client.emit('player:join', 'Ana')).toBe(true);
+      FakeWebSocket.latest().open();
+      expect(client.emit('player:join', 'Ana')).toBe(true);
+    });
+
+    it('drops emits made while reconnecting after a connection was lost', () => {
       const client = makeClient();
       FakeWebSocket.latest().open();
       FakeWebSocket.latest().drop();
 
-      client.emit('lobby:get-players-list');
+      expect(client.emit('admin:next-segment')).toBe(false);
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('admin:next-segment')
+      );
       vi.advanceTimersByTime(1000);
       const next = FakeWebSocket.latest();
       next.open();
 
-      expect(next.frames()).toEqual([
-        { event: 'lobby:get-players-list', args: [] },
+      expect(next.sent).toEqual([]);
+    });
+
+    it('lets connect listeners re-send after a reconnect', () => {
+      const client = makeClient();
+      client.on('connect', () => client.emit('narrator:register'));
+      FakeWebSocket.latest().open();
+      FakeWebSocket.latest().drop();
+      vi.advanceTimersByTime(1000);
+      const next = FakeWebSocket.latest();
+
+      next.open();
+
+      expect(next.frames()).toEqual([{ event: 'narrator:register', args: [] }]);
+    });
+
+    it('never calls the ack of a dropped emit', () => {
+      const client = makeClient();
+      FakeWebSocket.latest().open();
+      FakeWebSocket.latest().drop();
+      const callback = vi.fn();
+
+      expect(client.emit('agent:get-state', callback)).toBe(false);
+      vi.advanceTimersByTime(1000);
+      const next = FakeWebSocket.latest();
+      next.open();
+      next.serverSends({ ack: 0, args: [snapshot] });
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('heartbeat', () => {
+    it('pings while connected and keeps the connection while pongs come back', () => {
+      const client = makeClient();
+      const socket = FakeWebSocket.latest();
+      socket.open();
+
+      vi.advanceTimersByTime(19_999);
+      expect(socket.sent).toEqual([]);
+      vi.advanceTimersByTime(1);
+      expect(socket.frames()).toEqual([{ ping: 1 }]);
+      socket.serverSends({ pong: 1 });
+      vi.advanceTimersByTime(20_000);
+      socket.serverSends({ pong: 2 });
+      vi.advanceTimersByTime(15_000);
+
+      expect(socket.frames()).toEqual([{ ping: 1 }, { ping: 2 }]);
+      expect(client.connected).toBe(true);
+      expect(FakeWebSocket.instances).toHaveLength(1);
+    });
+
+    it('gives up on a silent socket that never closes, then reconnects', () => {
+      const client = makeClient();
+      const events: string[] = [];
+      client.on('connect', () => events.push('connect'));
+      client.on('disconnect', (reason) => events.push(`disconnect:${reason}`));
+      const silent = FakeWebSocket.latest();
+      silent.open();
+
+      // The ping goes out, the pong never comes, and `close` never fires
+      vi.advanceTimersByTime(20_000);
+      vi.advanceTimersByTime(9999);
+      expect(client.connected).toBe(true);
+      vi.advanceTimersByTime(1);
+
+      expect(client.connected).toBe(false);
+      expect(silent.closedWith).toBe(4000);
+      vi.advanceTimersByTime(1000);
+      const next = FakeWebSocket.latest();
+      expect(next).not.toBe(silent);
+      next.open();
+      // A late pong from the abandoned socket changes nothing
+      silent.serverSends({ pong: 1 });
+      expect(events).toEqual([
+        'connect',
+        'disconnect:transport close',
+        'connect',
       ]);
+    });
+
+    it('ignores a pong for an older ping', () => {
+      const client = makeClient();
+      FakeWebSocket.latest().open();
+      vi.advanceTimersByTime(20_000);
+
+      FakeWebSocket.latest().serverSends({ pong: 0 });
+      vi.advanceTimersByTime(10_000);
+
+      expect(client.connected).toBe(false);
+    });
+
+    it('can be turned off', () => {
+      const client = makeClient({ pingIntervalMs: 0 });
+      FakeWebSocket.latest().open();
+
+      vi.advanceTimersByTime(120_000);
+
+      expect(FakeWebSocket.latest().sent).toEqual([]);
+      expect(client.connected).toBe(true);
+    });
+  });
+
+  describe('handshake timeout', () => {
+    it('aborts a stalled handshake and retries', () => {
+      const client = makeClient();
+      const onError = vi.fn();
+      client.on('connect_error', onError);
+      const stalled = FakeWebSocket.latest();
+
+      vi.advanceTimersByTime(9999);
+      expect(onError).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+
+      expect(onError).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ message: 'WebSocket handshake timed out' })
+      );
+      expect(stalled.closedWith).toBe(4000);
+      vi.advanceTimersByTime(1000);
+      expect(FakeWebSocket.instances).toHaveLength(2);
+      // The stalled socket opening late is ignored
+      stalled.open();
+      expect(client.connected).toBe(false);
+    });
+
+    it('is cleared once the socket opens', () => {
+      const client = makeClient({ pingIntervalMs: 0 });
+      FakeWebSocket.latest().open();
+
+      vi.advanceTimersByTime(60_000);
+
+      expect(client.connected).toBe(true);
     });
   });
 
@@ -511,7 +651,7 @@ describe('RealtimeClient', () => {
 
       client.connect();
       expect(FakeWebSocket.instances).toHaveLength(2);
-      vi.advanceTimersByTime(10_000);
+      vi.advanceTimersByTime(5000);
       expect(FakeWebSocket.instances).toHaveLength(2);
     });
   });
@@ -573,6 +713,34 @@ describe('RealtimeClient', () => {
       expect(socket.sent).toEqual([]);
       expect(callback).not.toHaveBeenCalled();
       expect(client.connected).toBe(true);
+    });
+
+    it('leaves no timer behind', () => {
+      const connected = makeClient();
+      FakeWebSocket.latest().open();
+      vi.advanceTimersByTime(20_000);
+      // Pong deadline pending
+      connected.disconnect();
+      const connecting = makeClient();
+      // Handshake timeout pending
+      connecting.disconnect();
+      const retrying = makeClient();
+      FakeWebSocket.latest().drop();
+      // Reconnect pending
+      retrying.disconnect();
+
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('keeps one timer per state while running', () => {
+      const client = makeClient();
+      expect(vi.getTimerCount()).toBe(1);
+      FakeWebSocket.latest().open();
+      expect(vi.getTimerCount()).toBe(1);
+      FakeWebSocket.latest().drop();
+      expect(vi.getTimerCount()).toBe(1);
+      client.disconnect();
+      expect(vi.getTimerCount()).toBe(0);
     });
 
     it('does not fire disconnect when it was never connected', () => {

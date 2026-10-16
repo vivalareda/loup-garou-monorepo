@@ -59,6 +59,15 @@ export type RealtimeClientOptions = {
   reconnectDelayMaxMs?: number;
   /** Jitter, as a fraction of the delay (default 0.5). */
   randomizationFactor?: number;
+  /**
+   * Heartbeat: a `{ ping }` frame this long after the last pong (default
+   * 20000; 0 disables). Must stay well under the server's idle timeout.
+   */
+  pingIntervalMs?: number;
+  /** No pong within this long closes the connection (default 10000). */
+  pingTimeoutMs?: number;
+  /** A handshake still pending after this long is aborted (default 10000). */
+  connectTimeoutMs?: number;
   /** Defaults to the global `WebSocket`. */
   WebSocket?: ClientWebSocketConstructor;
 };
@@ -71,10 +80,13 @@ export type AnyListener = (
 ) => void;
 type ListenerEntry = { listener: Listener; once: boolean };
 type PendingAck = { callback: Listener; sent: boolean };
+type Timer = ReturnType<typeof setTimeout> | undefined;
 
 /** `WebSocket.OPEN`, without depending on a global `WebSocket`. */
 const OPEN = 1;
 const NORMAL_CLOSURE = 1000;
+/** Private-range code for a connection this client gave up on. */
+const ABANDONED = 4000;
 
 function resolveWebSocket(
   injected: ClientWebSocketConstructor | undefined
@@ -99,9 +111,16 @@ function resolveWebSocket(
  * - Reconnects after an unrequested drop with capped exponential backoff
  *   and jitter, firing `connect` again each time (the mobile app rejoins
  *   with its session token from there).
- * - Emits while disconnected are queued and flushed, in order, as soon as
- *   the next connection opens, before `connect` fires (Socket.io's
- *   default). `disconnect()` discards the queue. Acks still waiting when
+ * - Notices a dead connection that never reports `close` (broken network,
+ *   suspended phone): it pings the server and gives up on the socket when
+ *   the pong is late, or when the handshake stalls, then reconnects.
+ * - Emits made before the first connection ever opens are queued and
+ *   flushed, in order, before `connect` fires, so a fast first tap is not
+ *   lost. Once connected, emits made while the connection is down are
+ *   dropped (`emit` returns false and warns): replaying them after an
+ *   outage would act on a stale game (an extra admin "next segment", a
+ *   vote before the rejoin); the rejoin snapshot restores the state
+ *   instead. `disconnect()` discards the queue. Acks still waiting when
  *   the connection drops are never called: the reply belonged to a server
  *   connection that no longer exists.
  */
@@ -112,6 +131,9 @@ export class RealtimeClient {
   private readonly delayMs: number;
   private readonly delayMaxMs: number;
   private readonly jitter: number;
+  private readonly pingIntervalMs: number;
+  private readonly pingTimeoutMs: number;
+  private readonly connectTimeoutMs: number;
 
   private readonly listeners = new Map<string, ListenerEntry[]>();
   private readonly anyListeners: AnyListener[] = [];
@@ -123,8 +145,14 @@ export class RealtimeClient {
   private isOpen = false;
   /** True between `connect()` and `disconnect()`: keep reconnecting. */
   private active = false;
+  /** Whether any connection has opened yet: decides queue vs drop. */
+  private hasConnected = false;
   private attempts = 0;
-  private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  private pingSeq = 0;
+  private reconnectTimer: Timer;
+  private connectTimer: Timer;
+  private pingTimer: Timer;
+  private pongTimer: Timer;
 
   constructor(url: string, options: RealtimeClientOptions = {}) {
     this.url = url;
@@ -133,6 +161,9 @@ export class RealtimeClient {
     this.delayMs = options.reconnectDelayMs ?? 1000;
     this.delayMaxMs = options.reconnectDelayMaxMs ?? 5000;
     this.jitter = options.randomizationFactor ?? 0.5;
+    this.pingIntervalMs = options.pingIntervalMs ?? 20_000;
+    this.pingTimeoutMs = options.pingTimeoutMs ?? 10_000;
+    this.connectTimeoutMs = options.connectTimeoutMs ?? 10_000;
     if (options.autoConnect ?? true) {
       this.connect();
     }
@@ -204,24 +235,36 @@ export class RealtimeClient {
     return this;
   }
 
+  /**
+   * Sends an event; a trailing function is the ack callback. Returns false
+   * when the emit was dropped because the connection is down.
+   */
   emit<E extends EmitEvent>(
     event: E,
     ...args: Parameters<ClientToServerEvents[E]>
-  ): this {
+  ): boolean {
     const payload: unknown[] = [...args];
     const [last] = payload.slice(-1);
     if (typeof last !== 'function') {
-      this.send(encodeFrame({ event, args: payload }));
-      return this;
+      return (
+        this.send(event, encodeFrame({ event, args: payload })) !== 'dropped'
+      );
     }
 
     payload.pop();
     const ack = this.nextAckId;
     this.nextAckId += 1;
-    const pending: PendingAck = { callback: last as Listener, sent: false };
-    this.pendingAcks.set(ack, pending);
-    pending.sent = this.send(encodeFrame({ event, args: payload, ack }));
-    return this;
+    const outcome = this.send(
+      event,
+      encodeFrame({ event, args: payload, ack })
+    );
+    if (outcome !== 'dropped') {
+      this.pendingAcks.set(ack, {
+        callback: last as Listener,
+        sent: outcome === 'sent',
+      });
+    }
+    return outcome !== 'dropped';
   }
 
   private addListener(event: string, listener: Listener, once: boolean) {
@@ -231,18 +274,30 @@ export class RealtimeClient {
     return this;
   }
 
-  /** Sends now when open (returns true), else queues the frame. */
-  private send(frame: string) {
-    if (this.isOpen && this.socket?.readyState === OPEN) {
-      try {
-        this.socket.send(frame);
-        return true;
-      } catch {
-        // The socket is going down: its `close` event follows
-      }
+  /** Sends now when open; else queues (never connected yet) or drops. */
+  private send(event: string, frame: string): 'sent' | 'queued' | 'dropped' {
+    if (this.trySend(frame)) {
+      return 'sent';
     }
-    this.queue.push(frame);
-    return false;
+    if (!this.hasConnected) {
+      this.queue.push(frame);
+      return 'queued';
+    }
+    console.warn(`[realtime] Dropped "${event}": not connected`);
+    return 'dropped';
+  }
+
+  private trySend(frame: string) {
+    if (!(this.isOpen && this.socket?.readyState === OPEN)) {
+      return false;
+    }
+    try {
+      this.socket.send(frame);
+      return true;
+    } catch {
+      // The socket is going down: its `close` event follows
+      return false;
+    }
   }
 
   private open() {
@@ -255,6 +310,12 @@ export class RealtimeClient {
       return;
     }
     this.socket = socket;
+    if (this.connectTimeoutMs > 0) {
+      this.connectTimer = setTimeout(
+        () => this.abandon('WebSocket handshake timed out'),
+        this.connectTimeoutMs
+      );
+    }
     // Events from a socket this client already let go of are ignored
     socket.addEventListener('open', () => {
       if (socket === this.socket) {
@@ -269,34 +330,82 @@ export class RealtimeClient {
     // `error` always precedes `close`, which does the work
     socket.addEventListener('close', (event) => {
       if (socket === this.socket) {
-        this.handleClose(event.code);
+        this.handleClose(
+          `WebSocket closed before opening (code ${event.code})`
+        );
       }
     });
   }
 
   private handleOpen() {
+    this.connectTimer = clear(this.connectTimer);
     this.isOpen = true;
+    this.hasConnected = true;
     this.attempts = 0;
     const queued = this.queue;
     this.queue = [];
     for (const frame of queued) {
-      this.send(frame);
+      this.trySend(frame);
     }
     for (const pending of this.pendingAcks.values()) {
       pending.sent = true;
     }
+    this.schedulePing();
     this.dispatch('connect', []);
   }
 
-  /** Lets go of the current socket; returns whether it was open. */
+  private schedulePing() {
+    if (this.pingIntervalMs <= 0) {
+      return;
+    }
+    this.pingTimer = setTimeout(() => this.sendPing(), this.pingIntervalMs);
+  }
+
+  private sendPing() {
+    this.pingTimer = undefined;
+    this.pingSeq += 1;
+    this.trySend(encodeFrame({ ping: this.pingSeq }));
+    this.pongTimer = setTimeout(
+      () => this.abandon('Heartbeat timed out'),
+      this.pingTimeoutMs
+    );
+  }
+
+  private handlePong(seq: number) {
+    if (seq !== this.pingSeq || this.pongTimer === undefined) {
+      return;
+    }
+    this.pongTimer = clear(this.pongTimer);
+    this.schedulePing();
+  }
+
+  /**
+   * Gives up on a socket that went silent without closing: forget it now
+   * (its late events are ignored), close it, and reconnect as on a drop.
+   */
+  private abandon(failure: string) {
+    const socket = this.socket;
+    this.handleClose(failure);
+    try {
+      socket?.close(ABANDONED, failure);
+    } catch {
+      // Already closing
+    }
+  }
+
+  /** Lets go of the current socket and its timers; returns whether it was open. */
   private release() {
     const wasOpen = this.isOpen;
     this.socket = null;
     this.isOpen = false;
+    this.connectTimer = clear(this.connectTimer);
+    this.pingTimer = clear(this.pingTimer);
+    this.pongTimer = clear(this.pongTimer);
     return wasOpen;
   }
 
-  private handleClose(code: number) {
+  /** The socket closed (or was abandoned); `failure` describes a failed attempt. */
+  private handleClose(failure: string) {
     const wasOpen = this.release();
     for (const [id, pending] of this.pendingAcks) {
       if (pending.sent) {
@@ -306,9 +415,7 @@ export class RealtimeClient {
     if (wasOpen) {
       this.dispatch('disconnect', ['transport close']);
     } else {
-      this.dispatch('connect_error', [
-        new Error(`WebSocket closed before opening (code ${code})`),
-      ]);
+      this.dispatch('connect_error', [new Error(failure)]);
     }
     // A listener may have called disconnect() or connect() meanwhile
     if (this.active && this.reconnects && !this.socket) {
@@ -320,6 +427,10 @@ export class RealtimeClient {
     const frame = parseServerFrame(data);
     if (!frame) {
       console.warn('[realtime] Ignored a malformed frame');
+      return;
+    }
+    if ('pong' in frame) {
+      this.handlePong(frame.pong);
       return;
     }
     if ('ack' in frame) {
@@ -383,11 +494,16 @@ export class RealtimeClient {
   }
 
   private clearReconnectTimer() {
-    if (this.reconnectTimer !== undefined) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = undefined;
-    }
+    this.reconnectTimer = clear(this.reconnectTimer);
   }
+}
+
+/** Clears a timer; returns `undefined` to store back in its field. */
+function clear(timer: Timer): undefined {
+  if (timer !== undefined) {
+    clearTimeout(timer);
+  }
+  return;
 }
 
 export function createRealtimeClient(

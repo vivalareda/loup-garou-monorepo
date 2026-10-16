@@ -8,7 +8,7 @@ import type { Connection } from '@/server/connection';
 import { WebSocketHost } from '@/server/websocket-host';
 import { attachWebSocketServer } from '@/server/websocket-server';
 
-const HEARTBEAT_MS = 40;
+const IDLE_MS = 80;
 
 describe('attachWebSocketServer', () => {
   let httpServer: HttpServer;
@@ -19,10 +19,8 @@ describe('attachWebSocketServer', () => {
 
   beforeEach(async () => {
     httpServer = createServer();
-    host = new WebSocketHost();
-    wss = attachWebSocketServer(httpServer, host, {
-      heartbeatIntervalMs: HEARTBEAT_MS,
-    });
+    host = new WebSocketHost({ idleTimeoutMs: IDLE_MS, maxFrameBytes: 1024 });
+    wss = attachWebSocketServer(httpServer, host);
     await new Promise<void>((resolve) => {
       httpServer.listen(0, '127.0.0.1', () => resolve());
     });
@@ -46,8 +44,8 @@ describe('attachWebSocketServer', () => {
       host.on('connection', resolve);
     });
 
-  const open = (path: string, options?: { autoPong: boolean }) => {
-    const ws = new WebSocket(`${base}${path}`, options);
+  const open = (path: string) => {
+    const ws = new WebSocket(`${base}${path}`);
     clients.push(ws);
     return ws;
   };
@@ -78,29 +76,48 @@ describe('attachWebSocketServer', () => {
     }
   );
 
-  it('terminates a client that stops answering pings', async () => {
+  it('drops a client that sends no heartbeat', async () => {
     const accepted = nextConnection();
-    open('/room/default', { autoPong: false });
+    const ws = open('/room/default');
+    const closed = new Promise<number>((resolve) =>
+      ws.once('close', (code) => resolve(code))
+    );
     const connection = await accepted;
     const disconnected = vi.fn();
     connection.on('disconnect', disconnected);
 
-    await vi.waitFor(() => expect(disconnected).toHaveBeenCalledOnce(), {
-      timeout: HEARTBEAT_MS * 10,
-    });
+    expect(await closed).toBe(4000);
+    expect(disconnected).toHaveBeenCalledOnce();
     expect(host.size).toBe(0);
   });
 
-  it('keeps a client that answers pings', async () => {
-    const accepted = nextConnection();
-    open('/room/default');
-    const connection = await accepted;
-    const disconnected = vi.fn();
-    connection.on('disconnect', disconnected);
+  it('keeps a realtime client that pings', async () => {
+    const client = createRealtimeClient(`${base}/room/default`, {
+      reconnect: false,
+      pingIntervalMs: IDLE_MS / 4,
+    });
+    clients.push({ close: () => client.disconnect() });
+    const onDisconnect = vi.fn();
+    client.on('disconnect', onDisconnect);
+    await new Promise<void>((resolve) => client.once('connect', resolve));
 
-    await new Promise((resolve) => setTimeout(resolve, HEARTBEAT_MS * 5));
-    expect(disconnected).not.toHaveBeenCalled();
+    await new Promise((resolve) => setTimeout(resolve, IDLE_MS * 4));
+    expect(onDisconnect).not.toHaveBeenCalled();
+    expect(client.connected).toBe(true);
     expect(host.size).toBe(1);
+  });
+
+  it('enforces the host frame limit as the ws maxPayload', async () => {
+    expect(wss.options.maxPayload).toBe(host.maxFrameBytes);
+    const ws = open('/room/default');
+    await new Promise((resolve) => ws.once('open', resolve));
+    const closed = new Promise<number>((resolve) =>
+      ws.once('close', (code) => resolve(code))
+    );
+
+    ws.send('x'.repeat(2048));
+
+    expect(await closed).toBe(1009);
   });
 
   it('round-trips an ack with the realtime client', async () => {

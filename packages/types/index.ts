@@ -35,11 +35,14 @@ export type {
 } from './src/segment';
 export {
   type AckFrame,
+  type ClientEventFrame,
   type ClientFrame,
   DEFAULT_ROOM_CODE,
   type EventFrame,
   encodeFrame,
   isRoomCode,
+  type PingFrame,
+  type PongFrame,
   parseClientFrame,
   parseRoomPath,
   parseServerFrame,

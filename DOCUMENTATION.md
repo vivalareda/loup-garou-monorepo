@@ -243,7 +243,7 @@ apps/server/            # Node.js game server
 ├── src/segments/      # Segment management
 └── src/server/        # HTTP + WebSocket server (websocket-host.ts, websocket-server.ts)
 
-packages/realtime/      # Typed WebSocket client (reconnect, acks, queued emits)
+packages/realtime/      # Typed WebSocket client (reconnect, heartbeat, acks)
 
 apps/mobile/           # React Native player app  
 ├── app/(game)/       # Game interface screens

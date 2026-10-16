@@ -7,15 +7,23 @@
  *   (`ClientToServerEvents`); `ack` asks the server for a reply
  * - server → client `{ ack, args }`: the reply to the client's `ack`, whose
  *   `args` are what the server passed to the handler's reply callback
+ * - client → server `{ ping: n }`, answered by server → client `{ pong: n }`:
+ *   the application-level heartbeat. Browsers and React Native cannot send
+ *   protocol pings and a Durable Object cannot either, so liveness is
+ *   checked with these frames on both ends. They carry no `event`, so they
+ *   can never be mistaken for (or collide with) a game event.
  *
  * Event names are checked against the event maps (`isClientEvent` /
  * `isServerEvent`); argument shapes are not, so handlers keep validating
  * their own payloads.
  */
 export type EventFrame = { event: string; args: unknown[] };
-export type ClientFrame = EventFrame & { ack?: number };
+export type ClientEventFrame = EventFrame & { ack?: number };
 export type AckFrame = { ack: number; args: unknown[] };
-export type ServerFrame = EventFrame | AckFrame;
+export type PingFrame = { ping: number };
+export type PongFrame = { pong: number };
+export type ClientFrame = ClientEventFrame | PingFrame;
+export type ServerFrame = EventFrame | AckFrame | PongFrame;
 
 export function encodeFrame(frame: ClientFrame | ServerFrame): string {
   return JSON.stringify(frame);
@@ -37,20 +45,24 @@ function parseObject(data: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-function isAckId(value: unknown): value is number {
+/** Ack ids and ping sequence numbers: non-negative safe integers. */
+function isFrameId(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
 /** A frame a client sent, or null when it is malformed. */
 export function parseClientFrame(data: unknown): ClientFrame | null {
   const frame = parseObject(data);
+  if (frame && frame.event === undefined && isFrameId(frame.ping)) {
+    return { ping: frame.ping };
+  }
   if (!frame || typeof frame.event !== 'string' || !Array.isArray(frame.args)) {
     return null;
   }
   if (frame.ack === undefined) {
     return { event: frame.event, args: frame.args };
   }
-  return isAckId(frame.ack)
+  return isFrameId(frame.ack)
     ? { event: frame.event, args: frame.args, ack: frame.ack }
     : null;
 }
@@ -58,13 +70,16 @@ export function parseClientFrame(data: unknown): ClientFrame | null {
 /** A frame the server sent, or null when it is malformed. */
 export function parseServerFrame(data: unknown): ServerFrame | null {
   const frame = parseObject(data);
+  if (frame && frame.event === undefined && isFrameId(frame.pong)) {
+    return { pong: frame.pong };
+  }
   if (!(frame && Array.isArray(frame.args))) {
     return null;
   }
   if (typeof frame.event === 'string') {
     return { event: frame.event, args: frame.args };
   }
-  if (isAckId(frame.ack)) {
+  if (isFrameId(frame.ack)) {
     return { ack: frame.ack, args: frame.args };
   }
   return null;

@@ -7,6 +7,7 @@ import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
+import { LocalNarrator } from '@/segments/local-narrator';
 import { SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
 // Import existing infrastructure
@@ -24,7 +25,7 @@ import { io } from '@/server/sockets';
 export class SocketIO extends Context.Tag('SocketIO')<
   SocketIO,
   Server<ClientToServerEvents, ServerToClientEvents>
->() { }
+>() {}
 
 /**
  * HTTP Server service - wraps the existing HTTP server
@@ -32,7 +33,7 @@ export class SocketIO extends Context.Tag('SocketIO')<
 export class HttpServerService extends Context.Tag('HttpServer')<
   HttpServerService,
   HttpServer
->() { }
+>() {}
 
 /**
  * Game state service - manages all game-related instances
@@ -49,7 +50,7 @@ export class GameState extends Context.Tag('GameState')<
     readonly gameEvents: GameEvents;
     readonly loversAlertCount: Ref.Ref<number>;
   }
->() { }
+>() {}
 
 // =============================================================================
 // Layers (simple wrappers - no resource management needed, already exists)
@@ -74,7 +75,7 @@ const makeGameState = Effect.gen(function* () {
 
   const deathManager = new DeathManager();
   const game = new Game(socketServer, deathManager);
-  const audioManager = new AudioManager(deathManager);
+  const audioManager = new AudioManager(deathManager, new LocalNarrator());
   const specialScenarios = new SpecialScenarios(game, audioManager);
   const segmentsManager = new SegmentsManager(
     game,

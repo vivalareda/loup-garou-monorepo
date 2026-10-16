@@ -1,13 +1,14 @@
-import { existsSync } from 'node:fs';
 import type { SegmentType } from '@repo/types';
-import sound from 'sound-play';
 import type { DeathManager } from '@/core/death-manager';
+import { type Narrator, silentNarrator } from './narrator';
 
 export class AudioManager {
   deathManager: DeathManager;
+  private readonly narrator: Narrator;
 
-  constructor(deathManager: DeathManager) {
+  constructor(deathManager: DeathManager, narrator: Narrator = silentNarrator) {
     this.deathManager = deathManager;
+    this.narrator = narrator;
   }
 
   async playDayVoteHunterHasPartner() {
@@ -192,25 +193,6 @@ export class AudioManager {
   }
 
   async playAudio(file: string) {
-    const exists = existsSync(`./assets/${file}.mp3`);
-
-    // DEBUG_AUDIO=1 logs the file that would have played instead of playing
-    // it, so segment/audio ordering can be checked without sitting through
-    // the recordings
-    if (process.env.DEBUG_AUDIO) {
-      console.log(
-        `[AUDIO] Would play: ${file}${exists ? '' : ' (missing asset!)'}`
-      );
-      return;
-    }
-
-    try {
-      if (!exists) {
-        return;
-      }
-      await sound.play(`./assets/${file}.mp3`);
-    } catch (error) {
-      console.error('Error playing audio:', error);
-    }
+    await this.narrator.play(file);
   }
 }

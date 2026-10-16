@@ -33,6 +33,7 @@ type EventType =
   | 'game'
   | 'admin'
   | 'agent'
+  | 'narrator'
   | Lowercase<Role>;
 
 export type WerewolvesVoteState = Record<string, number>;
@@ -126,6 +127,9 @@ const serverEventSchemas = {
 
   // TODO: remove this, temporary for testing
   'hunter:killed-player': null as unknown as (selectedPlayer: string) => void,
+
+  // Sent only to the registered narrator; it answers `narrator:done`
+  'narrator:play': null as unknown as (clipId: string, clip: string) => void,
 } satisfies Record<EventName, (...args: any[]) => void>;
 
 export type ServerToClientEvents = typeof serverEventSchemas;
@@ -159,6 +163,10 @@ const clientEventSchemas = {
   'admin:mock-day-vote-lover-second-hunter-event':
     null as unknown as () => void,
   'admin:mock-hunter-revenge-kills-lover': null as unknown as () => void,
+
+  // A dashboard takes over playing the narration clips
+  'narrator:register': null as unknown as () => void,
+  'narrator:done': null as unknown as (clipId: string) => void,
 
   'cupid:lovers-pick': null as unknown as (selectedPlayers: string[]) => void,
   'alert:lover-closed-alert': null as unknown as () => void,

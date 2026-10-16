@@ -2,7 +2,9 @@ import { resolvePlayerCount } from '@/config';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { AudioManager } from '@/segments/audio-manager';
+import { LocalNarrator } from '@/segments/local-narrator';
 import { SegmentsManager } from '@/segments/segments-manager';
+import { DashboardNarrator } from '@/server/dashboard-narrator';
 import { EventsActions } from '@/server/events-actions';
 import { startServer } from '@/server/http-server';
 import { GameEvents } from '@/server/server-events';
@@ -30,10 +32,16 @@ let deathManager: DeathManager;
 let eventsActions: EventsActions;
 let specialScenarios: SpecialScenarios;
 
+// NARRATOR=dashboard plays the clips in a dashboard tab instead of on this
+// machine's speakers (the only option once the server runs on Workers)
+const dashboardNarrator =
+  process.env.NARRATOR === 'dashboard' ? new DashboardNarrator(io) : undefined;
+const narrator = dashboardNarrator ?? new LocalNarrator();
+
 const initGame = () => {
   deathManager = new DeathManager();
   game = new Game(io, deathManager);
-  audioManager = new AudioManager(deathManager);
+  audioManager = new AudioManager(deathManager, narrator);
   specialScenarios = new SpecialScenarios(game, audioManager);
   segmentsManager = new SegmentsManager(
     game,
@@ -58,4 +66,5 @@ process.stdin.on('data', (key: string) => {
 });
 
 initGame();
+dashboardNarrator?.listen(io);
 startServer();

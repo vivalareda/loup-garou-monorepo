@@ -1,5 +1,7 @@
+import { useSyncExternalStore } from 'react';
 import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
+import { enableNarrator, narratorStore } from '@/utils/narrator';
 import { socket } from '@/utils/socket';
 
 type SidebarProps = {
@@ -16,6 +18,11 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
     connectPlayer,
     disconnectPlayer,
   } = useMockPlayerStore();
+
+  const narrator = useSyncExternalStore(
+    narratorStore.subscribe,
+    narratorStore.getState
+  );
 
   const playersArray = Array.from(players.values());
 
@@ -108,6 +115,26 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
             Batch Add Players
           </Button>
         </div>
+      </div>
+
+      <div className="border-b border-gray-200 bg-white p-4">
+        <h3 className="mb-3 text-sm font-semibold text-gray-700">
+          🔊 Narrator
+        </h3>
+        <Button
+          className="w-full text-xs"
+          disabled={narrator.enabled}
+          onClick={enableNarrator}
+          size="sm"
+          variant="outline"
+        >
+          {narrator.enabled ? 'Narrating from this tab' : 'Play narration here'}
+        </Button>
+        {narrator.currentClip && (
+          <p className="mt-2 truncate text-xs text-gray-500">
+            ▶ {narrator.currentClip}
+          </p>
+        )}
       </div>
 
       {/* Admin Controls */}

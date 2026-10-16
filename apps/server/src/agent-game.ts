@@ -1,12 +1,18 @@
-import { io, type Socket } from 'socket.io-client';
-import type { PlayerGameSnapshot, SnapshotPlayer } from '@repo/types';
+import { createRealtimeClient, type RealtimeClient } from '@repo/realtime';
+import {
+  type PlayerGameSnapshot,
+  roomUrl,
+  type ServerToClientEvents,
+  type SnapshotPlayer,
+} from '@repo/types';
 
 const serverUrl = process.env.SERVER_URL ?? 'http://localhost:3000';
+const url = roomUrl(serverUrl, process.env.ROOM_CODE || undefined);
 const names = process.argv.slice(2).length >= 6
   ? process.argv.slice(2)
   : ['agent-1', 'agent-2', 'agent-3', 'agent-4', 'agent-5', 'agent-6'];
 
-const clients: Array<{ name: string; socket: Socket; acted: string }> = [];
+const clients: Array<{ name: string; socket: RealtimeClient; acted: string }> = [];
 let started = false;
 let finished = false;
 
@@ -41,7 +47,7 @@ const act = (client: (typeof clients)[number], snapshot: PlayerGameSnapshot) => 
 };
 
 for (const name of names) {
-  const socket = io(serverUrl);
+  const socket = createRealtimeClient(url);
   const client = { name, socket, acted: '' };
   clients.push(client);
   socket.on('connect', () => {
@@ -60,7 +66,8 @@ for (const name of names) {
     else act(client, snapshot);
   });
   socket.on('game:phase-changed', requestState);
-  for (const promptEvent of ['cupid:pick-required', 'werewolf:pick-required', 'witch:can-heal', 'witch:pick-poison-player', 'hunter:pick-required', 'day:voting-phase-start']) {
+  const promptEvents: (keyof ServerToClientEvents)[] = ['cupid:pick-required', 'werewolf:pick-required', 'witch:can-heal', 'witch:pick-poison-player', 'hunter:pick-required', 'day:voting-phase-start'];
+  for (const promptEvent of promptEvents) {
     socket.on(promptEvent, requestState);
   }
   socket.on('game:snapshot', (snapshot: PlayerGameSnapshot) => {

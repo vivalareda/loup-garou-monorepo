@@ -1,22 +1,18 @@
-import type {
-  ClientToServerEvents,
-  Player,
-  PlayerListItem,
-  Role,
-  ServerToClientEvents,
-} from '@repo/types';
-import { isGamePlayer } from '@repo/types';
-import type { Socket } from 'socket.io-client';
-import { io } from 'socket.io-client';
+import { createRealtimeClient, type RealtimeClient } from '@repo/realtime';
+import type { Player, PlayerListItem, Role } from '@repo/types';
+import { isGamePlayer, roomUrl } from '@repo/types';
 import { create } from 'zustand';
 
-const BACKEND_URL =
-  import.meta.env.VITE_PUBLIC_BACKEND_SERVER_URL || 'http://localhost:3000';
+// Each mock player opens its own WebSocket to the game room
+const ROOM_URL = roomUrl(
+  import.meta.env.VITE_PUBLIC_BACKEND_SERVER_URL || 'http://localhost:3000',
+  import.meta.env.VITE_PUBLIC_ROOM_CODE || undefined
+);
 
 type MockPlayer = {
   id: string;
   name: string;
-  socket: Socket;
+  socket: RealtimeClient;
   player: Player | null;
   playersList: PlayerListItem[];
   isConnected: boolean;
@@ -78,14 +74,8 @@ function createPlayerSocket(
   name: string,
   // biome-ignore lint/suspicious/noExplicitAny: <just for testing>
   store: any
-): Socket<ClientToServerEvents, ServerToClientEvents> {
-  const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
-    BACKEND_URL,
-    {
-      autoConnect: false,
-      transports: ['websocket'],
-    }
-  );
+): RealtimeClient {
+  const socket = createRealtimeClient(ROOM_URL, { autoConnect: false });
 
   socket.on('connect', () => {
     console.log(`Player ${name} connected`);

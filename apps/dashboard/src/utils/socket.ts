@@ -1,24 +1,17 @@
-import type {
-  ClientToServerEvents,
-  DeathInfo,
-  ServerToClientEvents,
-} from '@repo/types';
-import type { Socket } from 'socket.io-client';
-import { io } from 'socket.io-client';
+import { createRealtimeClient } from '@repo/realtime';
+import { type DeathInfo, roomUrl } from '@repo/types';
 
 if (!import.meta.env.VITE_PUBLIC_BACKEND_SERVER_URL) {
   throw new Error('Missing VITE_PUBLIC_BACKEND_SERVER_URL env variable');
 }
 
-const backendUrl = import.meta.env.VITE_PUBLIC_BACKEND_SERVER_URL;
-
-export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
-  backendUrl,
-  {
-    autoConnect: true,
-    transports: ['websocket'],
-  }
+/** The game room's WebSocket URL, from the server's http(s) base URL. */
+export const roomSocketUrl = roomUrl(
+  import.meta.env.VITE_PUBLIC_BACKEND_SERVER_URL,
+  import.meta.env.VITE_PUBLIC_ROOM_CODE || undefined
 );
+
+export const socket = createRealtimeClient(roomSocketUrl);
 
 // Game events state - simple global store for demo
 export const gameEvents: { deaths: DeathInfo[]; logs: string[] } = {

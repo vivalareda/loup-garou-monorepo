@@ -3,13 +3,12 @@ import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
-import type { ConnectionHost } from '@/server/connection';
 import { DashboardNarrator } from '@/server/dashboard-narrator';
 import { EventsActions } from '@/server/events-actions';
 import { startServer } from '@/server/http-server';
 import { LocalNarrator } from '@/server/local-narrator';
 import { GameEvents } from '@/server/server-events';
-import { io } from '@/server/sockets';
+import { host } from '@/server/sockets';
 import { SpecialScenarios } from './core/special-scenarios';
 
 // Fail fast on a bad PLAYER_COUNT before any socket is accepted
@@ -32,11 +31,6 @@ let events: GameEvents;
 let deathManager: DeathManager;
 let eventsActions: EventsActions;
 let specialScenarios: SpecialScenarios;
-
-// Socket.io's Server satisfies the transport-agnostic host type; everything
-// below depends on that type only, so swapping the transport touches just
-// this assignment
-const host: ConnectionHost = io;
 
 // NARRATOR=dashboard plays the clips in a dashboard tab instead of on this
 // machine's speakers (the only option once the server runs on Workers).

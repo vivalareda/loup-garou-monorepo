@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from 'node:http';
 import type { ClientToServerEvents, ServerToClientEvents } from '@repo/types';
 import { Context, Effect, Layer, Ref } from 'effect';
-import type { Server } from 'socket.io';
+import { Server } from 'socket.io';
 
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
@@ -13,7 +13,6 @@ import { EventsActions } from '@/server/events-actions';
 import { httpServer, startServer } from '@/server/http-server';
 import { LocalNarrator } from '@/server/local-narrator';
 import { GameEvents } from '@/server/server-events';
-import { io } from '@/server/sockets';
 
 // =============================================================================
 // Service Definitions (wrapping existing infrastructure)
@@ -59,7 +58,17 @@ export class GameState extends Context.Tag('GameState')<
 /**
  * Socket.IO layer - provides the existing io instance
  */
-export const SocketIOLive = Layer.succeed(SocketIO, io);
+export const SocketIOLive = Layer.sync(
+  SocketIO,
+  () =>
+    // The live entry (index.ts) moved to raw WebSockets; this dormant entry
+    // still builds its own Socket.io server on the shared http server
+    new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
+      cors: { origin: '*' },
+      pingTimeout: 60_000,
+      pingInterval: 25_000,
+    })
+);
 
 /**
  * HTTP Server layer - provides the existing httpServer instance

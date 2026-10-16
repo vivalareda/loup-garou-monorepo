@@ -1,6 +1,6 @@
 /**
  * Witch heal/poison decision logic, extracted so it is unit-testable without
- * the socket.io singleton (which throws on import when the backend URL env
+ * the socket singleton (which throws on import when the backend URL env
  * var is missing — see `utils/sockets.ts`).
  *
  * The component bridges these to its typed socket via a loose `WitchEmit`

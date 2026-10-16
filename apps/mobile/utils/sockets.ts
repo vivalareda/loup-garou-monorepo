@@ -1,27 +1,24 @@
-import type { ClientToServerEvents, ServerToClientEvents } from '@repo/types';
-import type { Socket } from 'socket.io-client';
-import { io } from 'socket.io-client';
+import { createRealtimeClient } from '@repo/realtime';
+import { roomUrl } from '@repo/types';
 
 if (!process.env.EXPO_PUBLIC_BACKEND_SERVER_URL) {
   throw new Error('Missing EXPO_PUBLIC_BACKEND_SERVER_URL env variable');
 }
 
+// The http(s) base URL of the game server; the socket connects to the
+// ws(s) room endpoint derived from it
 const backendUrl = process.env.EXPO_PUBLIC_BACKEND_SERVER_URL;
-// export let isConnected = false;
+const url = roomUrl(backendUrl, process.env.EXPO_PUBLIC_ROOM_CODE || undefined);
 
-console.log('🔗 Connecting to:', backendUrl);
+console.log('🔗 Connecting to:', url);
 
-export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
-  backendUrl,
-  {
-    autoConnect: true,
-    transports: ['websocket'],
-  }
-);
+// Reconnects on its own after a drop (locked phone, app in background,
+// network hop) and fires `connect` again: use-session-recovery rejoins
+// with the session token from there
+export const socket = createRealtimeClient(url);
 
 socket.on('connect', () => {
   console.log('Socket connected');
-  // isConnected = true;
 });
 
 socket.on('connect_error', (error) => {

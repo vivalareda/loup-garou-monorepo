@@ -13,7 +13,7 @@ export default function ModalTestScreen() {
     Array<{ timestamp: string; selection: string; playerName: string }>
   >([]);
 
-  // Mock players data - self contained for testing using realistic Socket.io ID format
+  // Mock players data - self contained for testing with opaque socket IDs
   const mockPlayers = [
     { name: 'Alice', socketId: 'ZjQxMjRmN2UtNmY2Ni00' },
     { name: 'Bob', socketId: 'OGI3YWJkYzEtNzIyOC00' },

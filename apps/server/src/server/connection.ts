@@ -8,8 +8,8 @@ type ClientEvent = keyof ClientToServerEvents;
  * events it sends (plus `disconnect` when it drops), and emits back to it
  * or to everyone else. A handler's arguments come from the client's
  * message; for `agent:get-state` the last one is a reply callback the
- * transport routes back to the sender. Socket.io's `Socket` satisfies it
- * structurally; a raw WebSocket host implements it over JSON frames.
+ * transport routes back to the sender. `WebSocketHost` (websocket-host.ts)
+ * implements it over raw WebSockets and JSON frames.
  *
  * Contract every transport must honor:
  * - `on` adds a listener; several may observe the same event (GameEvents
@@ -34,7 +34,8 @@ export type Connection = {
 
 /**
  * The transport the socket handlers run on: a `Broadcaster` that also
- * announces each new client. Socket.io's `Server` satisfies it structurally.
+ * announces each new client. `WebSocketHost` implements it, for the Node
+ * `ws` server and (later) a Durable Object alike.
  * `on` adds a listener: GameEvents and the narrator wiring each register
  * their own `connection` handler, and both must see every client.
  */

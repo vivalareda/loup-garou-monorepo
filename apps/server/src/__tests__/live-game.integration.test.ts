@@ -1,29 +1,29 @@
 import { createServer, type Server as HttpServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import type {
-  ClientToServerEvents,
-  DeathInfo,
-  GameEndResult,
-  PlayerGameSnapshot,
-  Role,
-  ServerToClientEvents,
+import { createRealtimeClient, type RealtimeClient } from '@repo/realtime';
+import {
+  type DeathInfo,
+  type GameEndResult,
+  type PlayerGameSnapshot,
+  type Role,
+  roomUrl,
 } from '@repo/types';
-import { Server } from 'socket.io';
-import { io as connectClient, type Socket as ClientSocket } from 'socket.io-client';
+import type { WebSocketServer } from 'ws';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
-import type { ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
+import { WebSocketHost } from '@/server/websocket-host';
+import { attachWebSocketServer } from '@/server/websocket-server';
 
 /**
  * Task 28: the happy-path live-socket test. Boots the live server path
  * (the same class wiring as src/index.ts) on an ephemeral port and drives
- * six real Socket.IO clients through a complete game:
+ * six real WebSocket clients (the apps' `@repo/realtime` client) through a complete game:
  * join → roles → Cupid/Lovers → werewolf vote → both Witch decisions →
  * dawn deaths → day vote → winner → role reveal → client-triggered
  * restart → the start of a second game.
@@ -41,7 +41,7 @@ const DETERMINISTIC_ROLES: Role[] = [
   'WEREWOLF',
 ];
 
-type Client = ClientSocket<ServerToClientEvents, ClientToServerEvents>;
+type Client = RealtimeClient;
 
 /** Buffers every incoming event so nothing is lost before we await it. */
 class EventRecorder {
@@ -49,7 +49,7 @@ class EventRecorder {
   private readonly waiters = new Map<string, ((args: unknown[]) => void)[]>();
 
   constructor(socket: Client) {
-    socket.onAny((event: string, ...args: unknown[]) => {
+    socket.onAny((event, ...args) => {
       const waiter = this.waiters.get(event)?.shift();
       if (waiter) {
         waiter(args);
@@ -94,9 +94,9 @@ type Player = {
 
 describe('live-socket happy path', () => {
   let httpServer: HttpServer;
-  let io: Server<ClientToServerEvents, ServerToClientEvents>;
+  let wss: WebSocketServer;
   let players: Player[];
-  let serverUrl: string;
+  let url: string;
   const savedEnv: Record<string, string | undefined> = {};
 
   beforeAll(async () => {
@@ -108,12 +108,12 @@ describe('live-socket happy path', () => {
     process.env.LOVER_ALERT_DELAY_MS = '0';
 
     httpServer = createServer();
-    io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
-      cors: { origin: '*' },
+    const host = new WebSocketHost();
+    wss = attachWebSocketServer(httpServer, host, {
+      heartbeatIntervalMs: 60_000,
     });
 
     // Same wiring as src/index.ts initGame(), with deterministic roles
-    const host: ConnectionHost = io;
     const deathManager = new DeathManager();
     const game = new Game(host, deathManager, {
       shuffleRoles: () => [...DETERMINISTIC_ROLES],
@@ -133,13 +133,10 @@ describe('live-socket happy path', () => {
       httpServer.listen(0, '127.0.0.1', () => resolve());
     });
     const { port } = httpServer.address() as AddressInfo;
-    serverUrl = `http://127.0.0.1:${port}`;
+    url = roomUrl(`http://127.0.0.1:${port}`);
 
     players = Array.from({ length: 6 }, (_, index) => {
-      const socket: Client = connectClient(serverUrl, {
-        transports: ['websocket'],
-        forceNew: true,
-      });
+      const socket: Client = createRealtimeClient(url);
       return {
         name: `P${index + 1}`,
         socket,
@@ -155,7 +152,7 @@ describe('live-socket happy path', () => {
     for (const player of players ?? []) {
       player.socket.disconnect();
     }
-    io?.close();
+    wss?.close();
     httpServer?.close();
     for (const [key, value] of Object.entries(savedEnv)) {
       if (value === undefined) {
@@ -234,10 +231,7 @@ describe('live-socket happy path', () => {
       // and a fresh socket recovers the seat with the session token —
       // receiving the pending werewolf prompt in the snapshot
       wolf2.socket.disconnect();
-      const recoveredSocket: Client = connectClient(serverUrl, {
-        transports: ['websocket'],
-        forceNew: true,
-      });
+      const recoveredSocket: Client = createRealtimeClient(url);
       wolf2.socket = recoveredSocket;
       wolf2.events = new EventRecorder(recoveredSocket);
       // An action tapped while offline is flushed from the new socket

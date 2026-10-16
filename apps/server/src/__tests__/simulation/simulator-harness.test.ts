@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { GameSimulator } from '@/simulation/game-simulator';
 import {
@@ -8,10 +8,6 @@ import {
   assertDeathAudioInvariants,
   assertOnlyKnownPlaceholders,
 } from '@/simulation/audio-validators';
-
-vi.mock('sound-play', () => ({
-  default: { play: vi.fn().mockResolvedValue(undefined) },
-}));
 
 /** Deterministic 32-bit PRNG so the harness scenarios are reproducible. */
 function mulberry32(seed: number) {

@@ -1,6 +1,5 @@
 import type { Narrator } from '@/segments/narrator';
 import type { Broadcaster } from '@/server/broadcaster';
-import type { SocketType } from '@/server/sockets';
 
 /**
  * Upper bound on one clip. If the dashboard never reports `narrator:done`
@@ -8,15 +7,19 @@ import type { SocketType } from '@/server/sockets';
  */
 const CLIP_TIMEOUT_MS = 60_000;
 
+type InFlightClip = { socketId: string; finish: () => void };
+
 /**
  * Sends clips to the dashboard registered as narrator and waits for it to
  * report each one finished. With no narrator connected, clips are skipped
- * so the game never blocks on audio.
+ * so the game never blocks on audio. Transport-agnostic: the host forwards
+ * `narrator:register` / `narrator:done` / disconnects to `attach` /
+ * `complete` / `detach`.
  */
 export class DashboardNarrator implements Narrator {
   private narratorSocketId: string | undefined;
   private nextClipId = 0;
-  private readonly pending = new Map<string, () => void>();
+  private readonly inFlight = new Map<string, InFlightClip>();
   private readonly io: Broadcaster;
   private readonly clipTimeoutMs: number;
 
@@ -25,35 +28,34 @@ export class DashboardNarrator implements Narrator {
     this.clipTimeoutMs = clipTimeoutMs;
   }
 
-  /** Handles the narrator events on every Socket.io connection. */
-  listen(io: SocketType) {
-    io.on('connection', (socket) => {
-      socket.on('narrator:register', () => this.attach(socket.id));
-      socket.on('narrator:done', (clipId) => this.complete(clipId));
-      socket.on('disconnect', () => this.detach(socket.id));
-    });
-  }
-
-  /** The latest dashboard to register takes over narration. */
+  /**
+   * The latest dashboard to register takes over narration. Clips already
+   * sent to the previous one still finish when it reports them or leaves.
+   */
   attach(socketId: string) {
     console.log(`[NARRATOR] ${socketId} is now the narrator`);
     this.narratorSocketId = socketId;
   }
 
   detach(socketId: string) {
-    if (this.narratorSocketId !== socketId) {
-      return;
+    if (this.narratorSocketId === socketId) {
+      console.log(`[NARRATOR] ${socketId} left, clips will be skipped`);
+      this.narratorSocketId = undefined;
     }
-    console.log(`[NARRATOR] ${socketId} left, clips will be skipped`);
-    this.narratorSocketId = undefined;
-    // The clips in flight will never be acknowledged
-    for (const finish of [...this.pending.values()]) {
-      finish();
+    // Clips sent to this socket will never be acknowledged
+    for (const clip of [...this.inFlight.values()]) {
+      if (clip.socketId === socketId) {
+        clip.finish();
+      }
     }
   }
 
-  complete(clipId: string) {
-    this.pending.get(clipId)?.();
+  /** Only the socket a clip was sent to can report it done. */
+  complete(socketId: string, clipId: string) {
+    const clip = this.inFlight.get(clipId);
+    if (clip?.socketId === socketId) {
+      clip.finish();
+    }
   }
 
   play(clip: string) {
@@ -67,7 +69,7 @@ export class DashboardNarrator implements Narrator {
     return new Promise<void>((resolve) => {
       const finish = () => {
         clearTimeout(timer);
-        this.pending.delete(clipId);
+        this.inFlight.delete(clipId);
         resolve();
       };
       const timer = setTimeout(() => {
@@ -75,7 +77,7 @@ export class DashboardNarrator implements Narrator {
         finish();
       }, this.clipTimeoutMs);
 
-      this.pending.set(clipId, finish);
+      this.inFlight.set(clipId, { socketId, finish });
       this.io.to(socketId).emit('narrator:play', clipId, clip);
     });
   }

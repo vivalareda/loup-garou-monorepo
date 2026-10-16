@@ -1,11 +1,9 @@
 /** biome-ignore-all lint/suspicious/noEmptyBlockStatements: <mock file> */
-import { existsSync } from 'node:fs';
 import {
   afterEach,
   beforeEach,
   describe,
   expect,
-  type MockedFunction,
   test,
   vi,
 } from 'vitest';
@@ -18,13 +16,9 @@ import {
 } from '@/segments/segments-manager';
 import type { SocketType } from '@/server/sockets';
 
-vi.mock('sound-play');
-vi.mock('node:fs');
-
 describe('SegmentsManager', () => {
   let segmentsManager: SegmentsManager;
   let mockIo: SocketType;
-  let mockFs: MockedFunction<typeof vi.mocked>;
   let mockGame: Game;
   let mockAudioManager: AudioManager;
 
@@ -53,10 +47,6 @@ describe('SegmentsManager', () => {
       processPendingDeaths: vi.fn().mockReturnValue([]),
       checkIfWinner: vi.mocked('werewolves'),
     } as unknown as Game;
-    mockFs = vi.mocked(existsSync);
-
-    mockFs.mockReturnValue(true);
-
     mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),

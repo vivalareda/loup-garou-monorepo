@@ -8,10 +8,6 @@ import { SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
 import type { SocketType } from '@/server/sockets';
 
-vi.mock('sound-play', () => ({
-  default: { play: vi.fn().mockResolvedValue(undefined) },
-}));
-
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 describe('Night dawn death scenarios', () => {

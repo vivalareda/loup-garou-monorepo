@@ -2,11 +2,11 @@ import { resolvePlayerCount } from '@/config';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { AudioManager } from '@/segments/audio-manager';
-import { LocalNarrator } from '@/segments/local-narrator';
 import { SegmentsManager } from '@/segments/segments-manager';
 import { DashboardNarrator } from '@/server/dashboard-narrator';
 import { EventsActions } from '@/server/events-actions';
 import { startServer } from '@/server/http-server';
+import { LocalNarrator } from '@/server/local-narrator';
 import { GameEvents } from '@/server/server-events';
 import { io } from '@/server/sockets';
 import { SpecialScenarios } from './core/special-scenarios';
@@ -66,5 +66,15 @@ process.stdin.on('data', (key: string) => {
 });
 
 initGame();
-dashboardNarrator?.listen(io);
+
+if (dashboardNarrator) {
+  io.on('connection', (socket) => {
+    socket.on('narrator:register', () => dashboardNarrator.attach(socket.id));
+    socket.on('narrator:done', (clipId) =>
+      dashboardNarrator.complete(socket.id, clipId)
+    );
+    socket.on('disconnect', () => dashboardNarrator.detach(socket.id));
+  });
+}
+
 startServer();

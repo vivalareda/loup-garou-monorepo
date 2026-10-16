@@ -12,10 +12,6 @@ import { SpecialScenarios } from '@/core/special-scenarios';
 import type { SocketType } from '@/server/sockets';
 
 // Never play real audio in tests — sound.play blocks until the mp3 finishes
-vi.mock('sound-play', () => ({
-  default: { play: vi.fn().mockResolvedValue(undefined) },
-}));
-
 /**
  * Drive the real GameEvents socket-handler wiring by capturing the
  * io.on('connection', cb) callback and feeding it a mock socket whose

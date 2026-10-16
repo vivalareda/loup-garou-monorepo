@@ -1,6 +1,6 @@
 # Loup-Garou (Werewolf Game)
 
-A real-time multiplayer implementation of the classic social deduction game "Werewolf" (Loup-Garou) built with TypeScript, React Native, and Socket.io.
+A real-time multiplayer implementation of the classic social deduction game "Werewolf" (Loup-Garou) built with TypeScript, React Native, and WebSockets.
 
 ## About
 
@@ -21,10 +21,11 @@ This is a **Turborepo monorepo** containing three main applications:
 loup-garou/
 ├── apps/
 │   ├── mobile/          # React Native mobile app (Expo)
-│   ├── server/          # Node.js backend with Socket.io
+│   ├── server/          # Node.js backend (raw WebSockets via `ws`)
 │   └── dashboard/       # React web dashboard for testing
 ├── packages/
-│   └── types/           # Shared TypeScript types
+│   ├── types/           # Shared TypeScript types + wire protocol
+│   └── realtime/        # Typed WebSocket client used by every app
 └── turbo.json          # Turborepo configuration
 ```
 
@@ -38,7 +39,7 @@ loup-garou/
 
 - **TypeScript** - Type safety across the entire stack
 - **React Native + Expo** - Cross-platform mobile development
-- **Socket.io** - Real-time bidirectional communication
+- **WebSockets** - Real-time bidirectional communication (JSON frames, `ws` on the server)
 - **Node.js** - Backend server runtime
 - **Zustand** - State management
 - **TailwindCSS** - Utility-first styling

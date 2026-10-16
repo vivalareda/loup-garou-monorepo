@@ -1,10 +1,11 @@
 # AGENTS.md
 
 This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
-- `apps/server` — Node.js + Socket.io game server (plain classes + an in-progress Effect-TS migration)
+- `apps/server` — Node.js game server over raw WebSockets (`ws`) (plain classes + an in-progress Effect-TS migration)
 - `apps/mobile` — React Native + Expo player client (SDK 57)
 - `apps/dashboard` — Vite + React testing dashboard with mock players
-- `packages/types` — Shared TypeScript types for socket events, players, roles, segments, deaths
+- `packages/types` — Shared TypeScript types for socket events, players, roles, segments, deaths, plus the WebSocket wire protocol (`src/wire.ts`)
+- `packages/realtime` — `@repo/realtime`, the typed WebSocket client every app uses (mobile, dashboard, agent CLI, integration test)
 
 ## Workspace commands
 
@@ -19,6 +20,7 @@ This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
 | Lint       | `pnpm lint`                      |
 | Build      | `pnpm build`                     |
 | Server tests | `pnpm --filter server test:run` |
+| Client tests | `pnpm --filter @repo/realtime test:run` |
 
 > ¹ The root `pnpm dev:web` script (`turbo -F web dev`) filters for a package
 > named `web`, which does not exist in this workspace — the dashboard package
@@ -26,12 +28,41 @@ This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
 > fixed.
 
 > NOTE: `pnpm check-types` is wired up — it fans out via turbo to the
-> `check-types` script in each package (`server`, `@repo/types`, `dashboard`,
-> `mobile`) and exits 0 across all four. This was added by
+> `check-types` script in each package (`server`, `@repo/types`,
+> `@repo/realtime`, `dashboard`, `mobile`). This was added by
 > `plans/002-fix-check-types-baseline.md`. (The dashboard uses `tsc -b` rather
 > than `tsc -b --noEmit` because TS6310 forbids disabling emit on a composite
 > project that is referenced; its app config still has `noEmit: true`, so no
 > app JS is emitted.)
+
+## Transport: raw WebSockets + JSON
+
+Socket.io is gone from every live path. The pieces:
+- Wire protocol (`packages/types/src/wire.ts`): one JSON text frame per
+  message — server→client `{ event, args }`, client→server
+  `{ event, args, ack? }`, ack reply `{ ack, args }`. Event names are
+  checked against the event maps (`isClientEvent` / `isServerEvent`),
+  payloads are not.
+- Endpoint: `ws(s)://<host>/room/<code>`; clients derive it with
+  `roomUrl(baseUrl, code)` from the http(s) base URL env var plus an
+  optional room code env var (`EXPO_PUBLIC_ROOM_CODE`,
+  `VITE_PUBLIC_ROOM_CODE`, `ROOM_CODE` for the agent CLI; default
+  `default`). The Node server hosts a single game and ignores the code.
+- Server: `WebSocketHost` (`apps/server/src/server/websocket-host.ts`)
+  implements `ConnectionHost` over any socket with `send` / `close` /
+  `readyState` / `addEventListener` (the `ws` package's and the Workers
+  runtime's both fit) and imports nothing Node-only.
+  `websocket-server.ts` attaches it to the Node http server and pings
+  every client each 25s, terminating one that missed the previous pong.
+- Client: `@repo/realtime` mirrors the Socket.io client API the apps used
+  (`on/once/off/onAny/emit`, `connect/disconnect/connected`, reserved
+  `connect`/`disconnect`/`connect_error`), reconnects with capped
+  exponential backoff + jitter (1s→5s), and queues emits while
+  disconnected (flushed before `connect` fires; `disconnect()` drops them).
+- `socket.io` stays a server dependency ONLY for the dead Effect files
+  below (`index.effect.ts`, `socket-io.effect.ts`,
+  `socket-event-router.effect.ts`, `event-handlers.effect.ts`); nothing
+  live may import it.
 
 ## Server: dual entry points (Effect migration)
 

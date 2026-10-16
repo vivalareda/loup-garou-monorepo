@@ -4,7 +4,7 @@
 
 This is a real-time multiplayer implementation of the classic Werewolf (Loup-Garou) party game. The project consists of three main components:
 
-- **Server** (`apps/server`): Node.js game engine with Socket.io for real-time communication
+- **Server** (`apps/server`): Node.js game engine speaking JSON over raw WebSockets for real-time communication
 - **Mobile App** (`apps/mobile`): React Native/Expo mobile client for players  
 - **Dashboard** (`apps/dashboard`): React web dashboard for testing and debugging with mock players
 
@@ -233,6 +233,7 @@ Based on player count (`apps/server/src/core/game.ts:32-55`):
 packages/types/          # Shared TypeScript types
 ├── src/
 │   ├── event.ts        # Socket event definitions
+│   ├── wire.ts         # WebSocket frame format and room URLs
 │   ├── player.ts       # Player type definitions  
 │   ├── role.ts         # Role definitions and descriptions
 │   └── segment.ts      # Game segment definitions
@@ -240,7 +241,9 @@ packages/types/          # Shared TypeScript types
 apps/server/            # Node.js game server
 ├── src/core/          # Game logic
 ├── src/segments/      # Segment management
-└── src/server/        # HTTP and Socket.io server
+└── src/server/        # HTTP + WebSocket server (websocket-host.ts, websocket-server.ts)
+
+packages/realtime/      # Typed WebSocket client (reconnect, acks, queued emits)
 
 apps/mobile/           # React Native player app  
 ├── app/(game)/       # Game interface screens
@@ -257,7 +260,7 @@ apps/dashboard/        # React testing dashboard
 ### Key Design Patterns
 
 #### Event-Driven Architecture
-- Socket.io events drive all game interactions
+- Socket events (JSON frames over WebSockets) drive all game interactions
 - Segments manager orchestrates game flow via events
 - Asynchronous event handling for real-time gameplay
 
@@ -268,7 +271,7 @@ apps/dashboard/        # React testing dashboard
 
 #### Type Safety
 - Shared TypeScript types across all applications
-- Strongly typed Socket.io events prevent runtime errors
+- Strongly typed socket events prevent runtime errors
 - Consistent data structures for players, roles, and events
 
 ## Testing & Development
@@ -276,7 +279,7 @@ apps/dashboard/        # React testing dashboard
 ### Dashboard Mock Players
 The dashboard allows creating multiple mock players for testing:
 
-- **Individual Socket Connections**: Each mock player has its own Socket.io connection
+- **Individual Socket Connections**: Each mock player has its own WebSocket connection
 - **Real-time State Tracking**: Monitor player states, role assignments, lover status
 - **Interactive Testing**: Send events, close alerts, observe game flow
 - **Multi-client Simulation**: Test scenarios with multiple concurrent players

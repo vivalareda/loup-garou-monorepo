@@ -7,7 +7,11 @@ import {
 } from '@repo/types';
 
 const serverUrl = process.env.SERVER_URL ?? 'http://localhost:3000';
-const url = roomUrl(serverUrl, process.env.ROOM_CODE || undefined);
+const url = roomUrl(
+  serverUrl,
+  process.env.ROOM_CODE || undefined,
+  process.env.ACCESS_TOKEN || undefined
+);
 const names = process.argv.slice(2).length >= 6
   ? process.argv.slice(2)
   : ['agent-1', 'agent-2', 'agent-3', 'agent-4', 'agent-5', 'agent-6'];

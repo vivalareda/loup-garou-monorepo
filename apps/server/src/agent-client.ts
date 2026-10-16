@@ -15,7 +15,8 @@ if (!name) {
   process.exit(1);
 }
 
-const socket = createRealtimeClient(roomUrl(serverUrl, roomCode));
+const accessToken = process.env.ACCESS_TOKEN || undefined;
+const socket = createRealtimeClient(roomUrl(serverUrl, roomCode, accessToken));
 const emitState = () => {
   socket.emit('agent:get-state', (snapshot: PlayerGameSnapshot) => {
     process.stdout.write(`${JSON.stringify({ type: 'state', ...snapshot })}\n`);

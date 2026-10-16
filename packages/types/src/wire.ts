@@ -106,9 +106,14 @@ export function parseRoomPath(pathname: string): string | null {
 /**
  * The WebSocket URL of a room, from the server's http(s) base URL (the
  * form the apps' env vars hold): `http://host:3000` → `ws://host:3000/room/<code>`.
- * String-based on purpose: React Native's `URL` is incomplete.
+ * An `accessToken` (the Worker's optional shared token) is appended as
+ * `?token=`. String-based on purpose: React Native's `URL` is incomplete.
  */
-export function roomUrl(baseUrl: string, roomCode = DEFAULT_ROOM_CODE): string {
+export function roomUrl(
+  baseUrl: string,
+  roomCode = DEFAULT_ROOM_CODE,
+  accessToken?: string
+): string {
   if (!isRoomCode(roomCode)) {
     throw new Error(
       `Invalid room code "${roomCode}": use 1-64 letters, digits, - or _`
@@ -118,5 +123,6 @@ export function roomUrl(baseUrl: string, roomCode = DEFAULT_ROOM_CODE): string {
     .trim()
     .replace(HTTP_SCHEME, 'ws$1://')
     .replace(TRAILING_SLASHES, '');
-  return `${base}/room/${roomCode}`;
+  const query = accessToken ? `?token=${encodeURIComponent(accessToken)}` : '';
+  return `${base}/room/${roomCode}${query}`;
 }

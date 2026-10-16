@@ -8,9 +8,15 @@ if (!process.env.EXPO_PUBLIC_BACKEND_SERVER_URL) {
 // The http(s) base URL of the game server; the socket connects to the
 // ws(s) room endpoint derived from it
 const backendUrl = process.env.EXPO_PUBLIC_BACKEND_SERVER_URL;
-const url = roomUrl(backendUrl, process.env.EXPO_PUBLIC_ROOM_CODE || undefined);
+// The Worker's optional shared token: compiled into the app, so it only
+// keeps random scanners out, it is not authentication
+const url = roomUrl(
+  backendUrl,
+  process.env.EXPO_PUBLIC_ROOM_CODE || undefined,
+  process.env.EXPO_PUBLIC_ACCESS_TOKEN || undefined
+);
 
-console.log('🔗 Connecting to:', url);
+console.log('🔗 Connecting to:', url.split('?')[0]);
 
 // Reconnects on its own after a drop (locked phone, app in background,
 // network hop) and fires `connect` again: use-session-recovery rejoins

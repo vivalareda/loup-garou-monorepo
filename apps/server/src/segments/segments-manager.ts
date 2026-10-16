@@ -3,6 +3,10 @@ import type { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
 import type { SpecialScenarios } from '@/core/special-scenarios';
 import type { AudioManager } from '@/segments/audio-manager';
+import {
+  type GameGeneration,
+  ignoreStaleGame,
+} from '@/segments/game-generation';
 import type { Broadcaster } from '@/server/broadcaster';
 import { NightDawnResolution } from '@/server/night-dawn-resolution';
 
@@ -62,8 +66,9 @@ export class SegmentsManager {
    * Bumped when the game finishes or is reset. Anything that awaits
    * (narration, a hunter pick) or runs on a timer captures it first and
    * gives up if it changed: that work belongs to a game that is over.
+   * Shared with the AudioManager, which checks it after every clip.
    */
-  private generation = 0;
+  private readonly generation: GameGeneration;
   /** Bumped each time the game moves to another segment. */
   private segmentRun = 0;
   /** The segment run being ended by an `advanceSegment` in progress. */
@@ -79,6 +84,7 @@ export class SegmentsManager {
     this.io = io;
     this.game = game;
     this.audioManager = audioManager;
+    this.generation = audioManager.generation;
     this.gameActions = new GameActions(game, io, this);
     this.nightDawnResolution = new NightDawnResolution(game, this, io);
     this.specialScenarios = specialScenarios;
@@ -229,7 +235,7 @@ export class SegmentsManager {
   }
 
   resetForNewGame() {
-    this.generation++;
+    this.generation.bump();
     this.segmentRun++;
     this.clearDeadline();
     this.gameActions.closeDayVote();
@@ -252,16 +258,31 @@ export class SegmentsManager {
   }
 
   getGeneration() {
-    return this.generation;
+    return this.generation.current();
+  }
+
+  /** Runs `listener` whenever a game finishes or is reset. */
+  onGameEnded(listener: () => void) {
+    this.generation.onBump(listener);
   }
 
   /** False once the game `generation` was captured in has ended. */
   isCurrentGeneration(generation: number) {
-    return generation === this.generation;
+    return this.generation.isCurrent(generation);
+  }
+
+  /** Plays narration; false if its game ended meanwhile (`StaleGame`). */
+  private async narrate(narration: Promise<void>) {
+    try {
+      await narration;
+      return true;
+    } catch (error) {
+      ignoreStaleGame(error);
+      return false;
+    }
   }
 
   async playSegment() {
-    const generation = this.generation;
     const run = this.segmentRun;
     const segment = this.segments[this.currentSegment];
     console.log(`[SEGMENT] Playing segment: ${segment.type}`);
@@ -282,10 +303,12 @@ export class SegmentsManager {
       return;
     }
 
-    await this.audioManager.playSegmentAudio(segment.type, true);
+    const narrated = await this.narrate(
+      this.audioManager.playSegmentAudio(segment.type, true)
+    );
     // Reset, finished, or already moved past (admin:next-segment) while
     // the intro played
-    if (!this.isCurrentGeneration(generation) || run !== this.segmentRun) {
+    if (!narrated || run !== this.segmentRun) {
       return;
     }
     segment.action();
@@ -384,14 +407,14 @@ export class SegmentsManager {
     const winner = this.game.checkIfWinner();
 
     if (winner === 'villagers') {
-      this.audioManager.playVillagersWonAudio();
+      this.audioManager.playVillagersWonAudio().catch(ignoreStaleGame);
       this.game.alertWinnersAndLosers(winner);
       this.markFinished();
       return true;
     }
 
     if (winner === 'werewolves') {
-      this.audioManager.playWerewolvesWonAudio();
+      this.audioManager.playWerewolvesWonAudio().catch(ignoreStaleGame);
       this.game.alertWinnersAndLosers(winner);
       this.markFinished();
       return true;
@@ -406,7 +429,7 @@ export class SegmentsManager {
    * and keep a Durable Object awake for nothing.
    */
   private markFinished() {
-    this.generation++;
+    this.generation.bump();
     this.gameFinished = true;
     this.clearDeadline();
     this.gameActions.closeDayVote();
@@ -427,15 +450,16 @@ export class SegmentsManager {
       return;
     }
     this.endingRun = this.segmentRun;
-    const generation = this.generation;
     this.clearDeadline();
     const segment = this.segments[this.currentSegment];
 
-    if (playEndAudio) {
-      await this.audioManager.playSegmentAudio(segment.type, false);
-      if (!this.isCurrentGeneration(generation)) {
-        return;
-      }
+    if (
+      playEndAudio &&
+      !(await this.narrate(
+        this.audioManager.playSegmentAudio(segment.type, false)
+      ))
+    ) {
+      return;
     }
 
     this.markFirstNightSegment(segment);

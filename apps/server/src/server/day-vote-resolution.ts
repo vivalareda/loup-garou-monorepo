@@ -1,13 +1,10 @@
 import { Deferred, Duration, Effect } from 'effect';
 import type { Game } from '@/core/game';
 import type { Player } from '@/core/player';
+import { StaleGame } from '@/segments/game-generation';
 import type { SegmentsManager } from '@/segments/segments-manager';
 import type { Broadcaster } from '@/server/broadcaster';
-import {
-  awaitInGame,
-  runResolution,
-  type StaleGame,
-} from '@/server/stale-game';
+import { awaitInGame, narration, runResolution } from '@/server/stale-game';
 
 /**
  * Resolves everything that follows a day-vote elimination as one linear
@@ -20,13 +17,16 @@ import {
  * program's position, not in flags spread across handlers.
  */
 export class DayVoteResolution {
-  private pendingHunterPick: Deferred.Deferred<string> | null = null;
+  private pendingHunterPick: Deferred.Deferred<string, StaleGame> | null = null;
 
   constructor(
     private readonly game: Game,
     private readonly segmentsManager: SegmentsManager,
     private readonly io: Broadcaster
-  ) {}
+  ) {
+    // A finished or reset game drops its pending pick (and its timeout)
+    segmentsManager.onGameEnded(() => this.cancelPendingPick());
+  }
 
   /**
    * Called by the hunter socket handler. Returns false when no day-vote
@@ -49,6 +49,14 @@ export class DayVoteResolution {
     return this.pendingHunterPick !== null;
   }
 
+  private cancelPendingPick() {
+    const pick = this.pendingHunterPick;
+    if (pick) {
+      this.pendingHunterPick = null;
+      Deferred.unsafeDone(pick, Effect.fail(new StaleGame()));
+    }
+  }
+
   /**
    * The village voted `votedPlayer` out — run the full death chain. It
    * stops at the first await that outlives its game (finished or reset).
@@ -65,7 +73,7 @@ export class DayVoteResolution {
   ): Effect.Effect<void, StaleGame> {
     return Effect.gen(this, function* () {
       // "The village has spoken"
-      yield* this.play(generation, 'Day-vote/Vote-Death');
+      yield* this.play('Day-vote/Vote-Death');
 
       this.killPlayer(votedPlayer);
       this.game.clearDayVotes();
@@ -97,13 +105,13 @@ export class DayVoteResolution {
         : undefined;
 
       if (partner?.isAlive) {
-        yield* this.play(generation, 'Day-vote/Lover');
+        yield* this.play('Day-vote/Lover');
         this.killPlayer(partner);
         yield* this.resolveConsequences(partner, generation);
       }
 
       if (dead.getRole() === 'HUNTER') {
-        yield* this.play(generation, 'Day-vote/Hunter');
+        yield* this.play('Day-vote/Hunter');
 
         const targetSid = yield* awaitInGame(
           this.segmentsManager,
@@ -125,9 +133,9 @@ export class DayVoteResolution {
     });
   }
 
-  private awaitHunterPick(): Effect.Effect<string | null> {
+  private awaitHunterPick(): Effect.Effect<string | null, StaleGame> {
     return Effect.gen(this, function* () {
-      const pick = yield* Deferred.make<string>();
+      const pick = yield* Deferred.make<string, StaleGame>();
       this.pendingHunterPick = pick;
       const hunter = this.game.getSpecialRolePlayer('HUNTER');
       if (hunter) {
@@ -138,7 +146,10 @@ export class DayVoteResolution {
         Deferred.await(pick),
         Duration.seconds(60)
       );
-      this.pendingHunterPick = null;
+      // A newer pick may be pending by now: only clear our own
+      if (this.pendingHunterPick === pick) {
+        this.pendingHunterPick = null;
+      }
 
       if (result._tag === 'None') {
         console.warn('Hunter pick timed out — skipping revenge kill');
@@ -157,12 +168,8 @@ export class DayVoteResolution {
     this.game.handlePlayerDeath(player);
   }
 
-  /** Plays a clip, unless the game ended meanwhile. */
-  private play(generation: number, file: string) {
-    return awaitInGame(
-      this.segmentsManager,
-      generation,
-      Effect.promise(() => this.segmentsManager.audioManager.playAudio(file))
-    );
+  /** Plays a clip; it fails with StaleGame if the game ends mid-clip. */
+  private play(file: string) {
+    return narration(() => this.segmentsManager.audioManager.playAudio(file));
   }
 }

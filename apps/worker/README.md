@@ -84,9 +84,6 @@ sharing the URL beyond friends:
 - Real authentication or per-game invites instead of one shared token.
 - Origin checks for browser clients (the dashboard), so other sites
   can't open sockets from their visitors' browsers.
-- Known leftover: a hunter pick pending when its game is reset keeps
-  its 60s timeout running (it then stops without effect), holding the
-  object awake that long. Cancel it on reset if that matters.
 
 ## Things to know
 
@@ -96,10 +93,13 @@ sharing the URL beyond friends:
   last socket leaves a lobby or a finished game the room resets itself,
   so the object can be evicted. A game in progress is kept (players have
   the 90s reconnect grace), and its timers keep the object awake.
-- **Resets are safe mid-narration.** Segment transitions, the dawn/day
-  resolutions and the lovers alerts capture the game generation
-  (`SegmentsManager.getGeneration`, bumped on finish and reset) and stop
-  after any await that outlives it (`apps/server/src/server/stale-game.ts`).
+- **Resets are safe mid-narration.** A game generation
+  (`segments/game-generation.ts`, bumped on finish and reset) is checked
+  by `AudioManager.playAudio` after every clip: a clip that outlives its
+  game rejects with `StaleGame`, so no further clip of a sequence plays
+  and the segment or resolution awaiting it stops. A pending hunter pick
+  is cancelled (with its 60s timeout), and the lovers alerts skip
+  themselves.
   A segment also ends only once: a repeated finish (double vote, a
   deadline racing the last action) is ignored.
 - **Nothing is persisted.** A deploy (or an eviction) resets every live

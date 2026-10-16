@@ -10,6 +10,7 @@ import {
 import type { Game } from '@/core/game';
 import type { SpecialScenarios } from '@/core/special-scenarios';
 import type { AudioManager } from '@/segments/audio-manager';
+import { GameGeneration } from '@/segments/game-generation';
 import {
   resolveSegmentTimeoutMs,
   SegmentsManager,
@@ -54,6 +55,7 @@ describe('SegmentsManager', () => {
 
     mockAudioManager = {
       playSegmentAudio: vi.fn(),
+      generation: new GameGeneration(),
     } as unknown as AudioManager;
 
     const mockSpecialScenarios = {

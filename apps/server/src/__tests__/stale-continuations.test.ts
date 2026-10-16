@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGameRuntime, type GameRuntime } from '@/game-runtime';
 import type { Narrator } from '@/segments/narrator';
 import { DashboardNarrator } from '@/server/dashboard-narrator';
+import type { EventsActions } from '@/server/events-actions';
 import { type FakeSocket, fakeSocket, newHost } from './helpers/fake-socket';
 
 /** Lets every promise continuation (and 0ms timer) run. */
@@ -11,9 +12,20 @@ const flush = () => vi.advanceTimersByTimeAsync(0);
 /** A narrator whose clips finish only when the test says so. */
 class ManualNarrator implements Narrator {
   readonly clips: { clip: string; finish: () => void }[] = [];
+  /** Every clip ever requested, in order. */
+  readonly requested: string[] = [];
 
   play(clip: string) {
+    this.requested.push(clip);
     return new Promise<void>((finish) => this.clips.push({ clip, finish }));
+  }
+
+  /** Finishes only the clips pending right now. */
+  async finishPending() {
+    for (const pending of this.clips.splice(0)) {
+      pending.finish();
+    }
+    await flush();
   }
 
   async finishAll() {
@@ -60,6 +72,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
   vi.useRealTimers();
 });
@@ -214,5 +227,118 @@ describe('a game reset while its narration is pending', () => {
     expect(runtime.game.getPlayerList().size).toBe(0);
     expect(dayAction).not.toHaveBeenCalled();
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+/** A started 4-player game narrated clip by clip by the test. */
+function manualGame() {
+  const host = newHost();
+  const narrator = new ManualNarrator();
+  const runtime = createGameRuntime({ host, narrator, adminEvents: false });
+  const { eventsActions } = runtime.events as unknown as {
+    eventsActions: EventsActions;
+  };
+  /** (Re)fills the room: a new game starts, its intro narrated. */
+  const start = async () => {
+    const players = joinFour(host);
+    await narrator.finishAll();
+    const hunter = bySocket(runtime, players, 'HUNTER');
+    const target = [...players.keys()].find(
+      (sid) => sid !== hunter.sid && runtime.game.getPlayerBySocketId(sid)
+    );
+    return { hunter, target: target ?? '' };
+  };
+  return { runtime, narrator, eventsActions, start };
+}
+
+describe('a hunter pick pending across a reset', () => {
+  it.each([
+    ['dawn', 'night'],
+    ['day vote', 'day'],
+  ])(
+    "%s: the old pick is cancelled and the next game's hunter can pick",
+    async (_, path) => {
+      const { runtime, narrator, eventsActions, start } = manualGame();
+      // The day vote ends by advancing out of DAY; these games are still
+      // in CUPID (no lovers picked), so keep them there
+      vi.spyOn(runtime.segmentsManager, 'advanceSegment').mockResolvedValue();
+      // Kills the hunter and runs the resolution up to the pick; returns
+      // the running resolution (wrapped: awaiting it would wait for a pick)
+      const waitForPick = async (hunterSid: string) => {
+        const hunter = runtime.game.getPlayerBySocketId(hunterSid);
+        if (!hunter) {
+          throw new Error('No hunter');
+        }
+        if (path === 'night') {
+          runtime.game.addPendingDeath(hunterSid, 'WEREWOLVES');
+        }
+        const run =
+          path === 'night'
+            ? runtime.segmentsManager.nightDawnResolution.run()
+            : eventsActions.resolveDayVote(hunter);
+        await narrator.finishAll();
+        return { run };
+      };
+
+      const first = await start();
+      const old = await waitForPick(first.hunter.sid);
+      expect(eventsActions.hasPendingHunterPick()).toBe(true);
+
+      runtime.reset();
+      await flush();
+      expect(eventsActions.hasPendingHunterPick()).toBe(false);
+      await old.run;
+      // Its 60s timeout is cancelled, not just left to fire
+      expect(vi.getTimerCount()).toBe(0);
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      const second = await start();
+      const current = await waitForPick(second.hunter.sid);
+      // Past the old pick's 60s: the new one must still be pending
+      await vi.advanceTimersByTimeAsync(31_000);
+      expect(eventsActions.hasPendingHunterPick()).toBe(true);
+
+      expect(eventsActions.submitHunterPick(second.target)).toBe(true);
+      let settled = false;
+      current.run.then(() => {
+        settled = true;
+      });
+      for (let step = 0; step < 50 && !settled; step++) {
+        await narrator.finishAll();
+        await vi.advanceTimersByTimeAsync(10);
+      }
+      expect(settled).toBe(true);
+      expect(runtime.game.getPlayerBySocketId(second.target)?.isAlive).toBe(
+        false
+      );
+    }
+  );
+});
+
+describe('a composite narration reset after its first clip', () => {
+  it.each([
+    ['the DAY start', false],
+    ['the hunter death', true],
+  ])('%s requests no further clip', async (_, hunterDies) => {
+    const { runtime, narrator, eventsActions, start } = manualGame();
+    const { hunter } = await start();
+    if (hunterDies) {
+      runtime.game.addPendingDeath(hunter.sid, 'WEREWOLVES');
+    }
+    const before = narrator.requested.length;
+    const run = runtime.segmentsManager.nightDawnResolution.run();
+    await flush();
+    expect(narrator.requested.slice(before)).toEqual([
+      'Night-end/Wake-up-everyone',
+    ]);
+
+    runtime.reset();
+    await narrator.finishPending();
+    await run;
+
+    expect(narrator.requested.slice(before)).toEqual([
+      'Night-end/Wake-up-everyone',
+    ]);
+    expect(eventsActions.hasPendingHunterPick()).toBe(false);
   });
 });

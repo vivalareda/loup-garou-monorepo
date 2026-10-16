@@ -1,12 +1,9 @@
 import { Deferred, Duration, Effect } from 'effect';
 import type { Game } from '@/core/game';
+import { StaleGame } from '@/segments/game-generation';
 import type { SegmentsManager } from '@/segments/segments-manager';
 import type { Broadcaster } from '@/server/broadcaster';
-import {
-  awaitInGame,
-  runResolution,
-  type StaleGame,
-} from '@/server/stale-game';
+import { awaitInGame, narration, runResolution } from '@/server/stale-game';
 
 /**
  * Resolves the night/dawn death flow as one linear Effect program:
@@ -21,13 +18,16 @@ import {
  * then calls dayAction().
  */
 export class NightDawnResolution {
-  private pendingHunterPick: Deferred.Deferred<string> | null = null;
+  private pendingHunterPick: Deferred.Deferred<string, StaleGame> | null = null;
 
   constructor(
     private readonly game: Game,
     private readonly segmentsManager: SegmentsManager,
     private readonly io: Broadcaster
-  ) {}
+  ) {
+    // A finished or reset game drops its pending pick (and its timeout)
+    segmentsManager.onGameEnded(() => this.cancelPendingPick());
+  }
 
   /**
    * Kick off the dawn resolution as a background promise. It stops at
@@ -59,6 +59,14 @@ export class NightDawnResolution {
     return this.pendingHunterPick !== null;
   }
 
+  private cancelPendingPick() {
+    const pick = this.pendingHunterPick;
+    if (pick) {
+      this.pendingHunterPick = null;
+      Deferred.unsafeDone(pick, Effect.fail(new StaleGame()));
+    }
+  }
+
   private resolveDawn(generation: number): Effect.Effect<void, StaleGame> {
     return Effect.gen(this, function* () {
       const audioManager = this.segmentsManager.audioManager;
@@ -82,15 +90,11 @@ export class NightDawnResolution {
             hunter.getSocketId(),
             partner.getSocketId()
           );
-          yield* this.narrate(generation, () =>
-            specialScenarios.hunterIsLover()
-          );
+          yield* this.narrate(() => specialScenarios.hunterIsLover());
         } else {
-          yield* this.narrate(generation, () => audioManager.playHunterAudio());
+          yield* this.narrate(() => audioManager.playHunterAudio());
           if (this.game.isOneOfLoversInDeathQueue()) {
-            yield* this.narrate(generation, () =>
-              audioManager.playLoverAudio()
-            );
+            yield* this.narrate(() => audioManager.playLoverAudio());
           }
         }
 
@@ -103,16 +107,14 @@ export class NightDawnResolution {
       if (this.game.isOneOfLoversInDeathQueue()) {
         if (this.game.isPartnerHunter()) {
           // Branch B — surviving partner is the hunter
-          yield* this.narrate(generation, () =>
-            specialScenarios.partnerIsHunter()
-          );
+          yield* this.narrate(() => specialScenarios.partnerIsHunter());
           this.game.updateHunterPlayerList();
           yield* this.hunterPickAndContinue(generation);
           return;
         }
 
         // Branch C — lover died, partner is not the hunter
-        yield* this.narrate(generation, () => audioManager.playLoverAudio());
+        yield* this.narrate(() => audioManager.playLoverAudio());
         if (!this.segmentsManager.isGameOver()) {
           yield* Effect.promise(() =>
             this.segmentsManager.getGameActions().dayAction()
@@ -122,9 +124,7 @@ export class NightDawnResolution {
       }
 
       // Branch D — no special deaths
-      yield* this.narrate(generation, () =>
-        audioManager.playSegmentAudio('DAY', true)
-      );
+      yield* this.narrate(() => audioManager.playSegmentAudio('DAY', true));
       yield* Effect.promise(() =>
         this.segmentsManager.getGameActions().dayAction()
       );
@@ -154,7 +154,7 @@ export class NightDawnResolution {
           return;
         }
 
-        yield* this.narrate(generation, () => audioManager.playDayVoteAudio());
+        yield* this.narrate(() => audioManager.playDayVoteAudio());
         yield* Effect.promise(() =>
           this.segmentsManager.getGameActions().dayAction()
         );
@@ -176,9 +176,7 @@ export class NightDawnResolution {
         }
 
         this.game.addPendingDeath(partner.getSocketId(), 'PARTNER_SUICIDE');
-        yield* this.narrate(generation, () =>
-          audioManager.playHunterKilledLover()
-        );
+        yield* this.narrate(() => audioManager.playHunterKilledLover());
       }
 
       this.game.isHunterInLove();
@@ -187,21 +185,21 @@ export class NightDawnResolution {
         return;
       }
 
-      yield* this.narrate(generation, () => audioManager.playDayVoteAudio());
+      yield* this.narrate(() => audioManager.playDayVoteAudio());
       yield* Effect.promise(() =>
         this.segmentsManager.getGameActions().dayAction()
       );
     });
   }
 
-  /** Awaits a narration clip, unless the game ended meanwhile. */
-  private narrate(generation: number, play: () => Promise<void>) {
-    return awaitInGame(this.segmentsManager, generation, Effect.promise(play));
+  /** Awaits narration; it fails with StaleGame if the game ends mid-clip. */
+  private narrate(play: () => Promise<void>) {
+    return narration(play);
   }
 
-  private awaitHunterPick(): Effect.Effect<string | null> {
+  private awaitHunterPick(): Effect.Effect<string | null, StaleGame> {
     return Effect.gen(this, function* () {
-      const pick = yield* Deferred.make<string>();
+      const pick = yield* Deferred.make<string, StaleGame>();
       this.pendingHunterPick = pick;
       const hunter = this.game.getSpecialRolePlayer('HUNTER');
       if (hunter) {
@@ -212,7 +210,10 @@ export class NightDawnResolution {
         Deferred.await(pick),
         Duration.seconds(60)
       );
-      this.pendingHunterPick = null;
+      // A newer pick may be pending by now: only clear our own
+      if (this.pendingHunterPick === pick) {
+        this.pendingHunterPick = null;
+      }
 
       if (result._tag === 'None') {
         return null;

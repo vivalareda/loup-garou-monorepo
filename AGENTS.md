@@ -24,7 +24,7 @@ This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
 | Server tests | `pnpm --filter server test:run` |
 | Client tests | `pnpm --filter @repo/realtime test:run` |
 | Worker tests | `pnpm --filter worker test:run` |
-| Worker bundle check | `pnpm --filter worker build` (`wrangler deploy --dry-run`) |
+| Worker bundle check | `pnpm turbo run build --filter=worker` (dashboard, then `wrangler deploy --dry-run`) |
 
 > ¹ The root `pnpm dev:web` script (`turbo -F web dev`) filters for a package
 > named `web`, which does not exist in this workspace — the dashboard package
@@ -95,10 +95,23 @@ Socket.io is gone from every live path. The pieces:
   `node:crypto` is fine under `nodejs_compat`.
 - Config is the same env vars, from `vars` in `wrangler.jsonc` (read
   through `process.env`); override per run with `--var` or `.dev.vars`.
+- Admission: `createGameRuntime` takes `adminEvents`. Node passes `true`
+  (testing rig); the Worker only when `ENABLE_ADMIN_EVENTS` is `"true"`
+  (default `"false"`), otherwise `admin:*` events are not even
+  registered. `MAX_CONNECTIONS_PER_ROOM` (default 32) caps sockets per
+  room (503), and an optional `ACCESS_TOKEN` secret requires
+  `?token=` on `/room/*` (401). The token is a speed bump, not auth;
+  rate limiting and real auth are listed in the worker README's "Before
+  a public deploy".
+- A finished game clears its deadlines, and the room resets when its
+  last socket leaves a lobby or a finished game, so the Durable Object
+  can be evicted; a game in progress is kept for the reconnect grace.
 - No hibernation: sockets use `server.accept()`, since the game's timers
   keep the object awake anyway and hibernating would lose the in-memory
   game. Nothing is persisted, so a deploy (or eviction) resets every live
   game.
+- `worker#build` depends on `dashboard#build:worker` in turbo.json, so
+  `pnpm turbo run build --filter=worker` rebuilds and caches `dist-worker`.
 - The narrator is the dashboard tab that clicked "Play narration here";
   the Worker serves the dashboard (`apps/dashboard/dist-worker`, built by
   `pnpm --filter dashboard build:worker`) and its `/audio/*.mp3` clips

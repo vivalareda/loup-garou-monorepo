@@ -23,10 +23,17 @@
   // The per-segment timeouts (WEREWOLF_TIMEOUT_MS, ...) are left to their
   // code defaults: setting them here would shadow SEGMENT_TIMEOUT_MS, the
   // one override for short test games (--var or .dev.vars)
+  // ENABLE_ADMIN_EVENTS: "true" turns on the dashboard's admin:* testing
+  // tools, which let any client drive the game (local testing only).
+  // MAX_CONNECTIONS_PER_ROOM: further upgrades get a 503.
+  // ACCESS_TOKEN is deliberately absent: set it as a secret (or --var) to
+  // require ?token= on /room/*; unset, rooms are open
   "vars": {
     "PLAYER_COUNT": "6",
     "DISCONNECT_GRACE_MS": "90000",
-    "DAY_DISCUSSION_MS": "120000"
+    "DAY_DISCUSSION_MS": "120000",
+    "ENABLE_ADMIN_EVENTS": "false",
+    "MAX_CONNECTIONS_PER_ROOM": "32"
   },
   "observability": { "enabled": true }
 }

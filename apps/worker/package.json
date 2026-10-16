@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter dashboard build:worker && wrangler dev",
-    "build": "pnpm --filter dashboard build:worker && wrangler deploy --dry-run --outdir dist",
+    "build": "wrangler deploy --dry-run --outdir dist",
     "deploy": "pnpm --filter dashboard build:worker && wrangler deploy",
     "cf-typegen": "wrangler types --strict-vars=false",
     "check-types": "tsc --noEmit",

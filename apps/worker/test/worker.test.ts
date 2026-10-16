@@ -1,10 +1,15 @@
-import { exports } from 'cloudflare:workers';
-import { encodeFrame } from '@repo/types';
+import { runInDurableObject } from 'cloudflare:test';
+import { env, exports } from 'cloudflare:workers';
+import { encodeFrame, roomUrl } from '@repo/types';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { GameRuntime } from '@/game-runtime';
+import type { WebSocketHost } from '@/server/websocket-host';
+import worker from '../src/index';
 
 type Frame = { event?: string; args?: unknown[]; pong?: number };
 
 const ORIGIN = 'http://game.test';
+const WS_SCHEME = /^ws/;
 const open: Client[] = [];
 
 /** A raw WebSocket client of one room, recording every frame it gets. */
@@ -64,10 +69,10 @@ function request(path: string, init?: RequestInit) {
   return exports.default.fetch(`${ORIGIN}${path}`, init);
 }
 
-async function connect(code: string) {
-  const response = await request(`/room/${code}`, {
-    headers: { Upgrade: 'websocket' },
-  });
+const upgrade = { headers: { Upgrade: 'websocket' } };
+
+async function connect(code: string, upgraded?: Response) {
+  const response = upgraded ?? (await request(`/room/${code}`, upgrade));
   const socket = response.webSocket;
   if (response.status !== 101 || !socket) {
     throw new Error(`Upgrade failed with ${response.status}`);
@@ -80,6 +85,58 @@ async function connect(code: string) {
 
 /** Lets in-flight frames land before asserting that nothing arrived. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 200));
+
+type Room = { host: WebSocketHost; runtime: GameRuntime };
+
+/** Runs `inspect` inside a room's Durable Object, on its game. */
+function inRoom<R>(code: string, inspect: (room: Room) => R) {
+  const stub = env.GAME_ROOM.get(env.GAME_ROOM.idFromName(code));
+  return runInDurableObject(stub, (instance) => {
+    const { room } = instance as unknown as { room: Room | undefined };
+    if (!room) {
+      throw new Error(`Room ${code} has no game`);
+    }
+    return inspect(room);
+  });
+}
+
+/** Waits until the room has seen every client socket close. */
+async function emptied(code: string) {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    if ((await inRoom(code, (room) => room.host.size)) === 0) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`Room ${code} still has sockets`);
+}
+
+/** Fills a room (PLAYER_COUNT is 4), which starts its game. */
+async function startGame(code: string) {
+  const players = await Promise.all(
+    ['A', 'B', 'C', 'D'].map(() => connect(code))
+  );
+  for (const [index, player] of players.entries()) {
+    player.emit('player:join', `Player ${index + 1}`);
+    await player.event('lobby:player-data');
+  }
+  for (const player of players) {
+    await player.event('lobby:villagers-list');
+  }
+  return players;
+}
+
+/** Lets the werewolves win at once. */
+function finishGame(code: string) {
+  return inRoom(code, ({ runtime }) => {
+    for (const player of runtime.game.getAlivePlayers()) {
+      if (player.getRole() !== 'WEREWOLF') {
+        player.kill();
+      }
+    }
+    return runtime.segmentsManager.isGameOver();
+  });
+}
 
 afterEach(() => {
   for (const client of open.splice(0)) {
@@ -153,16 +210,129 @@ describe('rooms', () => {
   });
 
   it('starts the game once the room is full', async () => {
-    const players = await Promise.all(
-      ['A', 'B', 'C', 'D'].map(() => connect('FULL'))
+    await startGame('FULL');
+    expect(
+      await inRoom('FULL', ({ runtime }) =>
+        runtime.segmentsManager.hasStarted()
+      )
+    ).toBe(true);
+  });
+
+  it('ignores admin events by default', async () => {
+    const [player] = await startGame('ADMIN');
+    const dashboard = await connect('ADMIN');
+    dashboard.emit('admin:next-segment');
+    dashboard.emit('admin:mock-hunter-event');
+    await settle();
+    expect(
+      await inRoom('ADMIN', ({ runtime }) =>
+        runtime.segmentsManager.getCurrentSegmentType()
+      )
+    ).toBe('CUPID');
+    expect(player?.events()).not.toContain('alert:action-error');
+  });
+});
+
+describe('admission', () => {
+  it('refuses connections over MAX_CONNECTIONS_PER_ROOM with 503', async () => {
+    await Promise.all(Array.from({ length: 6 }, () => connect('CAP')));
+    const response = await request('/room/CAP', upgrade);
+    expect(response.status).toBe(503);
+  });
+
+  const withToken = { ...env, ACCESS_TOKEN: 's3cret' };
+  const fetchWith = (url: string, workerEnv: Env & { ACCESS_TOKEN?: string }) =>
+    worker.fetch(new Request(url, upgrade), workerEnv);
+  const httpRoomUrl = (token?: string) =>
+    roomUrl(ORIGIN, 'GATED', token).replace(WS_SCHEME, 'http');
+
+  it.each([
+    ['missing', undefined],
+    ['wrong', 'guess'],
+    ['longer', 's3cret-and-more'],
+  ])('answers 401 to a %s token', async (_, token) => {
+    const response = await fetchWith(httpRoomUrl(token), withToken);
+    expect(response.status).toBe(401);
+  });
+
+  it('connects with the right token', async () => {
+    const client = await connect(
+      'GATED',
+      await fetchWith(httpRoomUrl('s3cret'), withToken)
     );
-    for (const [index, player] of players.entries()) {
-      player.emit('player:join', `Player ${index + 1}`);
-      await player.event('lobby:player-data');
-    }
-    // PLAYER_COUNT is 4 in vitest.config.ts
+    client.ping(1);
+    await client.next((frame) => frame.pong === 1);
+  });
+
+  it('is open when no token is configured', async () => {
+    const response = await fetchWith(httpRoomUrl(), { ...env });
+    expect(response.status).toBe(101);
+    await connect('GATED', response);
+  });
+});
+
+describe('room lifecycle', () => {
+  it('leaves no deadline running once the game is finished', async () => {
+    await startGame('FINISH');
+    expect(
+      await inRoom('FINISH', ({ runtime }) =>
+        runtime.segmentsManager.getRemainingDeadlineMs()
+      )
+    ).not.toBeNull();
+    expect(await finishGame('FINISH')).toBe(true);
+    expect(
+      await inRoom('FINISH', ({ runtime }) =>
+        runtime.segmentsManager.getRemainingDeadlineMs()
+      )
+    ).toBeNull();
+  });
+
+  it('resets a lobby its last client left', async () => {
+    const alice = await connect('LEFT-LOBBY');
+    alice.emit('player:join', 'Alice');
+    await alice.event('lobby:player-data');
+    alice.close();
+    await emptied('LEFT-LOBBY');
+
+    const again = await connect('LEFT-LOBBY');
+    again.emit('player:join', 'Alice');
+    await again.event('lobby:player-data');
+  });
+
+  it('resets a finished game its last client left', async () => {
+    const players = await startGame('LEFT-DONE');
+    await finishGame('LEFT-DONE');
     for (const player of players) {
-      await player.event('lobby:villagers-list');
+      player.close();
     }
+    await emptied('LEFT-DONE');
+    expect(
+      await inRoom('LEFT-DONE', ({ runtime }) => ({
+        started: runtime.segmentsManager.hasStarted(),
+        players: runtime.game.getPlayerList().size,
+      }))
+    ).toEqual({ started: false, players: 0 });
+
+    const fresh = await connect('LEFT-DONE');
+    fresh.emit('player:join', 'Newcomer');
+    await fresh.event('lobby:player-data');
+  });
+
+  it('keeps a game in progress for its players to come back', async () => {
+    const players = await startGame('LEFT-MID');
+    for (const player of players) {
+      player.close();
+    }
+    await emptied('LEFT-MID');
+    expect(
+      await inRoom('LEFT-MID', ({ runtime }) => ({
+        started: runtime.segmentsManager.hasStarted(),
+        players: runtime.game.getPlayerList().size,
+      }))
+    ).toEqual({ started: true, players: 4 });
+
+    const back = await connect('LEFT-MID');
+    back.emit('player:join', 'Player 1');
+    await back.event('game:snapshot');
   });
 });

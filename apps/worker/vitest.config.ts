@@ -6,8 +6,11 @@ export default defineConfig({
   plugins: [
     cloudflareTest({
       wrangler: { configPath: './wrangler.jsonc' },
-      // A 4-player game, so a test can fill a room without 6 sockets
-      miniflare: { bindings: { PLAYER_COUNT: '4' } },
+      // A 4-player game, so a test can fill a room without 6 sockets, and a
+      // small cap so a test can reach it
+      miniflare: {
+        bindings: { PLAYER_COUNT: '4', MAX_CONNECTIONS_PER_ROOM: '6' },
+      },
     }),
   ],
   test: {

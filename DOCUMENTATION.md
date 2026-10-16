@@ -5,6 +5,7 @@
 This is a real-time multiplayer implementation of the classic Werewolf (Loup-Garou) party game. The project consists of three main components:
 
 - **Server** (`apps/server`): Node.js game engine speaking JSON over raw WebSockets for real-time communication
+- **Worker** (`apps/worker`): the same game engine on Cloudflare Workers, one Durable Object per room code, serving the dashboard from the same origin
 - **Mobile App** (`apps/mobile`): React Native/Expo mobile client for players  
 - **Dashboard** (`apps/dashboard`): React web dashboard for testing and debugging with mock players
 
@@ -241,7 +242,13 @@ packages/types/          # Shared TypeScript types
 apps/server/            # Node.js game server
 ├── src/core/          # Game logic
 ├── src/segments/      # Segment management
+├── src/game-runtime.ts # Builds one game on a ConnectionHost (shared with the Worker)
 └── src/server/        # HTTP + WebSocket server (websocket-host.ts, websocket-server.ts)
+
+apps/worker/            # Cloudflare Worker: /room/<code> → GameRoom Durable Object
+├── src/index.ts       # Routing (code validation, 400/426), static dashboard
+├── src/game-room.ts   # One in-memory game per room (WebSocketHost + DashboardNarrator)
+└── test/              # Workers-runtime tests (@cloudflare/vitest-plugin)
 
 packages/realtime/      # Typed WebSocket client (reconnect, heartbeat, acks)
 
@@ -285,7 +292,8 @@ The dashboard allows creating multiple mock players for testing:
 - **Multi-client Simulation**: Test scenarios with multiple concurrent players
 
 ### Development Workflow
-1. **Server**: Start with `pnpm dev:server` 
+1. **Server**: Start with `pnpm dev:server` (or `pnpm dev:worker` for the
+   Workers version on http://localhost:8787, which also serves the dashboard)
 2. **Dashboard**: Start with `pnpm dev` for testing
 3. **Mobile**: Start with `pnpm dev:native` for mobile testing
 4. **Create Mock Players**: Use dashboard to simulate multiplayer scenarios
@@ -303,7 +311,8 @@ The dashboard allows creating multiple mock players for testing:
 
 ### Technical Improvements
 - **Persistent Game State**: Database integration for game recovery
-- **Scalability**: Multi-room support for concurrent games  
+- **Scalability**: Multi-room support for concurrent games (done on the
+  Worker, one Durable Object per room; the Node server still hosts one game)
 - **Mobile Features**: Push notifications, offline mode
 - **Audio Enhancements**: Custom voice packs, volume controls
 - **UI/UX**: Enhanced mobile interface, accessibility features

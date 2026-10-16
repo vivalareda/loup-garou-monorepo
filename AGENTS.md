@@ -4,6 +4,7 @@ This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
 - `apps/server` — Node.js game server over raw WebSockets (`ws`) (plain classes + an in-progress Effect-TS migration)
 - `apps/mobile` — React Native + Expo player client (SDK 57)
 - `apps/dashboard` — Vite + React testing dashboard with mock players
+- `apps/worker` — the game on Cloudflare Workers: one `GameRoom` Durable Object per room code, plus the built dashboard as static assets (see `apps/worker/README.md`)
 - `packages/types` — Shared TypeScript types for socket events, players, roles, segments, deaths, plus the WebSocket wire protocol (`src/wire.ts`)
 - `packages/realtime` — `@repo/realtime`, the typed WebSocket client every app uses (mobile, dashboard, agent CLI, integration test)
 
@@ -14,6 +15,7 @@ This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
 | Install    | `pnpm install`                   |
 | Dev (all)  | `pnpm dev`                       |
 | Dev server | `pnpm dev:server`                |
+| Dev worker | `pnpm dev:worker` (builds the dashboard, `wrangler dev` on :8787) |
 | Dev mobile | `pnpm dev:mobile`                |
 | Dev dashboard | `pnpm --filter dashboard dev`¹ |
 | Typecheck  | `pnpm check-types` (turbo fans out to all packages) |
@@ -21,6 +23,8 @@ This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
 | Build      | `pnpm build`                     |
 | Server tests | `pnpm --filter server test:run` |
 | Client tests | `pnpm --filter @repo/realtime test:run` |
+| Worker tests | `pnpm --filter worker test:run` |
+| Worker bundle check | `pnpm --filter worker build` (`wrangler deploy --dry-run`) |
 
 > ¹ The root `pnpm dev:web` script (`turbo -F web dev`) filters for a package
 > named `web`, which does not exist in this workspace — the dashboard package
@@ -29,7 +33,7 @@ This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
 
 > NOTE: `pnpm check-types` is wired up — it fans out via turbo to the
 > `check-types` script in each package (`server`, `@repo/types`,
-> `@repo/realtime`, `dashboard`, `mobile`). This was added by
+> `@repo/realtime`, `dashboard`, `mobile`, `worker`). This was added by
 > `plans/002-fix-check-types-baseline.md`. (The dashboard uses `tsc -b` rather
 > than `tsc -b --noEmit` because TS6310 forbids disabling emit on a composite
 > project that is referenced; its app config still has `noEmit: true`, so no
@@ -47,7 +51,8 @@ Socket.io is gone from every live path. The pieces:
   `roomUrl(baseUrl, code)` from the http(s) base URL env var plus an
   optional room code env var (`EXPO_PUBLIC_ROOM_CODE`,
   `VITE_PUBLIC_ROOM_CODE`, `ROOM_CODE` for the agent CLI; default
-  `default`). The Node server hosts a single game and ignores the code.
+  `default`). The Node server hosts a single game and ignores the code;
+  the Worker runs one game per (upper-cased) code.
 - Server: `WebSocketHost` (`apps/server/src/server/websocket-host.ts`)
   implements `ConnectionHost` over any socket with `send` / `close` /
   `readyState` / `addEventListener` (the `ws` package's and the Workers
@@ -74,6 +79,34 @@ Socket.io is gone from every live path. The pieces:
   below (`index.effect.ts`, `socket-io.effect.ts`,
   `socket-event-router.effect.ts`, `event-handlers.effect.ts`); nothing
   live may import it.
+
+## Cloudflare Workers (`apps/worker`)
+
+- Both entries build the game with `createGameRuntime({ host, narrator })`
+  (`apps/server/src/game-runtime.ts`): the Node `index.ts` with the `ws`
+  host and `LocalNarrator` (or `DashboardNarrator` with
+  `NARRATOR=dashboard`), the `GameRoom` Durable Object with a
+  `WebSocketHost` and always a `DashboardNarrator`. Wire new game objects
+  there, not in an entry.
+- The Worker bundles `apps/server/src` through the `@/*` tsconfig path.
+  Keep Node-only modules out of what `game-runtime.ts` imports: they
+  crash the Worker at load (`server/local-narrator.ts`, `sockets.ts`,
+  `http-server.ts`, `websocket-server.ts`, `index.ts`, `index.effect.ts`).
+  `node:crypto` is fine under `nodejs_compat`.
+- Config is the same env vars, from `vars` in `wrangler.jsonc` (read
+  through `process.env`); override per run with `--var` or `.dev.vars`.
+- No hibernation: sockets use `server.accept()`, since the game's timers
+  keep the object awake anyway and hibernating would lose the in-memory
+  game. Nothing is persisted, so a deploy (or eviction) resets every live
+  game.
+- The narrator is the dashboard tab that clicked "Play narration here";
+  the Worker serves the dashboard (`apps/dashboard/dist-worker`, built by
+  `pnpm --filter dashboard build:worker`) and its `/audio/*.mp3` clips
+  from the same origin, so the dashboard's backend URL is left unset.
+- Tests run inside workerd with `@cloudflare/vitest-plugin` and the
+  worker's own vitest 4 (the rest of the repo is on vitest 3).
+- Never `wrangler deploy` / `wrangler login` from an agent session; the
+  user deploys (`pnpm --filter worker deploy`).
 
 ## Server: dual entry points (Effect migration)
 
@@ -111,4 +144,5 @@ While the migration is in progress:
 
 - `apps/server`: `effect-tsgo patch` runs on `prepare` — patches the installed TypeScript LSP for Effect's IDE support. Don't disable.
 - `apps/mobile`: Expo SDK 57 pins TypeScript ~6.0.3 — out of step with the server's `^7.0.2`. Plans to align are in `plans/`.
-- `apps/dashboard`: React 18 + Vite; no test runner (planned via `plans/018`).
+- `apps/dashboard`: React 18 + Vite; no test runner (planned via `plans/018`). `VITE_PUBLIC_BACKEND_SERVER_URL` is optional: unset, it uses the page's origin (how the Worker serves it; `build:worker` uses `.env.worker` to force that).
+- `apps/worker`: `worker-configuration.d.ts` is generated by `pnpm --filter worker cf-typegen` (rerun after editing `wrangler.jsonc`); `compatibility_date` can't be newer than the installed workerd supports.

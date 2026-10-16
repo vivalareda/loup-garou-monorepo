@@ -3,16 +3,18 @@ export type {
   DeathInfo,
   PendingDeath,
 } from './src/death';
-export type {
-  ClientToServerEvents,
-  Countdown,
-  CountdownPhase,
-  GamePhase,
-  PendingPrompt,
-  PlayerGameSnapshot,
-  ServerToClientEvents,
-  SnapshotPlayer,
-  WerewolvesVoteState,
+export {
+  type ClientToServerEvents,
+  type Countdown,
+  type CountdownPhase,
+  type GamePhase,
+  isClientEvent,
+  isServerEvent,
+  type PendingPrompt,
+  type PlayerGameSnapshot,
+  type ServerToClientEvents,
+  type SnapshotPlayer,
+  type WerewolvesVoteState,
 } from './src/event';
 export {
   type GameEndResult,
@@ -31,3 +33,16 @@ export type {
   SegmentType,
   segments,
 } from './src/segment';
+export {
+  type AckFrame,
+  type ClientFrame,
+  DEFAULT_ROOM_CODE,
+  type EventFrame,
+  encodeFrame,
+  isRoomCode,
+  parseClientFrame,
+  parseRoomPath,
+  parseServerFrame,
+  roomUrl,
+  type ServerFrame,
+} from './src/wire';

@@ -197,3 +197,20 @@ const clientEventSchemas = {
 } satisfies Record<EventName, (...args: any[]) => void>;
 
 export type ClientToServerEvents = typeof clientEventSchemas;
+
+const clientEventNames = new Set<string>(Object.keys(clientEventSchemas));
+const serverEventNames = new Set<string>(Object.keys(serverEventSchemas));
+
+/** Runtime guard for an event name a client may send. */
+export function isClientEvent(
+  name: string
+): name is keyof ClientToServerEvents {
+  return clientEventNames.has(name);
+}
+
+/** Runtime guard for an event name the server may send. */
+export function isServerEvent(
+  name: string
+): name is keyof ServerToClientEvents {
+  return serverEventNames.has(name);
+}

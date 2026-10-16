@@ -1,15 +1,9 @@
 import { resolvePlayerCount } from '@/config';
-import { DeathManager } from '@/core/death-manager';
-import { Game } from '@/core/game';
-import { AudioManager } from '@/segments/audio-manager';
-import { SegmentsManager } from '@/segments/segments-manager';
+import { createGameRuntime } from '@/game-runtime';
 import { DashboardNarrator } from '@/server/dashboard-narrator';
-import { EventsActions } from '@/server/events-actions';
 import { startServer } from '@/server/http-server';
 import { LocalNarrator } from '@/server/local-narrator';
-import { GameEvents } from '@/server/server-events';
 import { host } from '@/server/sockets';
-import { SpecialScenarios } from './core/special-scenarios';
 
 // Fail fast on a bad PLAYER_COUNT before any socket is accepted
 console.log(`Game starts at ${resolvePlayerCount()} players`);
@@ -24,38 +18,15 @@ if (process.stdin.isTTY) {
   console.log('Press r to restart new game');
 }
 
-let game: Game;
-let audioManager: AudioManager;
-let segmentsManager: SegmentsManager;
-let events: GameEvents;
-let deathManager: DeathManager;
-let eventsActions: EventsActions;
-let specialScenarios: SpecialScenarios;
-
 // NARRATOR=dashboard plays the clips in a dashboard tab instead of on this
 // machine's speakers (the only option once the server runs on Workers).
 // DEBUG_AUDIO only applies to speaker playback
-const dashboardNarrator =
+const narrator =
   process.env.NARRATOR === 'dashboard'
     ? new DashboardNarrator(host)
-    : undefined;
-const narrator = dashboardNarrator ?? new LocalNarrator();
+    : new LocalNarrator();
 
-const initGame = () => {
-  deathManager = new DeathManager();
-  game = new Game(host, deathManager);
-  audioManager = new AudioManager(deathManager, narrator);
-  specialScenarios = new SpecialScenarios(game, audioManager);
-  segmentsManager = new SegmentsManager(
-    game,
-    host,
-    audioManager,
-    specialScenarios
-  );
-  eventsActions = new EventsActions(game, segmentsManager, host);
-  events = new GameEvents(game, segmentsManager, host, eventsActions);
-  events.setupSocketHandlers();
-};
+const runtime = createGameRuntime({ host, narrator });
 
 process.stdin.on('data', (key: string) => {
   const keyPressed = key.toString().toLowerCase();
@@ -64,22 +35,8 @@ process.stdin.on('data', (key: string) => {
     // In-place reset: the same handler objects keep serving the existing
     // sockets, so no second 'connection' handler is ever registered
     console.log('Resetting game state...');
-    events.resetGame();
+    runtime.reset();
   }
 });
-
-initGame();
-
-if (dashboardNarrator) {
-  host.on('connection', (connection) => {
-    connection.on('narrator:register', () =>
-      dashboardNarrator.attach(connection.id)
-    );
-    connection.on('narrator:done', (clipId) =>
-      dashboardNarrator.complete(connection.id, clipId)
-    );
-    connection.on('disconnect', () => dashboardNarrator.detach(connection.id));
-  });
-}
 
 startServer();

@@ -22,7 +22,7 @@ export default function Home() {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [isJoining, setIsJoining] = useState(false);
   const { setPlayer } = usePlayerStore();
-  const { recoveryFailed, setRecoveryFailed } = useConnectionStore();
+  const { recoveryFailed, setRecoveryFailed, status } = useConnectionStore();
   const isDev = process.env.NODE_ENV === 'development';
 
   // Session restore on app start and after reconnects is handled globally
@@ -48,12 +48,27 @@ export default function Home() {
     [router, setPlayer]
   );
 
+  // A join in flight when the connection drops gets no answer: let the
+  // player tap again once reconnected
+  useEffect(() => {
+    if (status === 'reconnecting') {
+      setIsJoining(false);
+    }
+  }, [status]);
+
   const handleJoinGame = () => {
     if (isJoining) {
       return;
     }
     setRecoveryFailed(false);
     setJoinError(null);
+
+    // While the socket is reconnecting the join would be dropped (emits
+    // are not replayed after an outage) and the button would spin forever
+    if (status === 'reconnecting') {
+      setJoinError('Connexion au serveur perdue — réessayez dans un instant.');
+      return;
+    }
 
     if (!submitJoin(name)) {
       setJoinError('Entrez un nom valide.');

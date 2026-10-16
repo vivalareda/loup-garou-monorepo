@@ -14,7 +14,8 @@ console.log('🔗 Connecting to:', url);
 
 // Reconnects on its own after a drop (locked phone, app in background,
 // network hop) and fires `connect` again: use-session-recovery rejoins
-// with the session token from there
+// with the session token from there. Taps made while reconnecting are
+// dropped, not replayed: the rejoin snapshot reopens any pending prompt
 export const socket = createRealtimeClient(url);
 
 socket.on('connect', () => {

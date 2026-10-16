@@ -1,7 +1,7 @@
-import { useSyncExternalStore } from 'react';
 import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
-import { enableNarrator, narratorStore } from '@/utils/narrator';
+import { useNarratorStore } from '@/store/narrator';
+import { enableNarrator } from '@/utils/narrator';
 import { socket } from '@/utils/socket';
 
 type SidebarProps = {
@@ -19,10 +19,7 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
     disconnectPlayer,
   } = useMockPlayerStore();
 
-  const narrator = useSyncExternalStore(
-    narratorStore.subscribe,
-    narratorStore.getState
-  );
+  const narrator = useNarratorStore();
 
   const playersArray = Array.from(players.values());
 

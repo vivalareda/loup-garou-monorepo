@@ -2,9 +2,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Never play real audio in tests — sound.play blocks until the mp3 finishes
-vi.mock('sound-play', () => ({
-  default: { play: vi.fn().mockResolvedValue(undefined) },
-}));
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';

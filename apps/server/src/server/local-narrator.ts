@@ -1,10 +1,11 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import sound from 'sound-play';
-import type { Narrator } from './narrator';
+import type { Narrator } from '@/segments/narrator';
 
-// The clips live with the dashboard, which serves them to the browser
-// narrator; resolved from this file so it doesn't depend on the cwd
+// Local-only by design: the clips live with the dashboard, which serves them
+// to the browser narrator, so a Node server on the same checkout reads them
+// from there. Resolved from this file so it doesn't depend on the cwd
 const AUDIO_DIR = fileURLToPath(
   new URL('../../../dashboard/public/audio/', import.meta.url)
 );

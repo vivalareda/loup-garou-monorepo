@@ -44,7 +44,7 @@ describe('DashboardNarrator', () => {
     await Promise.resolve();
     expect(finished).toBe(false);
 
-    narrator.complete(lastClipId());
+    narrator.complete('dash', lastClipId());
     await playing;
     expect(finished).toBe(true);
   });
@@ -56,7 +56,7 @@ describe('DashboardNarrator', () => {
       finished = true;
     });
 
-    narrator.complete('999');
+    narrator.complete('dash', '999');
     await Promise.resolve();
     expect(finished).toBe(false);
   });
@@ -78,5 +78,30 @@ describe('DashboardNarrator', () => {
 
     await narrator.play('Witch/Witch-end');
     expect(io.eventsOf('narrator:play')).toHaveLength(1);
+  });
+
+  it('ignores a done from a socket the clip was not sent to', async () => {
+    narrator.attach('dash');
+    let finished = false;
+    narrator.play('Intro').then(() => {
+      finished = true;
+    });
+
+    narrator.complete('player', lastClipId());
+    await Promise.resolve();
+    expect(finished).toBe(false);
+  });
+
+  it("releases a replaced narrator's clips when it leaves", async () => {
+    narrator.attach('old-tab');
+    const playing = narrator.play('Intro');
+
+    // The tab reconnects under a new socket id before the old one drops
+    narrator.attach('new-tab');
+    narrator.detach('old-tab');
+    await playing;
+
+    narrator.play('Witch/Witch-end');
+    expect(io.eventsOf('narrator:play').at(-1)?.scope).toBe('new-tab');
   });
 });

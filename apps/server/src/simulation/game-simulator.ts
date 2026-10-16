@@ -4,6 +4,7 @@ import { Game } from '@/core/game';
 import type { Player } from '@/core/player';
 import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
+import type { Narrator } from '@/segments/narrator';
 import { SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
 import { RecordingIO } from '@/simulation/recording-io';
@@ -35,17 +36,16 @@ export interface SimOptions {
 }
 
 /**
- * `AudioManager` subclass that records every file the real manager would
- * have played, in order, and never touches the disk or `sound-play`. Because
- * every `audio-manager` method calls `this.playAudio` / `await this.playAudio`,
- * overriding `playAudio` captures the full intended audio sequence — including
- * files with no on-disk asset — exactly as the live code would emit it.
+ * Records every clip the real `AudioManager` asks for, in order, without
+ * playing anything — including clips with no asset — so the full intended
+ * audio sequence can be validated.
  */
-export class RecordingAudioManager extends AudioManager {
-  readonly audioLog: string[] = [];
+export class RecordingNarrator implements Narrator {
+  readonly clips: string[] = [];
 
-  override async playAudio(file: string) {
-    this.audioLog.push(file);
+  play(clip: string) {
+    this.clips.push(clip);
+    return Promise.resolve();
   }
 }
 
@@ -67,7 +67,8 @@ export class GameSimulator {
   readonly io = new RecordingIO();
   readonly deathManager = new DeathManager();
   readonly game: Game;
-  readonly audioManager: RecordingAudioManager;
+  readonly narrator = new RecordingNarrator();
+  readonly audioManager: AudioManager;
   readonly specialScenarios: SpecialScenarios;
   readonly segmentsManager: SegmentsManager;
   readonly eventsActions: EventsActions;
@@ -97,7 +98,7 @@ export class GameSimulator {
 
   constructor(options: SimOptions = {}) {
     this.game = new Game(this.io, this.deathManager);
-    this.audioManager = new RecordingAudioManager(this.deathManager);
+    this.audioManager = new AudioManager(this.deathManager, this.narrator);
     this.specialScenarios = new SpecialScenarios(this.game, this.audioManager);
     this.segmentsManager = new SegmentsManager(
       this.game,
@@ -463,7 +464,7 @@ export class GameSimulator {
         this.deathLog.push(sid);
       }
     }
-    this.audioLog = this.audioManager.audioLog;
+    this.audioLog = this.narrator.clips;
   }
 
   private pickHunterTarget(): string | undefined {

@@ -6,27 +6,28 @@ import { Platform } from 'react-native';
 const isWeb = Platform.OS === 'web';
 
 /**
- * Writes run one after another, in call order: a room change clears the
- * token right before the new room's join saves one, and the clear must
- * not land last.
+ * Every storage call (reads too) runs after the ones before it, in call
+ * order: a room change clears the token right before the new room's
+ * connection reads it, and that read must see the clear.
  */
-let writes: Promise<void> = Promise.resolve();
-function queueWrite(write: () => Promise<void>) {
-  const done = writes.then(write);
-  writes = done.catch(() => undefined);
-  return done;
+let pending: Promise<unknown> = Promise.resolve();
+function inOrder<T>(operation: () => Promise<T>): Promise<T> {
+  const result = pending.then(operation);
+  // A failed call must not block the ones after it
+  pending = result.catch(() => null);
+  return result;
 }
 
 /** One string kept across app launches. */
 function storedString(key: string) {
   return {
     get(): Promise<string | null> {
-      return isWeb
-        ? Promise.resolve(localStorage.getItem(key))
-        : getItemAsync(key);
+      return inOrder(async () =>
+        isWeb ? localStorage.getItem(key) : await getItemAsync(key)
+      );
     },
     save(value: string): Promise<void> {
-      return queueWrite(async () => {
+      return inOrder(async () => {
         if (isWeb) {
           localStorage.setItem(key, value);
           return;
@@ -35,7 +36,7 @@ function storedString(key: string) {
       });
     },
     clear(): Promise<void> {
-      return queueWrite(async () => {
+      return inOrder(async () => {
         if (isWeb) {
           localStorage.removeItem(key);
           return;

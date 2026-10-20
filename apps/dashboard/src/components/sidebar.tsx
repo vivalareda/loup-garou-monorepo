@@ -1,3 +1,4 @@
+import { RoomPanel } from '@/components/room-panel';
 import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
 import { useNarratorStore } from '@/store/narrator';
@@ -113,6 +114,8 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
           </Button>
         </div>
       </div>
+
+      <RoomPanel />
 
       <div className="border-b border-gray-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-gray-700">

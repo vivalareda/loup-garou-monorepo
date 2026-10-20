@@ -224,6 +224,25 @@ describe('registerSessionRecovery', () => {
     expect(emit).toHaveBeenCalledWith('player:rejoin', 'token-123');
   });
 
+  it('does not send a token read that finished after a room change', async () => {
+    const { leaveRoom } = await import('@/hooks/room');
+    let finishRead: (token: string) => void = () => undefined;
+    getSessionToken.mockReturnValue(
+      new Promise<string>((resolve) => {
+        finishRead = resolve;
+      })
+    );
+    await register();
+
+    fire('connect');
+    // The player moves on while the token is still being read
+    leaveRoom();
+    finishRead('token-from-room-a');
+    await flushMicrotasks();
+
+    expect(emit).not.toHaveBeenCalled();
+  });
+
   it('attempts the initial restore when the socket connected before registration', async () => {
     getSessionToken.mockResolvedValue('token-123');
     socketConnected = true;

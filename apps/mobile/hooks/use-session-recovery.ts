@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { applyGameSnapshot, type SnapshotRouter } from '@/hooks/game-snapshot';
-import { clearLocalGame, leaveRoom } from '@/hooks/room';
+import { clearLocalGame, currentRoomEntry, leaveRoom } from '@/hooks/room';
 import { useConnectionStore } from '@/hooks/use-connection-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
 import { clearSessionToken, getSessionToken } from '@/utils/session';
@@ -25,9 +25,12 @@ export function registerSessionRecovery(router: SnapshotRouter) {
 
   const onConnect = () => {
     useConnectionStore.getState().setStatus('connected');
+    // A token read that finishes after a room change belongs to the old
+    // room: sending it would only get the new room's seat reset
+    const entry = currentRoomEntry();
     getSessionToken()
       .then((token) => {
-        if (token) {
+        if (token && currentRoomEntry() === entry) {
           socket.emit('player:rejoin', token);
         }
       })

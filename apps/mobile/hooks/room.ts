@@ -30,15 +30,38 @@ export function clearLocalGame() {
 }
 
 /**
- * Moves the app into room `code`: the socket connects there, and the code
- * is remembered so a relaunch can rejoin it (see `restoreRoom`).
+ * Counts room entries and exits. Async work started for one entry (a
+ * session read, a relaunch restore) checks it is still current before
+ * acting, so it never lands in a room the player has since moved to.
  */
-function enterRoom(code: string) {
+let entry = 0;
+
+/** The current room entry; compare it again after any await. */
+export function currentRoomEntry() {
+  return entry;
+}
+
+/**
+ * Moves the app into room `code` over a new connection, even when it is
+ * the room it is already in: each entry is a new client to the server.
+ * A `fresh` entry (create or join from the room screen) drops the previous
+ * session token, which belonged to an earlier entry; a `restored` one
+ * (relaunch) keeps it to rejoin with. The code is remembered so a relaunch
+ * can rejoin (see `restoreRoom`).
+ */
+function enterRoom(code: string, session: 'fresh' | 'restored') {
+  entry += 1;
   clearLocalGame();
+  if (session === 'fresh') {
+    clearSessionToken().catch((error) => {
+      console.error('Failed to clear session token', error);
+    });
+  }
   useConnectionStore.getState().setRoomCode(code);
   saveSessionRoom(code).catch((error) => {
     console.error('Failed to save the room code', error);
   });
+  socket.disconnect();
   connectToRoom(code);
 }
 
@@ -54,7 +77,7 @@ function describeRoomError(error: unknown) {
 export async function createAndEnterRoom(): Promise<RoomEntry> {
   try {
     const code = await createRoom();
-    enterRoom(code);
+    enterRoom(code, 'fresh');
     return { ok: true, code };
   } catch (error) {
     return { ok: false, error: describeRoomError(error) };
@@ -75,7 +98,7 @@ export async function joinRoomByCode(input: string): Promise<RoomEntry> {
     if (!(await roomExists(code))) {
       return { ok: false, error: 'Aucune partie avec ce code.' };
     }
-    enterRoom(code);
+    enterRoom(code, 'fresh');
     return { ok: true, code };
   } catch (error) {
     return { ok: false, error: describeRoomError(error) };
@@ -84,6 +107,7 @@ export async function joinRoomByCode(input: string): Promise<RoomEntry> {
 
 /** Leaves the current room for good: disconnected, game and session forgotten. */
 export function leaveRoom() {
+  entry += 1;
   socket.disconnect();
   clearLocalGame();
   useConnectionStore.getState().setRoomCode(null);
@@ -98,12 +122,14 @@ export function leaveRoom() {
  * with the token. Anyone else starts on the room screen.
  */
 export async function restoreRoom() {
+  const startedAt = entry;
   const [token, code] = await Promise.all([
     getSessionToken(),
     getSessionRoom(),
   ]);
-  if (token && code) {
-    enterRoom(code);
+  // The player already picked a room on the room screen meanwhile
+  if (token && code && entry === startedAt) {
+    enterRoom(code, 'restored');
   }
 }
 

@@ -5,6 +5,18 @@ import { Platform } from 'react-native';
 // so joining from a browser doesn't throw mid-join and strand the player.
 const isWeb = Platform.OS === 'web';
 
+/**
+ * Writes run one after another, in call order: a room change clears the
+ * token right before the new room's join saves one, and the clear must
+ * not land last.
+ */
+let writes: Promise<void> = Promise.resolve();
+function queueWrite(write: () => Promise<void>) {
+  const done = writes.then(write);
+  writes = done.catch(() => undefined);
+  return done;
+}
+
 /** One string kept across app launches. */
 function storedString(key: string) {
   return {
@@ -14,18 +26,22 @@ function storedString(key: string) {
         : getItemAsync(key);
     },
     save(value: string): Promise<void> {
-      if (isWeb) {
-        localStorage.setItem(key, value);
-        return Promise.resolve();
-      }
-      return setItemAsync(key, value);
+      return queueWrite(async () => {
+        if (isWeb) {
+          localStorage.setItem(key, value);
+          return;
+        }
+        await setItemAsync(key, value);
+      });
     },
     clear(): Promise<void> {
-      if (isWeb) {
-        localStorage.removeItem(key);
-        return Promise.resolve();
-      }
-      return deleteItemAsync(key);
+      return queueWrite(async () => {
+        if (isWeb) {
+          localStorage.removeItem(key);
+          return;
+        }
+        await deleteItemAsync(key);
+      });
     },
   };
 }

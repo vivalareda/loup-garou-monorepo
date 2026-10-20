@@ -13,16 +13,21 @@ vi.mock('@/utils/sockets', () => ({
 
 const disconnect = vi.fn();
 const saveSessionRoom = vi.fn().mockResolvedValue(undefined);
+const getSessionToken = vi.fn();
+const getSessionRoom = vi.fn();
+const clearSessionToken = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/utils/session', () => ({
-  getSessionToken: vi.fn(),
-  getSessionRoom: vi.fn(),
-  clearSessionToken: vi.fn().mockResolvedValue(undefined),
+  getSessionToken: () => getSessionToken(),
+  getSessionRoom: () => getSessionRoom(),
+  clearSessionToken: () => clearSessionToken(),
   saveSessionRoom: (code: string) => saveSessionRoom(code),
 }));
 
 describe('entering a room', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    clearSessionToken.mockResolvedValue(undefined);
+    saveSessionRoom.mockResolvedValue(undefined);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { useConnectionStore } = await import('@/hooks/use-connection-store');
     useConnectionStore.setState({ roomCode: null });
@@ -129,5 +134,59 @@ describe('changing rooms', () => {
     await joinRoomByCode('ROOMB234');
 
     await expectNoGameLeft();
+  });
+});
+
+describe('room entries', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    clearSessionToken.mockResolvedValue(undefined);
+    saveSessionRoom.mockResolvedValue(undefined);
+  });
+
+  it('re-entering the current room starts over on a new connection', async () => {
+    const { joinRoomByCode } = await import('@/hooks/room');
+    roomExists.mockResolvedValue(true);
+
+    await joinRoomByCode('ROOMA234');
+    await joinRoomByCode('ROOMA234');
+
+    // Each entry closes the previous connection and opens a new one, and
+    // drops the session token of the earlier entry
+    expect(disconnect).toHaveBeenCalledTimes(2);
+    expect(connectToRoom).toHaveBeenCalledTimes(2);
+    expect(clearSessionToken).toHaveBeenCalledTimes(2);
+  });
+
+  it('a relaunch restore never overrides a room picked meanwhile', async () => {
+    const { joinRoomByCode, restoreRoom } = await import('@/hooks/room');
+    const { useConnectionStore } = await import('@/hooks/use-connection-store');
+    let finishRead: (token: string) => void = () => undefined;
+    getSessionToken.mockReturnValue(
+      new Promise<string>((resolve) => {
+        finishRead = resolve;
+      })
+    );
+    getSessionRoom.mockResolvedValue('ROOMA234');
+    roomExists.mockResolvedValue(true);
+
+    const restoring = restoreRoom();
+    await joinRoomByCode('ROOMB234');
+    finishRead('token-from-a');
+    await restoring;
+
+    expect(connectToRoom).toHaveBeenCalledExactlyOnceWith('ROOMB234');
+    expect(useConnectionStore.getState().roomCode).toBe('ROOMB234');
+  });
+
+  it('a relaunch restore rejoins the saved room, keeping its token', async () => {
+    const { restoreRoom } = await import('@/hooks/room');
+    getSessionToken.mockResolvedValue('token-from-a');
+    getSessionRoom.mockResolvedValue('ROOMA234');
+
+    await restoreRoom();
+
+    expect(connectToRoom).toHaveBeenCalledExactlyOnceWith('ROOMA234');
+    expect(clearSessionToken).not.toHaveBeenCalled();
   });
 });

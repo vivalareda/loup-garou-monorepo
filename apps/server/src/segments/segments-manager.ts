@@ -3,8 +3,8 @@ import type { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
 import type { SpecialScenarios } from '@/core/special-scenarios';
 import type { AudioManager } from '@/segments/audio-manager';
+import type { Broadcaster } from '@/server/broadcaster';
 import { NightDawnResolution } from '@/server/night-dawn-resolution';
-import type { SocketType } from '@/server/sockets';
 
 /**
  * Per-segment deadline defaults. Each is overridable by its own env var;
@@ -38,7 +38,7 @@ export function resolveSegmentTimeoutMs(segmentType: string): number {
 }
 
 export class SegmentsManager {
-  io: SocketType;
+  io: Broadcaster;
   game: Game;
   gameActions: GameActions;
   nightDawnResolution: NightDawnResolution;
@@ -62,7 +62,7 @@ export class SegmentsManager {
 
   constructor(
     game: Game,
-    io: SocketType,
+    io: Broadcaster,
     audioManager: AudioManager,
     specialScenarios: SpecialScenarios
   ) {

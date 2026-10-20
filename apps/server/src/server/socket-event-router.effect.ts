@@ -2,8 +2,9 @@ import type { ClientToServerEvents, ServerToClientEvents } from '@repo/types';
 import { Effect, Runtime } from 'effect';
 import type { Socket } from 'socket.io';
 import { MockScenario } from '@/segments/mock-scenario';
-import { GameState } from './game-service.effect';
 import * as Handlers from './event-handlers.effect';
+import { GameState } from './game-service.effect';
+import { SocketIOServer } from './socket-io.effect';
 
 /**
  * Setup all socket event handlers for a connected socket
@@ -225,9 +226,9 @@ export const setupSocketEventHandlers = (
  * Cleanup all socket event handlers
  */
 export const cleanupSocketHandlers = Effect.gen(function* () {
-  const { game } = yield* GameState;
+  const { io } = yield* SocketIOServer;
 
   yield* Effect.sync(() => {
-    game['io'].removeAllListeners();
+    io.removeAllListeners();
   });
 });

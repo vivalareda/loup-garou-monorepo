@@ -6,7 +6,6 @@ import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
-import type { SocketType } from '@/server/sockets';
 import { RecordingIO } from '@/simulation/recording-io';
 
 export type SimWinner = 'villagers' | 'werewolves' | null;
@@ -97,20 +96,19 @@ export class GameSimulator {
   private pendingDawnPromise: Promise<void> | null = null;
 
   constructor(options: SimOptions = {}) {
-    const socketIo = this.io as unknown as SocketType;
-    this.game = new Game(socketIo, this.deathManager);
+    this.game = new Game(this.io, this.deathManager);
     this.audioManager = new RecordingAudioManager(this.deathManager);
     this.specialScenarios = new SpecialScenarios(this.game, this.audioManager);
     this.segmentsManager = new SegmentsManager(
       this.game,
-      socketIo,
+      this.io,
       this.audioManager,
       this.specialScenarios
     );
     this.eventsActions = new EventsActions(
       this.game,
       this.segmentsManager,
-      socketIo
+      this.io
     );
 
     // Wrap `nightDawnResolution.run` so the simulator can await the dawn

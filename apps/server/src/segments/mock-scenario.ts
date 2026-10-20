@@ -2,19 +2,19 @@ import type { Role } from '@repo/types';
 import type { Game } from '@/core/game';
 import { Player } from '@/core/player';
 import type { SegmentsManager } from '@/segments/segments-manager';
+import type { Broadcaster } from '@/server/broadcaster';
 import type { EventsActions } from '@/server/events-actions';
-import type { SocketType } from '@/server/sockets';
 
 export class MockScenario {
   game: Game;
   segmentsManager: SegmentsManager;
-  io: SocketType;
+  io: Broadcaster;
   eventsActions: EventsActions;
 
   constructor(
     game: Game,
     segmentsManager: SegmentsManager,
-    io: SocketType,
+    io: Broadcaster,
     eventsActions: EventsActions
   ) {
     this.game = game;

@@ -66,9 +66,12 @@ const serverEventSchemas = {
   'lobby:update-players-list': null as unknown as (
     player: PlayerListItem
   ) => void,
+  // The full lobby: who joined, how many players start the game, and the
+  // host (the earliest joined player, who sets that count), if anyone joined
   'lobby:players-list': null as unknown as (
     playersList: PlayerListItem[],
-    requiredPlayerCount: number
+    requiredPlayerCount: number,
+    hostSocketId: string | null
   ) => void,
   'game:snapshot': null as unknown as (snapshot: PlayerGameSnapshot) => void,
   // The presented session token matched no player (server restarted, game
@@ -142,6 +145,9 @@ const clientEventSchemas = {
   ) => void,
 
   'player:join': null as unknown as (playerName: string) => void,
+  // Host only, in the lobby: the game starts once this many players joined
+  // (at once if they already have). MIN_PLAYER_COUNT..MAX_PLAYER_COUNT
+  'lobby:set-player-count': null as unknown as (count: number) => void,
   'player:rejoin': null as unknown as (sessionToken: string) => void,
   // Play-again after a finished game; any player may trigger it
   'game:restart': null as unknown as () => void,

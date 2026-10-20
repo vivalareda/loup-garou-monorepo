@@ -9,3 +9,4 @@ export {
   type RealtimeClientOptions,
   type ReservedEvents,
 } from './src/client';
+export { createRoom, RoomApiError, roomExists } from './src/rooms';

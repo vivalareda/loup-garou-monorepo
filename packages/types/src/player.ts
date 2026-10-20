@@ -23,6 +23,22 @@ export type PlayerSetters = {
 
 export type Player = GamePlayer | WaitingRoomPlayer;
 
+/**
+ * How many players a game may have. Below 4 there are not enough players
+ * for the special roles (`Game.initRolesList`); 16 keeps a room well under
+ * the Worker's default 32 sockets (players, dashboards, reconnects).
+ */
+export const MIN_PLAYER_COUNT = 4;
+export const MAX_PLAYER_COUNT = 16;
+
+export function isValidPlayerCount(count: unknown): count is number {
+  return (
+    Number.isInteger(count) &&
+    (count as number) >= MIN_PLAYER_COUNT &&
+    (count as number) <= MAX_PLAYER_COUNT
+  );
+}
+
 export type PlayerListItem = Pick<Player, 'name' | 'socketId'>;
 
 export type WaitingRoomPlayer = Pick<GamePlayer, 'name' | 'socketId'> & {

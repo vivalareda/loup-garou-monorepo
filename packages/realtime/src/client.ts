@@ -49,7 +49,10 @@ type ListenEvent = keyof ListenEvents;
 type EmitEvent = keyof ClientToServerEvents;
 
 export type RealtimeClientOptions = {
-  /** Open the connection immediately (default true); else call `connect()`. */
+  /**
+   * Open the connection immediately (default: true when constructed with a
+   * URL); else call `connect()`.
+   */
   autoConnect?: boolean;
   /** Reconnect after an unrequested drop (default true). */
   reconnect?: boolean;
@@ -134,7 +137,8 @@ function resolveWebSocket(
  *   connection that no longer exists.
  */
 export class RealtimeClient {
-  readonly url: string;
+  /** Where the client connects; null until the first `connect(url)`. */
+  private target: string | null;
   private readonly WebSocketImpl: ClientWebSocketConstructor;
   private readonly reconnects: boolean;
   private readonly delayMs: number;
@@ -164,8 +168,8 @@ export class RealtimeClient {
   private pingTimer: Timer;
   private pongTimer: Timer;
 
-  constructor(url: string, options: RealtimeClientOptions = {}) {
-    this.url = url;
+  constructor(url: string | null, options: RealtimeClientOptions = {}) {
+    this.target = url;
     this.WebSocketImpl = resolveWebSocket(options.WebSocket);
     this.reconnects = options.reconnect ?? true;
     this.delayMs = options.reconnectDelayMs ?? 1000;
@@ -175,9 +179,13 @@ export class RealtimeClient {
     this.pingTimeoutMs = options.pingTimeoutMs ?? 10_000;
     this.connectTimeoutMs = options.connectTimeoutMs ?? 10_000;
     this.bufferable = new Set(options.bufferBeforeConnect ?? []);
-    if (options.autoConnect ?? true) {
+    if (options.autoConnect ?? url !== null) {
       this.connect();
     }
+  }
+
+  get url() {
+    return this.target;
   }
 
   /** Whether a connection is open right now. */
@@ -185,8 +193,22 @@ export class RealtimeClient {
     return this.isOpen;
   }
 
-  /** Opens the connection (now, even if a reconnect was pending). */
-  connect(): this {
+  /**
+   * Opens the connection (now, even if a reconnect was pending). Given a
+   * different `url` (another room), the client moves there and starts over:
+   * the current connection is closed (firing `disconnect` if it was open),
+   * its queued emits and acks are dropped, and `bufferBeforeConnect`
+   * applies again until the new URL's first connection opens.
+   */
+  connect(url?: string): this {
+    if (url !== undefined && url !== this.target) {
+      this.disconnect();
+      this.target = url;
+      this.hasConnected = false;
+    }
+    if (this.target === null) {
+      throw new Error('[realtime] connect() needs a URL');
+    }
     this.active = true;
     if (this.socket) {
       return this;
@@ -317,7 +339,8 @@ export class RealtimeClient {
   private open() {
     let socket: ClientWebSocket;
     try {
-      socket = new this.WebSocketImpl(this.url);
+      // connect() refuses to start without a target
+      socket = new this.WebSocketImpl(this.target as string);
     } catch (error) {
       this.dispatch('connect_error', [toError(error)]);
       this.scheduleReconnect();
@@ -521,7 +544,7 @@ function clear(timer: Timer): undefined {
 }
 
 export function createRealtimeClient(
-  url: string,
+  url: string | null,
   options?: RealtimeClientOptions
 ) {
   return new RealtimeClient(url, options);

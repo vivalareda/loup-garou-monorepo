@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const listeners = new Map<string, ((...args: unknown[]) => void)[]>();
 const emit = vi.fn();
+const disconnect = vi.fn();
+const roomExists = vi.fn();
 let socketConnected = false;
 
 vi.mock('@/utils/sockets', () => ({
@@ -22,10 +24,12 @@ vi.mock('@/utils/sockets', () => ({
       listeners.set(event, list);
     }),
     emit,
+    disconnect,
     get connected() {
       return socketConnected;
     },
   },
+  roomExists: (code: string) => roomExists(code),
 }));
 
 const getSessionToken = vi.fn();
@@ -35,6 +39,8 @@ vi.mock('@/utils/session', () => ({
   getSessionToken: () => getSessionToken(),
   clearSessionToken: () => clearSessionToken(),
   saveSessionToken: (token: string) => saveSessionToken(token),
+  getSessionRoom: vi.fn(),
+  saveSessionRoom: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('expo-router', () => ({
@@ -265,7 +271,55 @@ describe('registerSessionRecovery', () => {
     expect(clearSessionToken).toHaveBeenCalled();
     expect(usePlayerStore.getState().player).toBeNull();
     expect(useConnectionStore.getState().recoveryFailed).toBe(true);
-    expect(router.replace).toHaveBeenCalledWith('/');
+    expect(router.replace).toHaveBeenCalledWith('/join');
+  });
+
+  describe('when a reconnect is refused', () => {
+    beforeEach(async () => {
+      const { useConnectionStore } = await import(
+        '@/hooks/use-connection-store'
+      );
+      useConnectionStore.setState({ roomCode: 'ABCD2345' });
+      roomExists.mockReset();
+      disconnect.mockClear();
+    });
+
+    it('leaves a room that no longer exists', async () => {
+      const { useConnectionStore } = await import(
+        '@/hooks/use-connection-store'
+      );
+      roomExists.mockResolvedValue(false);
+      await register();
+
+      fire('connect_error', new Error('closed before opening'));
+      await flushMicrotasks();
+
+      expect(roomExists).toHaveBeenCalledWith('ABCD2345');
+      expect(disconnect).toHaveBeenCalled();
+      expect(useConnectionStore.getState().roomCode).toBeNull();
+      expect(router.replace).toHaveBeenCalledWith('/');
+    });
+
+    it('keeps reconnecting to a room that still exists', async () => {
+      roomExists.mockResolvedValue(true);
+      await register();
+
+      fire('connect_error', new Error('closed before opening'));
+      await flushMicrotasks();
+
+      expect(disconnect).not.toHaveBeenCalled();
+      expect(router.replace).not.toHaveBeenCalled();
+    });
+
+    it('keeps reconnecting while the server is unreachable', async () => {
+      roomExists.mockRejectedValue(new TypeError('Network request failed'));
+      await register();
+
+      fire('connect_error', new Error('closed before opening'));
+      await flushMicrotasks();
+
+      expect(disconnect).not.toHaveBeenCalled();
+    });
   });
 
   it('silently clears a stale token when recovery fails before any game', async () => {

@@ -1,31 +1,42 @@
 import { deleteItemAsync, getItemAsync, setItemAsync } from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-const SESSION_TOKEN_KEY = 'loup-garou-session-token';
-
 // expo-secure-store has no web implementation; fall back to localStorage
 // so joining from a browser doesn't throw mid-join and strand the player.
 const isWeb = Platform.OS === 'web';
 
-export function getSessionToken() {
-  if (isWeb) {
-    return Promise.resolve(localStorage.getItem(SESSION_TOKEN_KEY));
-  }
-  return getItemAsync(SESSION_TOKEN_KEY);
+/** One string kept across app launches. */
+function storedString(key: string) {
+  return {
+    get(): Promise<string | null> {
+      return isWeb
+        ? Promise.resolve(localStorage.getItem(key))
+        : getItemAsync(key);
+    },
+    save(value: string): Promise<void> {
+      if (isWeb) {
+        localStorage.setItem(key, value);
+        return Promise.resolve();
+      }
+      return setItemAsync(key, value);
+    },
+    clear(): Promise<void> {
+      if (isWeb) {
+        localStorage.removeItem(key);
+        return Promise.resolve();
+      }
+      return deleteItemAsync(key);
+    },
+  };
 }
 
-export function saveSessionToken(token: string) {
-  if (isWeb) {
-    localStorage.setItem(SESSION_TOKEN_KEY, token);
-    return Promise.resolve();
-  }
-  return setItemAsync(SESSION_TOKEN_KEY, token);
-}
+const sessionToken = storedString('loup-garou-session-token');
+/** The room the session token belongs to, so a relaunch rejoins there. */
+const sessionRoom = storedString('loup-garou-room-code');
 
-export function clearSessionToken() {
-  if (isWeb) {
-    localStorage.removeItem(SESSION_TOKEN_KEY);
-    return Promise.resolve();
-  }
-  return deleteItemAsync(SESSION_TOKEN_KEY);
-}
+export const getSessionToken = () => sessionToken.get();
+export const saveSessionToken = (token: string) => sessionToken.save(token);
+export const clearSessionToken = () => sessionToken.clear();
+
+export const getSessionRoom = () => sessionRoom.get();
+export const saveSessionRoom = (code: string) => sessionRoom.save(code);

@@ -1,4 +1,4 @@
-import { Link, useRouter } from 'expo-router';
+import { Link, Redirect, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Button,
@@ -11,18 +11,21 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { formatRoomCode, leaveRoom } from '@/hooks/room';
 import { useConnectionStore } from '@/hooks/use-connection-store';
 import { registerJoinListeners, submitJoin } from '@/hooks/use-join-game';
 import { usePlayerStore } from '@/hooks/use-player-store';
 import { saveSessionToken } from '@/utils/session';
 
-export default function Home() {
+/** The name form of the room the app is in (entered on the room screen). */
+export default function JoinRoom() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
   const [isJoining, setIsJoining] = useState(false);
   const { setPlayer } = usePlayerStore();
-  const { recoveryFailed, setRecoveryFailed, status } = useConnectionStore();
+  const { recoveryFailed, setRecoveryFailed, status, roomCode } =
+    useConnectionStore();
   const isDev = process.env.NODE_ENV === 'development';
 
   // Session restore on app start and after reconnects is handled globally
@@ -77,6 +80,16 @@ export default function Home() {
     setIsJoining(true);
   };
 
+  const handleChangeRoom = () => {
+    setRecoveryFailed(false);
+    leaveRoom();
+    router.replace('/');
+  };
+
+  if (!roomCode) {
+    return <Redirect href="/" />;
+  }
+
   return (
     <ImageBackground
       className="flex-1"
@@ -104,6 +117,9 @@ export default function Home() {
                   </Text>
                 </View>
               )}
+              <Text className="mb-6 text-center text-xl font-semibold text-white">
+                Partie {formatRoomCode(roomCode)}
+              </Text>
               <Text className="text-center text-4xl font-bold text-white">
                 Entrez votre nom
               </Text>
@@ -121,6 +137,9 @@ export default function Home() {
                   onPress={handleJoinGame}
                 >
                   <Text>{isJoining ? 'Connexion…' : 'Join game'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity className="mt-4" onPress={handleChangeRoom}>
+                  <Text className="text-white underline">Changer de partie</Text>
                 </TouchableOpacity>
               </View>
             </View>

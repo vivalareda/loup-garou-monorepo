@@ -7,6 +7,7 @@ import { saveSessionToken } from '@/utils/session';
 
 export type SnapshotRoute =
   | '/'
+  | '/join'
   | '/waiting-room'
   | '/(game)/game-interface'
   | '/death-screen'

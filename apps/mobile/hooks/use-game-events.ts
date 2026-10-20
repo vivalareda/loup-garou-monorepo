@@ -14,6 +14,10 @@ const ACTION_ERROR_MESSAGES: Record<string, string> = {
   'Game already started': 'La partie a déjà commencé.',
   'Game is finished': 'La partie est terminée.',
   'Game is not finished': "La partie n'est pas terminée.",
+  'Invalid player count': 'Nombre de joueurs invalide.',
+  'More players have already joined': 'Plus de joueurs ont déjà rejoint.',
+  'Only the host can change the player count':
+    "Seul l'hôte peut changer le nombre de joueurs.",
   'Hunter pick is not allowed now': 'Le chasseur ne peut pas tirer maintenant.',
   'Invalid Cupid selection': 'Sélection de Cupidon invalide.',
   'Invalid Seer target': 'Cible de la voyante invalide.',
@@ -33,7 +37,7 @@ export function translateActionError(message: string) {
 
 /** The only routes these listeners ever navigate to. */
 export type GameEventRoute =
-  | '/'
+  | '/join'
   | '/death-screen'
   | '/winner-screen'
   | '/loser-screen';
@@ -155,15 +159,16 @@ export function registerGameEventListeners(router: GameEventRouter) {
   });
 
   socket.on('game:restarted', () => {
-    console.log('Server restarted the game — back to the lobby');
+    console.log('Server restarted the game — back to the join screen');
     useGameStore.getState().resetGame();
     usePlayerStore.getState().reset();
     useModalStore.getState().closeModal();
-    // The server dropped all players; the old token can never rejoin
+    // The server dropped all players; the old token can never rejoin. The
+    // room is the same: everyone joins it again under a name
     clearSessionToken().catch((error) => {
       console.error('Failed to clear session token', error);
     });
-    router.replace('/');
+    router.replace('/join');
   });
 
   return () => {

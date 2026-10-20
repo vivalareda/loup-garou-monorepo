@@ -2,9 +2,10 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import '../global.css';
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { GlobalModal } from '@/components/global-modal';
+import { restoreRoom } from '@/hooks/room';
 import { useSessionRecovery } from '@/hooks/use-session-recovery';
 import { setAndroidNavigationBar } from '@/lib/android-navigation-bar';
 import { NAV_THEME } from '@/lib/constants';
@@ -28,6 +29,13 @@ export default function RootLayout() {
   // every navigation, including back to the join screen
   useSessionRecovery();
 
+  // A relaunch goes back into the room the player had joined, if any
+  useEffect(() => {
+    restoreRoom().catch((error) => {
+      console.error('Failed to restore the room', error);
+    });
+  }, []);
+
   useIsomorphicLayoutEffect(() => {
     if (hasMounted.current) {
       return;
@@ -50,6 +58,7 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="join" />
           <Stack.Screen name="(game)" />
           <Stack.Screen name="modal-test" />
         </Stack>

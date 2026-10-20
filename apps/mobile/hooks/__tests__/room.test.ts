@@ -5,12 +5,13 @@ const connectToRoom = vi.fn();
 const createRoom = vi.fn();
 const roomExists = vi.fn();
 vi.mock('@/utils/sockets', () => ({
-  socket: { disconnect: vi.fn() },
+  socket: { disconnect: () => disconnect() },
   connectToRoom: (code: string) => connectToRoom(code),
   createRoom: () => createRoom(),
   roomExists: (code: string) => roomExists(code),
 }));
 
+const disconnect = vi.fn();
 const saveSessionRoom = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/utils/session', () => ({
   getSessionToken: vi.fn(),
@@ -80,5 +81,53 @@ describe('entering a room', () => {
     });
     expect(await createAndEnterRoom()).toMatchObject({ ok: false });
     expect(connectToRoom).not.toHaveBeenCalled();
+  });
+});
+
+describe('changing rooms', () => {
+  const playInRoomA = async () => {
+    const { useGameStore } = await import('@/hooks/use-game-store');
+    const { usePlayerStore } = await import('@/hooks/use-player-store');
+    const { useModalStore } = await import('@/hooks/use-modal-store');
+    usePlayerStore.getState().setPlayer({
+      type: 'game',
+      name: 'Alice',
+      socketId: 'alice-sid',
+      isAlive: true,
+      role: 'WITCH',
+    });
+    useGameStore.getState().setRoleAssigned('WITCH');
+    useModalStore.getState().setModalState({ type: 'WITCH-HEAL', open: true });
+  };
+
+  const expectNoGameLeft = async () => {
+    const { useGameStore } = await import('@/hooks/use-game-store');
+    const { usePlayerStore } = await import('@/hooks/use-player-store');
+    const { useModalStore } = await import('@/hooks/use-modal-store');
+    expect(usePlayerStore.getState().player).toBeNull();
+    expect(useGameStore.getState().roleAssigned).toBeNull();
+    expect(useModalStore.getState().modalState.open).toBe(false);
+  };
+
+  it('leaving a room forgets its game', async () => {
+    const { leaveRoom } = await import('@/hooks/room');
+    const { useConnectionStore } = await import('@/hooks/use-connection-store');
+    await playInRoomA();
+
+    leaveRoom();
+
+    expect(disconnect).toHaveBeenCalled();
+    expect(useConnectionStore.getState().roomCode).toBeNull();
+    await expectNoGameLeft();
+  });
+
+  it('entering another room forgets the previous game', async () => {
+    const { joinRoomByCode } = await import('@/hooks/room');
+    await playInRoomA();
+    roomExists.mockResolvedValue(true);
+
+    await joinRoomByCode('ROOMB234');
+
+    await expectNoGameLeft();
   });
 });

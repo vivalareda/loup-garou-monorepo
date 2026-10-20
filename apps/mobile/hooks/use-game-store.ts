@@ -209,9 +209,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         set(() => {
           const { player } = usePlayerStore.getState();
           return {
-            playersList: players.filter(
-              (p) => p.socketId !== player?.socketId
-            ),
+            playersList: players.filter((p) => p.socketId !== player?.socketId),
             requiredPlayerCount,
             hostSocketId,
           };

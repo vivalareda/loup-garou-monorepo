@@ -1,10 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { applyGameSnapshot, type SnapshotRouter } from '@/hooks/game-snapshot';
-import { leaveRoom } from '@/hooks/room';
+import { clearLocalGame, leaveRoom } from '@/hooks/room';
 import { useConnectionStore } from '@/hooks/use-connection-store';
-import { useGameStore } from '@/hooks/use-game-store';
-import { useModalStore } from '@/hooks/use-modal-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
 import { clearSessionToken, getSessionToken } from '@/utils/session';
 import { roomExists, socket } from '@/utils/sockets';
@@ -21,9 +19,7 @@ export function registerSessionRecovery(router: SnapshotRouter) {
   const resetToScreen = (route: '/' | '/join') => {
     useConnectionStore.getState().setStatus('unrecoverable');
     useConnectionStore.getState().setRecoveryFailed(true);
-    useGameStore.getState().resetGame();
-    usePlayerStore.getState().reset();
-    useModalStore.getState().closeModal();
+    clearLocalGame();
     router.replace(route);
   };
 
@@ -54,9 +50,14 @@ export function registerSessionRecovery(router: SnapshotRouter) {
       console.error('Failed to clear session token', error);
     });
 
-    // Only disruptive when we were actually in a game: reset everything
-    // and land back on the room's join screen with an explanation
-    if (usePlayerStore.getState().player !== null) {
+    // The room is still there (this answer came from it), only the seat
+    // is gone: back to its join screen with an explanation, whether the
+    // player was mid-game or relaunched the app (restoreRoom) on the room
+    // screen
+    if (
+      usePlayerStore.getState().player !== null ||
+      useConnectionStore.getState().roomCode !== null
+    ) {
       resetToScreen('/join');
     }
   };

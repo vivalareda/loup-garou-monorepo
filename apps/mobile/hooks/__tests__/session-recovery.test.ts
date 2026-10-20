@@ -200,7 +200,11 @@ describe('registerSessionRecovery', () => {
     const { useConnectionStore } = await import('@/hooks/use-connection-store');
     useGameStore.getState().resetGame();
     usePlayerStore.getState().reset();
-    useConnectionStore.setState({ status: 'connected', recoveryFailed: false });
+    useConnectionStore.setState({
+      status: 'connected',
+      recoveryFailed: false,
+      roomCode: null,
+    });
   });
 
   const register = async () => {
@@ -322,7 +326,21 @@ describe('registerSessionRecovery', () => {
     });
   });
 
-  it('silently clears a stale token when recovery fails before any game', async () => {
+  it("sends a relaunched app whose seat is gone to its room's join screen", async () => {
+    const { useConnectionStore } = await import('@/hooks/use-connection-store');
+    // restoreRoom() reconnected to the saved room; no player restored yet
+    useConnectionStore.setState({ roomCode: 'ABCD2345' });
+    getSessionToken.mockResolvedValue('token-123');
+    await register();
+
+    fire('player:rejoin-failed');
+    await flushMicrotasks();
+
+    expect(clearSessionToken).toHaveBeenCalled();
+    expect(router.replace).toHaveBeenCalledWith('/join');
+  });
+
+  it('silently clears a stale token when recovery fails outside any room', async () => {
     getSessionToken.mockResolvedValue('token-123');
     await register();
 

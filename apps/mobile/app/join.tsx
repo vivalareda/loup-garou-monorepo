@@ -11,13 +11,18 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { formatRoomCode, leaveRoom } from '@/hooks/room';
+import { leaveRoom } from '@/hooks/room';
 import { useConnectionStore } from '@/hooks/use-connection-store';
 import { registerJoinListeners, submitJoin } from '@/hooks/use-join-game';
 import { usePlayerStore } from '@/hooks/use-player-store';
 import { saveSessionToken } from '@/utils/session';
 
-/** The name form of the room the app is in (entered on the room screen). */
+/**
+ * The name form of the room the app is in (entered on the room screen).
+ * The room's code is shown only in the waiting room, once joined: a room's
+ * creator cannot share it before being in, so they are always its first
+ * player and therefore its host.
+ */
 export default function JoinRoom() {
   const router = useRouter();
   const [name, setName] = useState('');
@@ -34,14 +39,19 @@ export default function JoinRoom() {
   useEffect(
     () =>
       registerJoinListeners({
-        onJoined: async (playerData) => {
+        // Synchronous on purpose: awaiting the token write first would
+        // leave a window where "Changer de partie" moves to another room
+        // and this room's player lands on top of it
+        onJoined: (playerData) => {
           console.log('server response', playerData);
-          if (playerData.sessionToken) {
-            await saveSessionToken(playerData.sessionToken);
-          }
           setIsJoining(false);
           setPlayer(playerData);
           router.push('/waiting-room');
+          if (playerData.sessionToken) {
+            saveSessionToken(playerData.sessionToken).catch((error) => {
+              console.error('Failed to save session token', error);
+            });
+          }
         },
         onRejected: (message) => {
           setIsJoining(false);
@@ -117,9 +127,6 @@ export default function JoinRoom() {
                   </Text>
                 </View>
               )}
-              <Text className="mb-6 text-center text-xl font-semibold text-white">
-                Partie {formatRoomCode(roomCode)}
-              </Text>
               <Text className="text-center text-4xl font-bold text-white">
                 Entrez votre nom
               </Text>
@@ -139,7 +146,9 @@ export default function JoinRoom() {
                   <Text>{isJoining ? 'Connexion…' : 'Join game'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity className="mt-4" onPress={handleChangeRoom}>
-                  <Text className="text-white underline">Changer de partie</Text>
+                  <Text className="text-white underline">
+                    Changer de partie
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>

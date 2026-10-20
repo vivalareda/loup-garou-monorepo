@@ -1,6 +1,9 @@
 import { RoomApiError } from '@repo/realtime';
 import { isRoomCode, normalizeRoomCode } from '@repo/types';
 import { useConnectionStore } from '@/hooks/use-connection-store';
+import { useGameStore } from '@/hooks/use-game-store';
+import { useModalStore } from '@/hooks/use-modal-store';
+import { usePlayerStore } from '@/hooks/use-player-store';
 import {
   clearSessionToken,
   getSessionRoom,
@@ -10,13 +13,28 @@ import {
 import { connectToRoom, createRoom, roomExists, socket } from '@/utils/sockets';
 
 /** Entering a room either worked (its code) or failed (a message to show). */
-export type RoomEntry = { ok: true; code: string } | { ok: false; error: string };
+export type RoomEntry =
+  | { ok: true; code: string }
+  | { ok: false; error: string };
+
+/**
+ * Forgets the local game: player, role, roster, votes, open prompt. Its
+ * room's server may have reset it, or the app is changing rooms, and
+ * nothing of it may leak into the next game (a stale role would send the
+ * waiting room straight into the game interface).
+ */
+export function clearLocalGame() {
+  useGameStore.getState().resetGame();
+  usePlayerStore.getState().reset();
+  useModalStore.getState().closeModal();
+}
 
 /**
  * Moves the app into room `code`: the socket connects there, and the code
  * is remembered so a relaunch can rejoin it (see `restoreRoom`).
  */
 function enterRoom(code: string) {
+  clearLocalGame();
   useConnectionStore.getState().setRoomCode(code);
   saveSessionRoom(code).catch((error) => {
     console.error('Failed to save the room code', error);
@@ -64,9 +82,10 @@ export async function joinRoomByCode(input: string): Promise<RoomEntry> {
   }
 }
 
-/** Leaves the current room for good: disconnected, session forgotten. */
+/** Leaves the current room for good: disconnected, game and session forgotten. */
 export function leaveRoom() {
   socket.disconnect();
+  clearLocalGame();
   useConnectionStore.getState().setRoomCode(null);
   clearSessionToken().catch((error) => {
     console.error('Failed to clear session token', error);
@@ -79,7 +98,10 @@ export function leaveRoom() {
  * with the token. Anyone else starts on the room screen.
  */
 export async function restoreRoom() {
-  const [token, code] = await Promise.all([getSessionToken(), getSessionRoom()]);
+  const [token, code] = await Promise.all([
+    getSessionToken(),
+    getSessionRoom(),
+  ]);
   if (token && code) {
     enterRoom(code);
   }

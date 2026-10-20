@@ -40,7 +40,11 @@ A room exists once `POST /rooms` created it; there is no default room.
   still in progress pushes the check back until it ends). A room nobody
   ever joins expires the same way.
 - **Host and player count:** the earliest joined player of the lobby is
-  its host (passed on to the next one if they leave). The game starts on
+  its host (passed on to the next one if they leave). The mobile app
+  shows a room's code only in its waiting room, so a room's creator
+  cannot share it before joining: knowing the code is the only way in,
+  hence the creator is always the first player and the host, with no
+  creator credential to carry through joins and restarts. The game starts on
   its own once `requiredPlayerCount` players joined: `PLAYER_COUNT` (6)
   for a new room, changed by the host with `lobby:set-player-count`
   (4-16, never below the players already in). Setting it to the current

@@ -23,7 +23,8 @@ function HostControls({
   const setCount = (count: number) => {
     socket.emit('lobby:set-player-count', count);
   };
-  const canLower = requiredPlayerCount > Math.max(MIN_PLAYER_COUNT, joinedCount);
+  const canLower =
+    requiredPlayerCount > Math.max(MIN_PLAYER_COUNT, joinedCount);
   const canRaise = requiredPlayerCount < MAX_PLAYER_COUNT;
   const canStartNow =
     joinedCount >= MIN_PLAYER_COUNT && joinedCount < requiredPlayerCount;

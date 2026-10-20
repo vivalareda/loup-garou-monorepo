@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
+import { clearLocalGame } from '@/hooks/room';
 import { useGameStore } from '@/hooks/use-game-store';
 import { useModalStore } from '@/hooks/use-modal-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
@@ -26,7 +27,8 @@ const ACTION_ERROR_MESSAGES: Record<string, string> = {
   'Seer action is not allowed now': 'La voyante ne peut pas agir maintenant.',
   'Vote is out of date': 'Ce vote est obsolète.',
   'Werewolf vote is not allowed now': 'Le vote des loups-garous est fermé.',
-  'Witch heal is not allowed now': 'La sorcière ne peut pas soigner maintenant.',
+  'Witch heal is not allowed now':
+    'La sorcière ne peut pas soigner maintenant.',
   'Witch poison is not allowed now':
     'La sorcière ne peut pas empoisonner maintenant.',
 };
@@ -160,9 +162,7 @@ export function registerGameEventListeners(router: GameEventRouter) {
 
   socket.on('game:restarted', () => {
     console.log('Server restarted the game — back to the join screen');
-    useGameStore.getState().resetGame();
-    usePlayerStore.getState().reset();
-    useModalStore.getState().closeModal();
+    clearLocalGame();
     // The server dropped all players; the old token can never rejoin. The
     // room is the same: everyone joins it again under a name
     clearSessionToken().catch((error) => {

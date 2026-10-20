@@ -11,6 +11,7 @@ import { SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
 // Import existing infrastructure
 import { httpServer, startServer } from '@/server/http-server';
+import { LocalNarrator } from '@/server/local-narrator';
 import { GameEvents } from '@/server/server-events';
 import { io } from '@/server/sockets';
 
@@ -74,7 +75,8 @@ const makeGameState = Effect.gen(function* () {
 
   const deathManager = new DeathManager();
   const game = new Game(socketServer, deathManager);
-  const audioManager = new AudioManager(deathManager);
+  // Speaker playback only; this entry doesn't support NARRATOR=dashboard
+  const audioManager = new AudioManager(deathManager, new LocalNarrator());
   const specialScenarios = new SpecialScenarios(game, audioManager);
   const segmentsManager = new SegmentsManager(
     game,

@@ -3,8 +3,10 @@ import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
+import { DashboardNarrator } from '@/server/dashboard-narrator';
 import { EventsActions } from '@/server/events-actions';
 import { startServer } from '@/server/http-server';
+import { LocalNarrator } from '@/server/local-narrator';
 import { GameEvents } from '@/server/server-events';
 import { io } from '@/server/sockets';
 import { SpecialScenarios } from './core/special-scenarios';
@@ -30,10 +32,17 @@ let deathManager: DeathManager;
 let eventsActions: EventsActions;
 let specialScenarios: SpecialScenarios;
 
+// NARRATOR=dashboard plays the clips in a dashboard tab instead of on this
+// machine's speakers (the only option once the server runs on Workers).
+// DEBUG_AUDIO only applies to speaker playback
+const dashboardNarrator =
+  process.env.NARRATOR === 'dashboard' ? new DashboardNarrator(io) : undefined;
+const narrator = dashboardNarrator ?? new LocalNarrator();
+
 const initGame = () => {
   deathManager = new DeathManager();
   game = new Game(io, deathManager);
-  audioManager = new AudioManager(deathManager);
+  audioManager = new AudioManager(deathManager, narrator);
   specialScenarios = new SpecialScenarios(game, audioManager);
   segmentsManager = new SegmentsManager(
     game,
@@ -58,4 +67,15 @@ process.stdin.on('data', (key: string) => {
 });
 
 initGame();
+
+if (dashboardNarrator) {
+  io.on('connection', (socket) => {
+    socket.on('narrator:register', () => dashboardNarrator.attach(socket.id));
+    socket.on('narrator:done', (clipId) =>
+      dashboardNarrator.complete(socket.id, clipId)
+    );
+    socket.on('disconnect', () => dashboardNarrator.detach(socket.id));
+  });
+}
+
 startServer();

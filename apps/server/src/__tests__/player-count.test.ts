@@ -11,11 +11,6 @@ import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
 import type { SocketType } from '@/server/sockets';
 
-// Never play real audio in tests — sound.play blocks until the mp3 finishes
-vi.mock('sound-play', () => ({
-  default: { play: vi.fn().mockResolvedValue(undefined) },
-}));
-
 const PLAYER_COUNT_ERROR = /PLAYER_COUNT/;
 
 describe('resolvePlayerCount', () => {

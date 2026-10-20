@@ -11,10 +11,6 @@ import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
 import type { SocketType } from '@/server/sockets';
 
-vi.mock('sound-play', () => ({
-  default: { play: vi.fn().mockResolvedValue(undefined) },
-}));
-
 type Handler = (...args: unknown[]) => void;
 
 function makeMockSocket(id: string) {

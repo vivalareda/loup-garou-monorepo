@@ -963,6 +963,7 @@ export class GameEvents {
   }
 
   cleanup() {
+    // Also drops listeners registered outside GameEvents (the narrator's)
     this.io.removeAllListeners();
     this.pendingLoverAcks.clear();
     this.setupSocketHandlers();

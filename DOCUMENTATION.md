@@ -240,8 +240,7 @@ packages/types/          # Shared TypeScript types
 apps/server/            # Node.js game server
 ├── src/core/          # Game logic
 ├── src/segments/      # Segment management
-├── src/server/        # HTTP and Socket.io server
-└── assets/           # Audio files for game segments
+└── src/server/        # HTTP and Socket.io server
 
 apps/mobile/           # React Native player app  
 ├── app/(game)/       # Game interface screens
@@ -251,7 +250,8 @@ apps/mobile/           # React Native player app
 apps/dashboard/        # React testing dashboard
 ├── src/components/   # UI components
 ├── src/store/       # Mock player state management  
-└── src/utils/      # Socket utilities for mock players
+├── src/utils/      # Socket utilities for mock players
+└── public/audio/   # Narration clips (played by the server or a dashboard tab)
 ```
 
 ### Key Design Patterns

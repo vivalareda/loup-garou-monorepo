@@ -7,11 +7,6 @@ import { SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
 import type { SocketType } from '@/server/sockets';
 
-// Never play real audio in tests — sound.play blocks until the mp3 finishes
-vi.mock('sound-play', () => ({
-  default: { play: vi.fn().mockResolvedValue(undefined) },
-}));
-
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 describe('Night dawn: hunter who is a lover dies during the night', () => {

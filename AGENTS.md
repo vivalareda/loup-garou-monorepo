@@ -48,11 +48,22 @@ Socket.io is gone from every live path. The pieces:
   `{ ping: n }` → `{ pong: n }`. Event names are checked against the
   event maps (`isClientEvent` / `isServerEvent`), payloads are not.
 - Endpoint: `ws(s)://<host>/room/<code>`; clients derive it with
-  `roomUrl(baseUrl, code)` from the http(s) base URL env var plus an
-  optional room code env var (`EXPO_PUBLIC_ROOM_CODE`,
-  `VITE_PUBLIC_ROOM_CODE`, `ROOM_CODE` for the agent CLI; default
-  `default`). The Node server hosts a single game and ignores the code;
-  the Worker runs one game per (upper-cased) code.
+  `roomUrl(baseUrl, code)` from the http(s) base URL env var. Rooms are
+  created and looked up over HTTP first (`POST /rooms` → `{ code }`,
+  `GET /rooms/<code>` → 200 or 404; `createRoom` / `roomExists` in
+  `@repo/realtime`). The mobile app picks the room at runtime (create or
+  type a code, `hooks/room.ts`) and moves its one socket there with
+  `socket.connect(url)`; the dashboard reads `?room=<code>` (fallback
+  `VITE_PUBLIC_ROOM_CODE`, then `default`); the agent CLIs read
+  `ROOM_CODE` (`agent:game` creates a room without one). The Node server
+  hosts a single game: every code reaches it and `POST /rooms` answers
+  `default`. The Worker runs one game per (upper-cased) created code.
+- Lobby: the game starts on its own once `requiredPlayerCount` players
+  joined. It starts at `PLAYER_COUNT`; the lobby's host (its earliest
+  joined player, passed on when they leave) changes it with
+  `lobby:set-player-count` (4-16, never below the players in; reaching
+  it starts the game). `lobby:players-list` carries the count and the
+  host's socket id.
 - Server: `WebSocketHost` (`apps/server/src/server/websocket-host.ts`)
   implements `ConnectionHost` over any socket with `send` / `close` /
   `readyState` / `addEventListener` (the `ws` package's and the Workers
@@ -95,12 +106,18 @@ Socket.io is gone from every live path. The pieces:
   `node:crypto` is fine under `nodejs_compat`.
 - Config is the same env vars, from `vars` in `wrangler.jsonc` (read
   through `process.env`); override per run with `--var` or `.dev.vars`.
+- Rooms: `POST /rooms` draws a random 8-character code
+  (`room-code.ts`, no look-alike characters) and claims it with the
+  `GameRoom.create()` RPC, which stores the only persisted key. Sockets
+  and `GET /rooms/<code>` for an unclaimed code get a 404. An alarm
+  deletes a room 15 min after its last socket left (a game in progress
+  waits until it ends).
 - Admission: `createGameRuntime` takes `adminEvents`. Node passes `true`
   (testing rig); the Worker only when `ENABLE_ADMIN_EVENTS` is `"true"`
   (default `"false"`), otherwise `admin:*` events are not even
   registered. `MAX_CONNECTIONS_PER_ROOM` (default 32) caps sockets per
   room (503), and an optional `ACCESS_TOKEN` secret requires
-  `?token=` on `/room/*` (401). The token is a speed bump, not auth;
+  `?token=` on `/room/*` and `/rooms*` (401). The token is a speed bump, not auth;
   rate limiting and real auth are listed in the worker README's "Before
   a public deploy".
 - Async game code must survive a reset: `SegmentsManager` bumps the
@@ -116,8 +133,8 @@ Socket.io is gone from every live path. The pieces:
   can be evicted; a game in progress is kept for the reconnect grace.
 - No hibernation: sockets use `server.accept()`, since the game's timers
   keep the object awake anyway and hibernating would lose the in-memory
-  game. Nothing is persisted, so a deploy (or eviction) resets every live
-  game.
+  game. Only the room's existence is persisted, so a deploy (or
+  eviction) resets every live game but its code keeps working.
 - `worker#build` depends on `dashboard#build:worker` in turbo.json, so
   `pnpm turbo run build --filter=worker` rebuilds and caches `dist-worker`.
 - The narrator is the dashboard tab that clicked "Play narration here";

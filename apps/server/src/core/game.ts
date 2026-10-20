@@ -16,6 +16,7 @@ export type DayVoteResult =
 
 export class Game {
   private readonly io: Broadcaster;
+  /** Keyed by socket ID, in join order (see `rekeyPlayer`). */
   private readonly players: Map<string, Player>;
   private readonly specialRolePlayers: Map<Role, Player> = new Map();
   private readonly deathManager: DeathManager;
@@ -80,6 +81,11 @@ export class Game {
     this.players.clear();
   }
 
+  /** The earliest joined player still in the game, if any. */
+  getFirstJoinedPlayer(): Player | undefined {
+    return this.players.values().next().value;
+  }
+
   getClientPlayerList(): PlayerListItem[] {
     return Array.from(this.players.values()).map((player) => ({
       name: player.getName(),
@@ -114,12 +120,26 @@ export class Game {
     }
 
     const oldSocketId = player.getSocketId();
-    this.players.delete(oldSocketId);
+    this.rekeyPlayer(oldSocketId, newSocketId);
     player.setSocketId(newSocketId);
     player.isConnected = true;
-    this.players.set(newSocketId, player);
     this.remapSocketId(oldSocketId, newSocketId);
     return player;
+  }
+
+  /**
+   * Moves a player to a new socket ID in place: `players` stays in join
+   * order, which the lobby relies on (its host is the earliest joined).
+   */
+  private rekeyPlayer(oldSid: string, newSid: string) {
+    if (oldSid === newSid) {
+      return;
+    }
+    const entries = Array.from(this.players.entries());
+    this.players.clear();
+    for (const [sid, player] of entries) {
+      this.players.set(sid === oldSid ? newSid : sid, player);
+    }
   }
 
   /**

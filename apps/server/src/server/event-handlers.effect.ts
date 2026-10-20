@@ -237,7 +237,12 @@ export const handleGetPlayersList = (
 
     yield* Effect.sync(() => {
       const playersArray = game.getClientPlayerList();
-      socket.emit('lobby:players-list', playersArray, resolvePlayerCount());
+      socket.emit(
+        'lobby:players-list',
+        playersArray,
+        resolvePlayerCount(),
+        game.getFirstJoinedPlayer()?.getSocketId() ?? null
+      );
     });
   });
 

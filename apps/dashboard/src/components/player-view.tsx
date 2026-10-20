@@ -138,7 +138,8 @@ export function PlayerView() {
                   Socket ID
                 </div>
                 <div className="font-mono text-xs text-gray-700 break-all">
-                  {activePlayer.socket.id || 'Not connected'}
+                  {activePlayer.player?.socketId ||
+                    (activePlayer.isConnected ? 'Not joined' : 'Not connected')}
                 </div>
               </div>
               {activePlayer.player && (

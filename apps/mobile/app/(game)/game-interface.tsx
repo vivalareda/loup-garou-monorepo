@@ -315,7 +315,7 @@ export default function GameInterface() {
   const { isRevealed, flipCard, animations } = useCardFlip();
 
   // Bridge the typed socket to the loose WitchEmit so the witch decisions
-  // stay pure and unit-testable (the socket.io singleton throws on import in
+  // stay pure and unit-testable (the socket singleton throws on import in
   // tests when the backend URL env var is missing).
   const emitWitch = useCallback<WitchEmit>(
     (event, ...args) => (socket.emit as unknown as WitchEmit)(event, ...args),

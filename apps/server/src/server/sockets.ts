@@ -1,18 +1,13 @@
-import type { ClientToServerEvents, ServerToClientEvents } from '@repo/types';
-import { Server } from 'socket.io';
 import { httpServer } from './http-server';
+import { WebSocketHost } from './websocket-host';
+import { attachWebSocketServer } from './websocket-server';
 
-export type SocketType = typeof io;
+/** The live transport: raw WebSockets on the http server's `/room/<code>`. */
+const host = new WebSocketHost();
 
-const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['*'],
-    credentials: true,
-  },
-  pingTimeout: 60_000,
-  pingInterval: 25_000,
-});
+attachWebSocketServer(httpServer, host);
 
-export { io };
+/** The live host's type (tests type their mock hosts with it). */
+export type SocketType = WebSocketHost;
+
+export { host };

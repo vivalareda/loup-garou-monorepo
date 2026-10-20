@@ -13,7 +13,8 @@ export function enableNarrator() {
   socket.emit('narrator:register');
 }
 
-// The server forgets the narrator when its socket drops
+// The server forgets the narrator when its socket drops, and a register
+// emitted while not connected is dropped: (re-)register on every connect
 socket.on('connect', () => {
   if (useNarratorStore.getState().enabled) {
     socket.emit('narrator:register');

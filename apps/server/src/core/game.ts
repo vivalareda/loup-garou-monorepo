@@ -688,7 +688,8 @@ export class Game {
       return; // unknown socket (never joined as a player)
     }
 
-    // Idempotent: a socket.io adapter can emit disconnect twice
+    // Idempotent: a player who already died (in the game, or of an earlier
+    // expired grace) must not die twice
     if (!player.isAlive) {
       return;
     }

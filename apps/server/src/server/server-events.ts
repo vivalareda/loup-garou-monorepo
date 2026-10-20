@@ -16,7 +16,9 @@ import type { EventsActions } from '@/server/events-actions';
  * How long a disconnected player keeps their seat before the game treats
  * the disconnect as a death (same consequences as before: votes cleared,
  * a lover's partner grieves). Long enough to cover a locked phone or an
- * app hop plus the socket.io reconnect backoff.
+ * app hop, the heartbeat noticing a dead socket (the host's 45s idle
+ * timeout), and the client's reconnect backoff (capped at 5s, see
+ * @repo/realtime).
  */
 function resolveDisconnectGraceMs() {
   const raw = process.env.DISCONNECT_GRACE_MS;
@@ -48,7 +50,13 @@ export class GameEvents {
     this.segmentsManager = segmentsManager;
   }
 
-  setupSocketHandlers() {
+  /**
+   * Registers every client event handler on each new connection.
+   * `adminEvents` adds the dashboard's testing tools (`admin:*`,
+   * `admin:mock-*`), which let any client drive the game; with it off they
+   * are not registered at all, so those events are ignored.
+   */
+  setupSocketHandlers({ adminEvents = true }: { adminEvents?: boolean } = {}) {
     this.io.on('connection', (socket) => {
       socket.on('player:join', (name: string) => {
         this.handlePlayerJoin(socket, name);
@@ -68,51 +76,6 @@ export class GameEvents {
         this.handleTransportDisconnect(socket.id);
       });
 
-      // Admin/Dashboard events for testing
-      socket.on('admin:start-game', () => {
-        if (this.segmentsManager.hasStarted()) {
-          socket.emit('alert:action-error', 'Game already started');
-          return;
-        }
-        console.log('🎮 Admin starting game manually');
-        this.game.assignRandomRoles();
-        this.game.alertPlayersOfRoles();
-        this.io.emit('lobby:villagers-list', this.game.getVillagersList());
-        this.segmentsManager.startGame();
-      });
-
-      socket.on('admin:next-segment', () => {
-        if (this.segmentsManager.hasFinished()) {
-          socket.emit('alert:action-error', 'Game is finished');
-          return;
-        }
-        console.log('⏭ Admin advancing to next segment');
-        this.segmentsManager.finishSegment();
-      });
-
-      socket.on('admin:simulate-werewolf-vote', (targetPlayer: string) => {
-        console.log(`🐺 Admin simulating werewolf vote for: ${targetPlayer}`);
-        const werewolves = this.game.getWerewolves();
-        for (const werewolf of werewolves) {
-          this.game.handleWerewolfVote(werewolf.getSocketId(), targetPlayer);
-        }
-        this.segmentsManager.getGameActions().broadcastWerewolfVotes();
-
-        if (this.game.hasAllWerewolvesAgreed()) {
-          const victim = this.game.getWerewolfTarget();
-          if (!victim) {
-            throw new Error('The victim does not exist, this is not normal');
-          }
-          this.game.addPendingDeath(victim, 'WEREWOLVES');
-          this.segmentsManager.finishSegment();
-        }
-      });
-
-      socket.on('admin:simulate-day-vote', (targetPlayer: string) => {
-        console.log(`☀ Admin simulating day vote for: ${targetPlayer}`);
-        // For now, just log - day voting will be implemented later
-      });
-
       this.setupGettersEvents(socket);
       this.setupCupidEvents(socket);
       this.setupLoversEvents(socket);
@@ -121,8 +84,59 @@ export class GameEvents {
       this.setupWitchEvents(socket);
       this.setupDayVoteEvents(socket);
       this.setupHunterEvents(socket);
-      this.setupMockEvents(socket);
+      if (adminEvents) {
+        this.setupAdminEvents(socket);
+      }
     });
+  }
+
+  /** Admin/Dashboard events for testing */
+  private setupAdminEvents(socket: Connection) {
+    socket.on('admin:start-game', () => {
+      if (this.segmentsManager.hasStarted()) {
+        socket.emit('alert:action-error', 'Game already started');
+        return;
+      }
+      console.log('🎮 Admin starting game manually');
+      this.game.assignRandomRoles();
+      this.game.alertPlayersOfRoles();
+      this.io.emit('lobby:villagers-list', this.game.getVillagersList());
+      this.segmentsManager.startGame();
+    });
+
+    socket.on('admin:next-segment', () => {
+      if (this.segmentsManager.hasFinished()) {
+        socket.emit('alert:action-error', 'Game is finished');
+        return;
+      }
+      console.log('⏭ Admin advancing to next segment');
+      this.segmentsManager.finishSegment();
+    });
+
+    socket.on('admin:simulate-werewolf-vote', (targetPlayer: string) => {
+      console.log(`🐺 Admin simulating werewolf vote for: ${targetPlayer}`);
+      const werewolves = this.game.getWerewolves();
+      for (const werewolf of werewolves) {
+        this.game.handleWerewolfVote(werewolf.getSocketId(), targetPlayer);
+      }
+      this.segmentsManager.getGameActions().broadcastWerewolfVotes();
+
+      if (this.game.hasAllWerewolvesAgreed()) {
+        const victim = this.game.getWerewolfTarget();
+        if (!victim) {
+          throw new Error('The victim does not exist, this is not normal');
+        }
+        this.game.addPendingDeath(victim, 'WEREWOLVES');
+        this.segmentsManager.finishSegment();
+      }
+    });
+
+    socket.on('admin:simulate-day-vote', (targetPlayer: string) => {
+      console.log(`☀ Admin simulating day vote for: ${targetPlayer}`);
+      // For now, just log - day voting will be implemented later
+    });
+
+    this.setupMockEvents(socket);
   }
 
   setupGettersEvents(socket: Connection) {

@@ -7,6 +7,16 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**"]
     },
+    "dashboard#build:worker": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist-worker/**"]
+    },
+    "worker#build": {
+      "dependsOn": ["^build", "dashboard#build:worker"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**"]
+    },
     "lint": {
       "dependsOn": ["^lint"]
     },

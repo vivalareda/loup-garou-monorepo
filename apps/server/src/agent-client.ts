@@ -1,15 +1,22 @@
 import { createInterface } from 'node:readline';
-import { io } from 'socket.io-client';
-import type { PlayerGameSnapshot } from '@repo/types';
+import { createRealtimeClient } from '@repo/realtime';
+import {
+  type ClientToServerEvents,
+  isClientEvent,
+  type PlayerGameSnapshot,
+  roomUrl,
+} from '@repo/types';
 
 const serverUrl = process.env.SERVER_URL ?? 'http://localhost:3000';
+const roomCode = process.env.ROOM_CODE || undefined;
 const name = process.argv[2];
 if (!name) {
   console.error('Usage: pnpm --filter server agent <name>');
   process.exit(1);
 }
 
-const socket = io(serverUrl);
+const accessToken = process.env.ACCESS_TOKEN || undefined;
+const socket = createRealtimeClient(roomUrl(serverUrl, roomCode, accessToken));
 const emitState = () => {
   socket.emit('agent:get-state', (snapshot: PlayerGameSnapshot) => {
     process.stdout.write(`${JSON.stringify({ type: 'state', ...snapshot })}\n`);
@@ -37,7 +44,15 @@ input.on('line', (line) => {
       emitState();
       return;
     }
-    socket.emit(command.event, ...(command.args ?? []));
+    if (!isClientEvent(command.event)) {
+      throw new Error(`Unknown event "${command.event}"`);
+    }
+    // Commands come from stdin: the server validates their payloads
+    const emit = socket.emit.bind(socket) as (
+      event: keyof ClientToServerEvents,
+      ...args: unknown[]
+    ) => void;
+    emit(command.event, ...(command.args ?? []));
     setTimeout(emitState, 25);
   } catch (error) {
     process.stdout.write(

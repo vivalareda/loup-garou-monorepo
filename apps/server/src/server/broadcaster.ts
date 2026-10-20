@@ -7,9 +7,9 @@ type Emit = <E extends keyof ServerToClientEvents>(
 
 /**
  * The slice of the transport the game logic needs: broadcast to everyone,
- * or emit to one player's socket id. Socket.io's `Server` satisfies it
- * structurally; a Cloudflare Durable Object can implement it over raw
- * WebSockets, keeping `core/` and `segments/` transport-agnostic.
+ * or emit to one player's socket id. `WebSocketHost` implements it over
+ * raw WebSockets (on Node or in a Durable Object), keeping `core/` and
+ * `segments/` transport-agnostic.
  */
 export type Broadcaster = {
   emit: Emit;

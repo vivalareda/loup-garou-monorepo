@@ -1,24 +1,10 @@
-import type {
-  ClientToServerEvents,
-  DeathInfo,
-  ServerToClientEvents,
-} from '@repo/types';
-import type { Socket } from 'socket.io-client';
-import { io } from 'socket.io-client';
+import { createRealtimeClient } from '@repo/realtime';
+import type { DeathInfo } from '@repo/types';
+import { roomSocketUrl } from './room-url';
 
-if (!import.meta.env.VITE_PUBLIC_BACKEND_SERVER_URL) {
-  throw new Error('Missing VITE_PUBLIC_BACKEND_SERVER_URL env variable');
-}
-
-const backendUrl = import.meta.env.VITE_PUBLIC_BACKEND_SERVER_URL;
-
-export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
-  backendUrl,
-  {
-    autoConnect: true,
-    transports: ['websocket'],
-  }
-);
+// Nothing is buffered before the first connection: the controls send
+// admin commands, which must never fire late on a game that moved on
+export const socket = createRealtimeClient(roomSocketUrl);
 
 // Game events state - simple global store for demo
 export const gameEvents: { deaths: DeathInfo[]; logs: string[] } = {

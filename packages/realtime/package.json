@@ -1,0 +1,24 @@
+{
+  "name": "@repo/realtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "biome check . --write",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "dependencies": {
+    "@repo/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

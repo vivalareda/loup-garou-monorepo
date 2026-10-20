@@ -2,8 +2,11 @@ import { createServer } from 'node:http';
 
 const SUCCESS_CODE = 200;
 
+// Plain requests get a health-check answer; the game runs over the
+// WebSocket upgrade handled in sockets.ts
 const httpServer = createServer((_, res) => {
   res.writeHead(SUCCESS_CODE, { 'Content-Type': 'text/plain' });
+  res.end('ok');
 });
 
 const PORT = process.env.PORT || '3000';

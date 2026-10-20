@@ -1,9 +1,12 @@
 import type { SegmentType } from '@repo/types';
 import type { DeathManager } from '@/core/death-manager';
+import { GameGeneration, ignoreStaleGame, StaleGame } from './game-generation';
 import { type Narrator, silentNarrator } from './narrator';
 
 export class AudioManager {
   deathManager: DeathManager;
+  /** Bumped by SegmentsManager when a game finishes or is reset. */
+  readonly generation = new GameGeneration();
   private readonly narrator: Narrator;
 
   constructor(deathManager: DeathManager, narrator: Narrator = silentNarrator) {
@@ -111,7 +114,7 @@ export class AudioManager {
       switch (segment) {
         case 'LOVERS':
           // Dont wait for the audio to finish if it's the lovers or day segment
-          this.playAudio(startAudioFile);
+          this.playAudio(startAudioFile).catch(ignoreStaleGame);
           break;
         case 'DAY':
           await this.playAudio('Night-end/Wake-up-everyone');
@@ -192,7 +195,17 @@ export class AudioManager {
     await this.playVillagersWonAudio();
   }
 
+  /**
+   * Plays one clip. Every narration goes through here, so this is where
+   * a sequence of clips stops when its game ends mid-clip: it rejects
+   * with `StaleGame` if the game finished or was reset while the clip
+   * played, and the caller's next clips never start.
+   */
   async playAudio(file: string) {
+    const generation = this.generation.current();
     await this.narrator.play(file);
+    if (!this.generation.isCurrent(generation)) {
+      throw new StaleGame();
+    }
   }
 }

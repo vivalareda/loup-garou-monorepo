@@ -39,9 +39,15 @@ export class GameActions {
     const lovers = this.game.getLovers();
     // Overridable so headless tests don't sit through real-time delays
     const alertDelayMs = Number(process.env.LOVER_ALERT_DELAY_MS ?? 4000);
+    // The alerts fire later: skip them if the game ended or was reset
+    const generation = this.segmentsManager.getGeneration();
+    const sameGame = () => this.segmentsManager.isCurrentGeneration(generation);
 
     // Wait a few seconds before prompting the cupid to pick lovers since lover audio file isn't awaited
     setTimeout(() => {
+      if (!sameGame()) {
+        return;
+      }
       this.io
         .to(lovers[0].getSocketId())
         .emit('alert:player-is-lover', lovers[1].getName());
@@ -53,6 +59,9 @@ export class GameActions {
     // *This is for the dashboard only* Enable the close button after a delay, like in the mobile app
     setTimeout(
       () => {
+        if (!sameGame()) {
+          return;
+        }
         this.io
           .to(lovers[0].getSocketId())
           .emit('alert:lovers-can-close-alert');

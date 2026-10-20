@@ -12,7 +12,8 @@
     "check-types": "turbo check-types",
     "dev:mobile": "turbo -F mobile dev",
     "dev:web": "turbo -F web dev",
-    "dev:server": "turbo -F server dev"
+    "dev:server": "turbo -F server dev",
+    "dev:worker": "turbo -F worker dev"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",

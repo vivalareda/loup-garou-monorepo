@@ -1,4 +1,4 @@
-import { runInDurableObject } from 'cloudflare:test';
+import { runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import { env, exports } from 'cloudflare:workers';
 import { encodeFrame, roomUrl } from '@repo/types';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -71,6 +71,14 @@ function request(path: string, init?: RequestInit) {
 
 const upgrade = { headers: { Upgrade: 'websocket' } };
 
+/** Creates a room through the API and returns its code. */
+async function newRoom() {
+  const response = await request('/rooms', { method: 'POST' });
+  expect(response.status).toBe(201);
+  const { code } = (await response.json()) as { code: string };
+  return code;
+}
+
 async function connect(code: string, upgraded?: Response) {
   const response = upgraded ?? (await request(`/room/${code}`, upgrade));
   const socket = response.webSocket;
@@ -88,10 +96,12 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 200));
 
 type Room = { host: WebSocketHost; runtime: GameRuntime };
 
+const roomStub = (code: string) =>
+  env.GAME_ROOM.get(env.GAME_ROOM.idFromName(code));
+
 /** Runs `inspect` inside a room's Durable Object, on its game. */
 function inRoom<R>(code: string, inspect: (room: Room) => R) {
-  const stub = env.GAME_ROOM.get(env.GAME_ROOM.idFromName(code));
-  return runInDurableObject(stub, (instance) => {
+  return runInDurableObject(roomStub(code), (instance) => {
     const { room } = instance as unknown as { room: Room | undefined };
     if (!room) {
       throw new Error(`Room ${code} has no game`);
@@ -144,6 +154,8 @@ afterEach(() => {
   }
 });
 
+const CODE_SHAPE = /^[2-9A-HJKMNP-TV-Z]{8}$/;
+
 describe('routing', () => {
   it.each(['/room/bad!code', '/room/', `/room/${'x'.repeat(65)}`, '/room/a/b'])(
     'rejects the room path %s with 400',
@@ -155,6 +167,11 @@ describe('routing', () => {
     }
   );
 
+  it('rejects a bad code in the room API with 400', async () => {
+    const response = await request('/rooms/bad!code');
+    expect(response.status).toBe(400);
+  });
+
   it('answers 426 to a room request that is not a WebSocket upgrade', async () => {
     const response = await request('/room/TEST');
     expect(response.status).toBe(426);
@@ -162,7 +179,7 @@ describe('routing', () => {
   });
 
   it('accepts a trailing slash and answers the app-level heartbeat', async () => {
-    const client = await connect('HEARTBEAT/');
+    const client = await connect(`${await newRoom()}/`);
     client.ping(7);
     expect(await client.next((frame) => frame.pong !== undefined)).toEqual({
       pong: 7,
@@ -170,10 +187,46 @@ describe('routing', () => {
   });
 });
 
+describe('creating and finding rooms', () => {
+  it('creates rooms with short, distinct, unambiguous codes', async () => {
+    const codes = await Promise.all(Array.from({ length: 10 }, newRoom));
+    for (const code of codes) {
+      expect(code).toMatch(CODE_SHAPE);
+    }
+    expect(new Set(codes).size).toBe(codes.length);
+  });
+
+  it('finds a created room, whatever the case of its code', async () => {
+    const code = await newRoom();
+    for (const asTyped of [code, code.toLowerCase()]) {
+      const response = await request(`/rooms/${asTyped}`);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ code });
+    }
+  });
+
+  it('answers 404 for a code that was never created', async () => {
+    const response = await request('/rooms/NEVERMADE');
+    expect(response.status).toBe(404);
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+  });
+
+  it('refuses sockets to a code that was never created', async () => {
+    const response = await request('/room/NOSUCHROOM', upgrade);
+    expect(response.status).toBe(404);
+  });
+
+  it('lets the room API be read from another origin', async () => {
+    const response = await request('/rooms', { method: 'POST' });
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+  });
+});
+
 describe('rooms', () => {
   it('sends lobby events to a joining client and its room', async () => {
-    const alice = await connect('LOBBY');
-    const bob = await connect('LOBBY');
+    const code = await newRoom();
+    const alice = await connect(code);
+    const bob = await connect(code);
 
     alice.emit('player:join', 'Alice');
     const data = await alice.event('lobby:player-data');
@@ -183,9 +236,10 @@ describe('rooms', () => {
   });
 
   it('isolates rooms from each other', async () => {
-    const red = await connect('RED');
-    const redWatcher = await connect('RED');
-    const blue = await connect('BLUE');
+    const [redCode, blueCode] = await Promise.all([newRoom(), newRoom()]);
+    const red = await connect(redCode);
+    const redWatcher = await connect(redCode);
+    const blue = await connect(blueCode);
 
     red.emit('player:join', 'Alice');
     await redWatcher.event('lobby:update-players-list');
@@ -198,9 +252,61 @@ describe('rooms', () => {
     expect(redWatcher.events()).toEqual(['lobby:update-players-list']);
   });
 
+  it('keeps each room its own player count', async () => {
+    const [bigCode, smallCode] = await Promise.all([newRoom(), newRoom()]);
+    const host = await connect(bigCode);
+    host.emit('player:join', 'Host');
+    await host.event('lobby:player-data');
+    host.emit('lobby:set-player-count', 6);
+    const lobby = await host.event('lobby:players-list');
+    expect(lobby.args?.slice(1)).toEqual([6, expect.any(String)]);
+
+    // Four players start the other room, at the default count
+    await startGame(smallCode);
+    expect(
+      await inRoom(bigCode, ({ runtime }) => ({
+        started: runtime.segmentsManager.hasStarted(),
+        players: runtime.game.getPlayerList().size,
+      }))
+    ).toEqual({ started: false, players: 1 });
+  });
+
+  it('starts a game at the count its host picked', async () => {
+    const code = await newRoom();
+    const players = await Promise.all(
+      Array.from({ length: 5 }, () => connect(code))
+    );
+    const [host, guest] = players;
+    host?.emit('player:join', 'Host');
+    await host?.event('lobby:player-data');
+    guest?.emit('player:join', 'Guest');
+    await guest?.event('lobby:player-data');
+
+    guest?.emit('lobby:set-player-count', 5);
+    const refused = await guest?.event('alert:action-error');
+    expect(refused?.args).toEqual(['Only the host can change the player count']);
+
+    host?.emit('lobby:set-player-count', 5);
+    await host?.next(
+      (frame) => frame.event === 'lobby:players-list' && frame.args?.[1] === 5
+    );
+    for (const [index, player] of players.slice(2).entries()) {
+      player.emit('player:join', `Player ${index + 3}`);
+      await player.event('lobby:player-data');
+    }
+    await host?.event('lobby:villagers-list');
+    expect(
+      await inRoom(code, ({ runtime }) => ({
+        started: runtime.segmentsManager.hasStarted(),
+        players: runtime.game.getPlayerList().size,
+      }))
+    ).toEqual({ started: true, players: 5 });
+  });
+
   it('treats room codes case-insensitively', async () => {
-    const lower = await connect('case-room');
-    const upper = await connect('CASE-ROOM');
+    const code = await newRoom();
+    const lower = await connect(code.toLowerCase());
+    const upper = await connect(code);
 
     lower.emit('player:join', 'Alice');
     await lower.event('lobby:player-data');
@@ -210,22 +316,22 @@ describe('rooms', () => {
   });
 
   it('starts the game once the room is full', async () => {
-    await startGame('FULL');
+    const code = await newRoom();
+    await startGame(code);
     expect(
-      await inRoom('FULL', ({ runtime }) =>
-        runtime.segmentsManager.hasStarted()
-      )
+      await inRoom(code, ({ runtime }) => runtime.segmentsManager.hasStarted())
     ).toBe(true);
   });
 
   it('ignores admin events by default', async () => {
-    const [player] = await startGame('ADMIN');
-    const dashboard = await connect('ADMIN');
+    const code = await newRoom();
+    const [player] = await startGame(code);
+    const dashboard = await connect(code);
     dashboard.emit('admin:next-segment');
     dashboard.emit('admin:mock-hunter-event');
     await settle();
     expect(
-      await inRoom('ADMIN', ({ runtime }) =>
+      await inRoom(code, ({ runtime }) =>
         runtime.segmentsManager.getCurrentSegmentType()
       )
     ).toBe('CUPID');
@@ -235,104 +341,179 @@ describe('rooms', () => {
 
 describe('admission', () => {
   it('refuses connections over MAX_CONNECTIONS_PER_ROOM with 503', async () => {
-    await Promise.all(Array.from({ length: 6 }, () => connect('CAP')));
-    const response = await request('/room/CAP', upgrade);
+    const code = await newRoom();
+    await Promise.all(Array.from({ length: 6 }, () => connect(code)));
+    const response = await request(`/room/${code}`, upgrade);
     expect(response.status).toBe(503);
   });
 
   const withToken = { ...env, ACCESS_TOKEN: 's3cret' };
-  const fetchWith = (url: string, workerEnv: Env & { ACCESS_TOKEN?: string }) =>
-    worker.fetch(new Request(url, upgrade), workerEnv);
-  const httpRoomUrl = (token?: string) =>
-    roomUrl(ORIGIN, 'GATED', token).replace(WS_SCHEME, 'http');
+  const fetchWith = (
+    url: string,
+    workerEnv: Env & { ACCESS_TOKEN?: string },
+    init: { method?: string; headers?: Record<string, string> } = upgrade
+  ) => worker.fetch(new Request(url, init), workerEnv);
+  const httpRoomUrl = (code: string, token?: string) =>
+    roomUrl(ORIGIN, code, token).replace(WS_SCHEME, 'http');
 
   it.each([
     ['missing', undefined],
     ['wrong', 'guess'],
     ['longer', 's3cret-and-more'],
   ])('answers 401 to a %s token', async (_, token) => {
-    const response = await fetchWith(httpRoomUrl(token), withToken);
-    expect(response.status).toBe(401);
+    const code = await newRoom();
+    const query = token ? `?token=${token}` : '';
+    const responses = await Promise.all([
+      fetchWith(httpRoomUrl(code, token), withToken),
+      fetchWith(`${ORIGIN}/rooms${query}`, withToken, { method: 'POST' }),
+      fetchWith(`${ORIGIN}/rooms/${code}${query}`, withToken, {}),
+    ]);
+    expect(responses.map((response) => response.status)).toEqual([
+      401, 401, 401,
+    ]);
   });
 
-  it('connects with the right token', async () => {
+  it('creates, finds and connects with the right token', async () => {
+    const created = await fetchWith(`${ORIGIN}/rooms?token=s3cret`, withToken, {
+      method: 'POST',
+    });
+    const { code } = (await created.json()) as { code: string };
+    const found = await fetchWith(
+      `${ORIGIN}/rooms/${code}?token=s3cret`,
+      withToken,
+      {}
+    );
+    expect(found.status).toBe(200);
+
     const client = await connect(
-      'GATED',
-      await fetchWith(httpRoomUrl('s3cret'), withToken)
+      code,
+      await fetchWith(httpRoomUrl(code, 's3cret'), withToken)
     );
     client.ping(1);
     await client.next((frame) => frame.pong === 1);
   });
 
   it('is open when no token is configured', async () => {
-    const response = await fetchWith(httpRoomUrl(), { ...env });
+    const code = await newRoom();
+    const response = await fetchWith(httpRoomUrl(code), { ...env });
     expect(response.status).toBe(101);
-    await connect('GATED', response);
+    await connect(code, response);
   });
 });
 
 describe('room lifecycle', () => {
   it('leaves no deadline running once the game is finished', async () => {
-    await startGame('FINISH');
+    const code = await newRoom();
+    await startGame(code);
     expect(
-      await inRoom('FINISH', ({ runtime }) =>
+      await inRoom(code, ({ runtime }) =>
         runtime.segmentsManager.getRemainingDeadlineMs()
       )
     ).not.toBeNull();
-    expect(await finishGame('FINISH')).toBe(true);
+    expect(await finishGame(code)).toBe(true);
     expect(
-      await inRoom('FINISH', ({ runtime }) =>
+      await inRoom(code, ({ runtime }) =>
         runtime.segmentsManager.getRemainingDeadlineMs()
       )
     ).toBeNull();
   });
 
   it('resets a lobby its last client left', async () => {
-    const alice = await connect('LEFT-LOBBY');
+    const code = await newRoom();
+    const alice = await connect(code);
     alice.emit('player:join', 'Alice');
     await alice.event('lobby:player-data');
     alice.close();
-    await emptied('LEFT-LOBBY');
+    await emptied(code);
 
-    const again = await connect('LEFT-LOBBY');
+    const again = await connect(code);
     again.emit('player:join', 'Alice');
     await again.event('lobby:player-data');
   });
 
   it('resets a finished game its last client left', async () => {
-    const players = await startGame('LEFT-DONE');
-    await finishGame('LEFT-DONE');
+    const code = await newRoom();
+    const players = await startGame(code);
+    await finishGame(code);
     for (const player of players) {
       player.close();
     }
-    await emptied('LEFT-DONE');
+    await emptied(code);
     expect(
-      await inRoom('LEFT-DONE', ({ runtime }) => ({
+      await inRoom(code, ({ runtime }) => ({
         started: runtime.segmentsManager.hasStarted(),
         players: runtime.game.getPlayerList().size,
       }))
     ).toEqual({ started: false, players: 0 });
 
-    const fresh = await connect('LEFT-DONE');
+    const fresh = await connect(code);
     fresh.emit('player:join', 'Newcomer');
     await fresh.event('lobby:player-data');
   });
 
   it('keeps a game in progress for its players to come back', async () => {
-    const players = await startGame('LEFT-MID');
+    const code = await newRoom();
+    const players = await startGame(code);
     for (const player of players) {
       player.close();
     }
-    await emptied('LEFT-MID');
+    await emptied(code);
     expect(
-      await inRoom('LEFT-MID', ({ runtime }) => ({
+      await inRoom(code, ({ runtime }) => ({
         started: runtime.segmentsManager.hasStarted(),
         players: runtime.game.getPlayerList().size,
       }))
     ).toEqual({ started: true, players: 4 });
 
-    const back = await connect('LEFT-MID');
+    const back = await connect(code);
     back.emit('player:join', 'Player 1');
     await back.event('game:snapshot');
+  });
+});
+
+describe('room expiry', () => {
+  const isFound = async (code: string) =>
+    (await request(`/rooms/${code}`)).status === 200;
+
+  it('deletes a room nobody joined', async () => {
+    const code = await newRoom();
+    expect(await runDurableObjectAlarm(roomStub(code))).toBe(true);
+    expect(await isFound(code)).toBe(false);
+    expect((await request(`/room/${code}`, upgrade)).status).toBe(404);
+  });
+
+  it('deletes a room once its last client left', async () => {
+    const code = await newRoom();
+    const alice = await connect(code);
+    alice.emit('player:join', 'Alice');
+    await alice.event('lobby:player-data');
+    alice.close();
+    await emptied(code);
+
+    expect(await runDurableObjectAlarm(roomStub(code))).toBe(true);
+    expect(await isFound(code)).toBe(false);
+  });
+
+  it('keeps a room someone is connected to', async () => {
+    const code = await newRoom();
+    await connect(code);
+    await runDurableObjectAlarm(roomStub(code));
+    expect(await isFound(code)).toBe(true);
+  });
+
+  it('keeps a game in progress until it ends', async () => {
+    const code = await newRoom();
+    const players = await startGame(code);
+    for (const player of players) {
+      player.close();
+    }
+    await emptied(code);
+
+    await runDurableObjectAlarm(roomStub(code));
+    expect(await isFound(code)).toBe(true);
+    // Still waiting: the check was rescheduled
+    await finishGame(code);
+    expect(await runDurableObjectAlarm(roomStub(code))).toBe(true);
+    expect(await isFound(code)).toBe(false);
   });
 });

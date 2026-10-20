@@ -3,14 +3,51 @@
 The game on Cloudflare Workers. One Worker serves everything from a single
 origin:
 
+- `POST /rooms` creates a private room and answers 201 `{ "code": "K7MQ3XPD" }`.
+- `GET /rooms/<code>` answers 200 `{ "code" }` for a live room and 404
+  otherwise, so clients can report a mistyped code before connecting.
 - `GET /room/<code>` (WebSocket upgrade) goes to that room's `GameRoom`
   Durable Object. Codes are 1-64 letters, digits, `-` or `_` (what
   `roomUrl` accepts) and are upper-cased, so `abc` and `ABC` are the same
   room. A bad code gets a 400, a plain request a 426, a missing or wrong
-  access token (when one is set) a 401, and a full room a 503.
+  access token (when one is set) a 401, a code that was never created
+  (or expired) a 404, and a full room a 503.
 - Every other path is the built dashboard (`apps/dashboard/dist-worker`,
   built by `pnpm --filter dashboard build:worker`), including the
   narration clips under `/audio/*.mp3`.
+
+## Rooms
+
+A room exists once `POST /rooms` created it; there is no default room.
+
+- **Codes** are 8 characters from `23456789ABCDEFGHJKMNPQRSTVWXYZ` (no
+  0/O, 1/I/L, U), drawn from the CSPRNG: ~39 bits, short enough to read
+  out ("K7MQ-3XPD"; clients ignore case, spaces and dashes) and
+  unguessable without a flood of requests (rate-limit before a public
+  deploy, see below). The Worker draws a code and claims it with the
+  Durable Object's `create()` RPC, retrying on the (all but impossible)
+  collision.
+- **Why HTTP and not a "create" socket:** the creator needs the code
+  back, and a socket opened with a create intent would create another
+  room on every reconnect. With `POST /rooms` each call creates exactly
+  one room, and everyone, creator included, then joins the same way.
+- **Existence** is the one thing a room persists (a `createdAt` key in
+  its Durable Object's storage): a room survives eviction while its code
+  is being passed around, and a socket or lookup for any other code gets
+  a 404, so an unknown code never turns into a joinable room.
+- **Expiry:** when the last socket leaves, an alarm is set for 15
+  minutes later. If nobody is connected then, the room is deleted (a game
+  still in progress pushes the check back until it ends). A room nobody
+  ever joins expires the same way.
+- **Host and player count:** the earliest joined player of the lobby is
+  its host (passed on to the next one if they leave). The game starts on
+  its own once `requiredPlayerCount` players joined: `PLAYER_COUNT` (6)
+  for a new room, changed by the host with `lobby:set-player-count`
+  (4-16, never below the players already in). Setting it to the current
+  headcount starts the game at once; the mobile app offers that as
+  "Lancer à N joueurs". Auto-start was kept over a separate "start"
+  action: the lobby, the agents and mock players all already wait for a
+  full room, and one event covers both "wait for N" and "start now".
 
 The Durable Object builds one game with `createGameRuntime`
 (`apps/server/src/game-runtime.ts`, the same wiring as the Node entry) on
@@ -25,11 +62,21 @@ pnpm --filter worker test:run  # Workers-runtime tests, offline
 pnpm --filter worker check-types
 ```
 
-Open http://localhost:8787, click "Play narration here" in a tab to make it
-the narrator, then join with the mobile app (`EXPO_PUBLIC_BACKEND_SERVER_URL`
-= the Worker's URL, see `apps/mobile/.env.example`), mock players or the
-agent CLI (`SERVER_URL=http://localhost:8787 pnpm --filter server agent Ana`). The
-dashboard's game controls (Start Game, Next Segment, mock scenarios) are
+Open http://localhost:8787, click "+ New room" (or open
+`http://localhost:8787/?room=<code>` for a room created elsewhere), then
+"Play narration here" to make the tab that room's narrator. Join with the
+mobile app (`EXPO_PUBLIC_BACKEND_SERVER_URL` = the Worker's URL, see
+`apps/mobile/.env.example`; "Créer une partie" or type the code), mock
+players, or the agent CLIs:
+
+```sh
+# A whole game of five agents in a new room (the first sets the count to 5)
+SERVER_URL=http://localhost:8787 pnpm --filter server agent:game a b c d e
+# One interactive agent in an existing room
+SERVER_URL=http://localhost:8787 ROOM_CODE=K7MQ3XPD pnpm --filter server agent Ana
+```
+
+The dashboard's game controls (Start Game, Next Segment, mock scenarios) are
 `admin:*` events, ignored unless `ENABLE_ADMIN_EVENTS` is `"true"`.
 
 Game config comes from `vars` in `wrangler.jsonc` (read through
@@ -47,7 +94,7 @@ Worker-only vars:
 |-----|---------|--------|
 | `ENABLE_ADMIN_EVENTS` | `"false"` | `"true"` registers the dashboard's `admin:*` / `admin:mock-*` testing tools. They let any client advance phases, inject players or change deaths, so keep them off outside local testing; off, those events are ignored. |
 | `MAX_CONNECTIONS_PER_ROOM` | `"32"` | Upgrades beyond this many open sockets in one room get a 503 (players, dashboard tabs and mock players all count). |
-| `ACCESS_TOKEN` | unset | When set (`wrangler secret put ACCESS_TOKEN`, or `--var` locally), `/room/<code>` needs `?token=<value>` and answers 401 otherwise, before any Durable Object is created. Unset, rooms are open. |
+| `ACCESS_TOKEN` | unset | When set (`wrangler secret put ACCESS_TOKEN`, or `--var` locally), `/room/<code>` and `/rooms` need `?token=<value>` and answer 401 otherwise, before any Durable Object is reached. Unset, they are open. |
 
 Clients append the token from `EXPO_PUBLIC_ACCESS_TOKEN` (mobile),
 `VITE_PUBLIC_ACCESS_TOKEN` (dashboard, at build time) or `ACCESS_TOKEN`
@@ -76,11 +123,13 @@ into `dist/`.
 
 ### Before a public deploy
 
-The token and the connection cap only keep casual traffic out. Before
-sharing the URL beyond friends:
+The token, the unguessable room codes and the connection cap only keep
+casual traffic out. Before sharing the URL beyond friends:
 
-- Rate-limit `/room/*`: a Cloudflare rate-limiting rule, or the
-  `ratelimit` binding checked in the Worker before the Durable Object.
+- Rate-limit `/room/*` and `/rooms*`: a Cloudflare rate-limiting rule,
+  or the `ratelimit` binding checked in the Worker before the Durable
+  Object. Without it, room creation is unbounded (each room is one
+  storage key until it expires) and codes can be guessed by brute force.
 - Real authentication or per-game invites instead of one shared token.
 - Origin checks for browser clients (the dashboard), so other sites
   can't open sockets from their visitors' browsers.
@@ -91,7 +140,7 @@ sharing the URL beyond friends:
   game's timers keep the object awake anyway, and hibernating would lose
   the in-memory game. A finished game clears its deadlines, and when the
   last socket leaves a lobby or a finished game the room resets itself,
-  so the object can be evicted. A game in progress is kept (players have
+  so the object can be evicted (its expiry alarm wakes it later). A game in progress is kept (players have
   the 90s reconnect grace), and its timers keep the object awake.
 - **Resets are safe mid-narration.** A game generation
   (`segments/game-generation.ts`, bumped on finish and reset) is checked
@@ -102,9 +151,12 @@ sharing the URL beyond friends:
   themselves.
   A segment also ends only once: a repeated finish (double vote, a
   deadline racing the last action) is ignored.
-- **Nothing is persisted.** A deploy (or an eviction) resets every live
-  game; clients reconnect and are sent back to the join screen.
+- **Only rooms are persisted, not games.** A deploy (or an eviction)
+  resets every live game; clients reconnect into the same room and are
+  sent back to its join screen.
 - **The narrator is a dashboard tab.** There are no speakers on Workers:
   the clips play in the tab that clicked "Play narration here" for that
-  room. With none, clips are skipped. The dashboard joins the room of its
-  build-time `VITE_PUBLIC_ROOM_CODE` (default `default`).
+  room. With none, clips are skipped. The dashboard joins the room in its
+  URL's `?room=<code>` (its room panel creates or switches rooms by
+  reloading with a new one), falling back to the build-time
+  `VITE_PUBLIC_ROOM_CODE`.

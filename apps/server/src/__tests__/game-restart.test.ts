@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ClientToServerEvents, ServerToClientEvents } from '@repo/types';
-import type { Socket } from 'socket.io';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
+import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
-import type { SocketType } from '@/server/sockets';
 
 type Handler = (...args: unknown[]) => void;
 
@@ -24,41 +22,28 @@ function makeMockSocket(id: string) {
     broadcast: { emit: vi.fn() },
   };
   return {
-    socket: socket as unknown as Socket<
-      ClientToServerEvents,
-      ServerToClientEvents
-    >,
+    socket: socket satisfies Connection,
     fire: (event: string, ...args: unknown[]) => handlers.get(event)?.(...args),
   };
 }
 
 describe('in-place game restart', () => {
-  let mockIo: SocketType;
+  let mockIo: ConnectionHost;
   let game: Game;
   let segmentsManager: SegmentsManager;
   let gameEvents: GameEvents;
-  let connectionHandler:
-    | ((socket: Socket<ClientToServerEvents, ServerToClientEvents>) => void)
-    | undefined;
+  let connectionHandler: ((socket: Connection) => void) | undefined;
 
   beforeEach(() => {
     mockIo = {
-      on: vi.fn(
-        (
-          event: string,
-          cb: (
-            socket: Socket<ClientToServerEvents, ServerToClientEvents>
-          ) => void
-        ) => {
-          if (event === 'connection') {
-            connectionHandler = cb;
-          }
+      on: vi.fn((event: string, cb: (socket: Connection) => void) => {
+        if (event === 'connection') {
+          connectionHandler = cb;
         }
-      ),
+      }),
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
-      removeAllListeners: vi.fn(),
-    } as unknown as SocketType;
+    } satisfies ConnectionHost;
 
     const deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);

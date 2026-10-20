@@ -1,19 +1,16 @@
 import type {
-  ClientToServerEvents,
   Countdown,
   GamePhase,
   PendingPrompt,
   PlayerGameSnapshot,
-  ServerToClientEvents,
 } from '@repo/types';
-import type { Socket } from 'socket.io';
 import { resolvePlayerCount } from '@/config';
 import type { Game } from '@/core/game';
 import type { Player } from '@/core/player';
 import { MockScenario } from '@/segments/mock-scenario';
 import type { SegmentsManager } from '@/segments/segments-manager';
+import type { Connection, ConnectionHost } from '@/server/connection';
 import type { EventsActions } from '@/server/events-actions';
-import type { SocketType } from '@/server/sockets';
 
 /**
  * How long a disconnected player keeps their seat before the game treats
@@ -30,7 +27,7 @@ function resolveDisconnectGraceMs() {
 }
 
 export class GameEvents {
-  private readonly io: SocketType;
+  private readonly io: ConnectionHost;
   private readonly game: Game;
   private readonly eventsActions: EventsActions;
   private readonly segmentsManager: SegmentsManager;
@@ -42,7 +39,7 @@ export class GameEvents {
   constructor(
     game: Game,
     segmentsManager: SegmentsManager,
-    io: SocketType,
+    io: ConnectionHost,
     eventActions: EventsActions
   ) {
     this.io = io;
@@ -128,9 +125,7 @@ export class GameEvents {
     });
   }
 
-  setupGettersEvents(
-    socket: Socket<ClientToServerEvents, ServerToClientEvents>
-  ) {
+  setupGettersEvents(socket: Connection) {
     socket.on('lobby:get-players-list', () => {
       const playersArray = this.game.getClientPlayerList();
       socket.emit('lobby:players-list', playersArray, this.requiredPlayerCount);
@@ -163,10 +158,7 @@ export class GameEvents {
     });
   }
 
-  private handlePlayerJoin(
-    socket: Socket<ClientToServerEvents, ServerToClientEvents>,
-    name: string
-  ) {
+  private handlePlayerJoin(socket: Connection, name: string) {
     const trimmedName = typeof name === 'string' ? name.trim() : '';
     if (!trimmedName) {
       socket.emit('lobby:join-rejected', 'Invalid name');
@@ -230,10 +222,7 @@ export class GameEvents {
    * while its owner is disconnected — a connected player's seat cannot be
    * stolen by name.
    */
-  private reclaimSeatByName(
-    name: string,
-    socket: Socket<ClientToServerEvents, ServerToClientEvents>
-  ) {
+  private reclaimSeatByName(name: string, socket: Connection) {
     const wanted = name.trim().toLowerCase();
     const match = Array.from(this.game.getPlayerList().values()).find(
       (candidate) => candidate.getName().trim().toLowerCase() === wanted
@@ -258,7 +247,7 @@ export class GameEvents {
   private completeRejoin(
     player: Player,
     previousSid: string | undefined,
-    socket: Socket<ClientToServerEvents, ServerToClientEvents>
+    socket: Connection
   ) {
     this.clearGraceTimer(player.sessionToken);
 
@@ -293,7 +282,7 @@ export class GameEvents {
     }
   }
 
-  setupCupidEvents(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
+  setupCupidEvents(socket: Connection) {
     socket.on('cupid:lovers-pick', (selectedPlayers: string[]) => {
       const cupid = this.game.getSpecialRolePlayer('CUPID');
       if (
@@ -309,7 +298,9 @@ export class GameEvents {
 
       if (!this.isValidCupidSelection(selectedPlayers, cupid.getSocketId())) {
         socket.emit('alert:action-error', 'Invalid Cupid selection');
-        console.warn(`cupid:lovers-pick rejected from ${socket.id} (bad payload)`);
+        console.warn(
+          `cupid:lovers-pick rejected from ${socket.id} (bad payload)`
+        );
         return;
       }
 
@@ -335,12 +326,13 @@ export class GameEvents {
     });
   }
 
-  setupLoversEvents(
-    socket: Socket<ClientToServerEvents, ServerToClientEvents>
-  ) {
+  setupLoversEvents(socket: Connection) {
     socket.on('alert:lover-closed-alert', () => {
       if (!this.segmentsManager.isCurrentSegment('LOVERS')) {
-        socket.emit('alert:action-error', 'Lover acknowledgement is not allowed now');
+        socket.emit(
+          'alert:action-error',
+          'Lover acknowledgement is not allowed now'
+        );
         return;
       }
 
@@ -355,7 +347,7 @@ export class GameEvents {
     });
   }
 
-  setupSeerEvents(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
+  setupSeerEvents(socket: Connection) {
     socket.on('seer:picked-player', (targetSid: string) => {
       const seer = this.game.getSpecialRolePlayer('SEER');
       if (
@@ -372,7 +364,9 @@ export class GameEvents {
       const target = this.game.getPlayerBySocketId(targetSid);
       if (!target || !target.isAlive || target === seer) {
         socket.emit('alert:action-error', 'Invalid Seer target');
-        console.warn(`seer:picked-player rejected: invalid target ${targetSid}`);
+        console.warn(
+          `seer:picked-player rejected: invalid target ${targetSid}`
+        );
         return;
       }
 
@@ -381,9 +375,7 @@ export class GameEvents {
     });
   }
 
-  setupWerewolfEvents(
-    socket: Socket<ClientToServerEvents, ServerToClientEvents>
-  ) {
+  setupWerewolfEvents(socket: Connection) {
     socket.on('werewolf:player-voted', (targetPlayer: string) => {
       if (!this.isLivingWerewolfSender(socket)) {
         return;
@@ -429,9 +421,7 @@ export class GameEvents {
    * flushes those events from its NEW socket before `player:rejoin` lands,
    * and an unknown sender must not crash the process.
    */
-  private isLivingWerewolfSender(
-    socket: Socket<ClientToServerEvents, ServerToClientEvents>
-  ) {
+  private isLivingWerewolfSender(socket: Connection) {
     if (!this.segmentsManager.isCurrentSegment('WEREWOLF')) {
       socket.emit('alert:action-error', 'Werewolf vote is not allowed now');
       return false;
@@ -454,7 +444,7 @@ export class GameEvents {
     return !!target && target.isAlive && target.getRole() !== 'WEREWOLF';
   }
 
-  setupWitchEvents(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
+  setupWitchEvents(socket: Connection) {
     socket.on('witch:healed-player', () => {
       const witch = this.game.getSpecialRolePlayer('WITCH');
       if (
@@ -521,9 +511,7 @@ export class GameEvents {
     });
   }
 
-  setupDayVoteEvents(
-    socket: Socket<ClientToServerEvents, ServerToClientEvents>
-  ) {
+  setupDayVoteEvents(socket: Connection) {
     socket.on('day:player-voted', (targetPlayer: string) => {
       if (
         !this.segmentsManager.isCurrentSegment('DAY') ||
@@ -553,14 +541,14 @@ export class GameEvents {
     });
   }
 
-  setupHunterEvents(
-    socket: Socket<ClientToServerEvents, ServerToClientEvents>
-  ) {
+  setupHunterEvents(socket: Connection) {
     socket.on('hunter:killed-player', (targetSid: string) => {
       const hunter = this.game.getSpecialRolePlayer('HUNTER');
       const target = this.game.getPlayerBySocketId(targetSid);
       if (!hunter || hunter.getSocketId() !== socket.id) {
-        console.warn(`hunter:killed-player rejected from ${socket.id} (not hunter)`);
+        console.warn(
+          `hunter:killed-player rejected from ${socket.id} (not hunter)`
+        );
         return;
       }
 
@@ -570,7 +558,9 @@ export class GameEvents {
         target.getSocketId() === hunter.getSocketId() ||
         target.getRole() === 'HUNTER'
       ) {
-        console.warn(`hunter:killed-player rejected: invalid target ${targetSid}`);
+        console.warn(
+          `hunter:killed-player rejected: invalid target ${targetSid}`
+        );
         return;
       }
 
@@ -583,7 +573,7 @@ export class GameEvents {
     });
   }
 
-  setupMockEvents(socket: Socket<ClientToServerEvents, ServerToClientEvents>) {
+  setupMockEvents(socket: Connection) {
     socket.on('admin:mock-hunter-event', () => {
       const mockScenario = new MockScenario(
         this.game,
@@ -843,7 +833,9 @@ export class GameEvents {
       .getGameActions()
       .getDiscussionRemainingMs();
     if (phase === 'DAY' && discussionMs !== null) {
-      return { countdown: { phase: 'DAY-DISCUSSION', remainingMs: discussionMs } };
+      return {
+        countdown: { phase: 'DAY-DISCUSSION', remainingMs: discussionMs },
+      };
     }
 
     const remainingMs = this.segmentsManager.getRemainingDeadlineMs();
@@ -960,12 +952,5 @@ export class GameEvents {
     }
     this.graceTimers.clear();
     this.io.emit('game:restarted');
-  }
-
-  cleanup() {
-    // Also drops listeners registered outside GameEvents (the narrator's)
-    this.io.removeAllListeners();
-    this.pendingLoverAcks.clear();
-    this.setupSocketHandlers();
   }
 }

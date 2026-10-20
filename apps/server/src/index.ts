@@ -3,6 +3,7 @@ import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
+import type { ConnectionHost } from '@/server/connection';
 import { DashboardNarrator } from '@/server/dashboard-narrator';
 import { EventsActions } from '@/server/events-actions';
 import { startServer } from '@/server/http-server';
@@ -32,26 +33,33 @@ let deathManager: DeathManager;
 let eventsActions: EventsActions;
 let specialScenarios: SpecialScenarios;
 
+// Socket.io's Server satisfies the transport-agnostic host type; everything
+// below depends on that type only, so swapping the transport touches just
+// this assignment
+const host: ConnectionHost = io;
+
 // NARRATOR=dashboard plays the clips in a dashboard tab instead of on this
 // machine's speakers (the only option once the server runs on Workers).
 // DEBUG_AUDIO only applies to speaker playback
 const dashboardNarrator =
-  process.env.NARRATOR === 'dashboard' ? new DashboardNarrator(io) : undefined;
+  process.env.NARRATOR === 'dashboard'
+    ? new DashboardNarrator(host)
+    : undefined;
 const narrator = dashboardNarrator ?? new LocalNarrator();
 
 const initGame = () => {
   deathManager = new DeathManager();
-  game = new Game(io, deathManager);
+  game = new Game(host, deathManager);
   audioManager = new AudioManager(deathManager, narrator);
   specialScenarios = new SpecialScenarios(game, audioManager);
   segmentsManager = new SegmentsManager(
     game,
-    io,
+    host,
     audioManager,
     specialScenarios
   );
-  eventsActions = new EventsActions(game, segmentsManager, io);
-  events = new GameEvents(game, segmentsManager, io, eventsActions);
+  eventsActions = new EventsActions(game, segmentsManager, host);
+  events = new GameEvents(game, segmentsManager, host, eventsActions);
   events.setupSocketHandlers();
 };
 
@@ -69,12 +77,14 @@ process.stdin.on('data', (key: string) => {
 initGame();
 
 if (dashboardNarrator) {
-  io.on('connection', (socket) => {
-    socket.on('narrator:register', () => dashboardNarrator.attach(socket.id));
-    socket.on('narrator:done', (clipId) =>
-      dashboardNarrator.complete(socket.id, clipId)
+  host.on('connection', (connection) => {
+    connection.on('narrator:register', () =>
+      dashboardNarrator.attach(connection.id)
     );
-    socket.on('disconnect', () => dashboardNarrator.detach(socket.id));
+    connection.on('narrator:done', (clipId) =>
+      dashboardNarrator.complete(connection.id, clipId)
+    );
+    connection.on('disconnect', () => dashboardNarrator.detach(connection.id));
   });
 }
 

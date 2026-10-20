@@ -1,15 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ClientToServerEvents, ServerToClientEvents } from '@repo/types';
-import type { Socket } from 'socket.io';
 import { resolvePlayerCount } from '@/config';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
 import { SpecialScenarios } from '@/core/special-scenarios';
+import type { Broadcaster } from '@/server/broadcaster';
+import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
-import type { SocketType } from '@/server/sockets';
 
 const PLAYER_COUNT_ERROR = /PLAYER_COUNT/;
 
@@ -38,7 +37,7 @@ describe('role distribution', () => {
     const mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
-    } as unknown as SocketType;
+    } satisfies Broadcaster;
     const game = new Game(mockIo, new DeathManager());
     for (let index = 0; index < playerCount; index++) {
       game.addPlayer(`Player${index}`, `socket-${index}`);
@@ -85,9 +84,7 @@ describe('role distribution', () => {
 
 describe('PLAYER_COUNT driven auto-start', () => {
   type Handler = (...args: unknown[]) => void;
-  let connectionHandler:
-    | ((socket: Socket<ClientToServerEvents, ServerToClientEvents>) => void)
-    | undefined;
+  let connectionHandler: ((socket: Connection) => void) | undefined;
   let game: Game;
   let segmentsManager: SegmentsManager;
 
@@ -103,10 +100,7 @@ describe('PLAYER_COUNT driven auto-start', () => {
       broadcast: { emit: vi.fn() },
     };
     return {
-      socket: socket as unknown as Socket<
-        ClientToServerEvents,
-        ServerToClientEvents
-      >,
+      socket: socket satisfies Connection,
       fire: (event: string, ...args: unknown[]) =>
         handlers.get(event)?.(...args),
     };
@@ -116,21 +110,14 @@ describe('PLAYER_COUNT driven auto-start', () => {
     vi.stubEnv('PLAYER_COUNT', '4');
 
     const mockIo = {
-      on: vi.fn(
-        (
-          event: string,
-          cb: (
-            socket: Socket<ClientToServerEvents, ServerToClientEvents>
-          ) => void
-        ) => {
-          if (event === 'connection') {
-            connectionHandler = cb;
-          }
+      on: vi.fn((event: string, cb: (socket: Connection) => void) => {
+        if (event === 'connection') {
+          connectionHandler = cb;
         }
-      ),
+      }),
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
-    } as unknown as SocketType;
+    } satisfies ConnectionHost;
 
     const deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);

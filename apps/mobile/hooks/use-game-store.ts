@@ -178,6 +178,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     if (playerVote) {
       updateVote(targetPlayerSid);
+
       return;
     }
 
@@ -203,6 +204,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     socket.on('lobby:players-list', (players, requiredPlayerCount) => {
       set(() => {
         const { player } = usePlayerStore.getState();
+
         return {
           playersList: players.filter((p) => p.socketId !== player?.socketId),
           requiredPlayerCount,
@@ -261,6 +263,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       // The server already applied the fallback: this phase's prompt can no
       // longer be answered, so don't leave its modal actionable on screen.
       const { modalState, closeModal } = useModalStore.getState();
+
       if (
         modalState.open &&
         PHASE_PROMPT_MODALS[phase]?.includes(modalState.type)
@@ -296,12 +299,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   getPlayerNameFromSid: (socketId: string) => {
     const { playersList } = get();
     const foundPlayer = playersList.find((p) => p.socketId === socketId);
+
     if (!foundPlayer) {
       // Called from render paths: a dead player pruned from the roster may
       // still be referenced by an open modal, and a throw here unmounts the
       // whole app. Show a placeholder instead.
       return 'Joueur inconnu';
     }
+
     return foundPlayer.name;
   },
 }));

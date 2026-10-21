@@ -45,6 +45,7 @@ export class RecordingNarrator implements Narrator {
 
   play(clip: string) {
     this.clips.push(clip);
+
     return Promise.resolve();
   }
 }
@@ -123,6 +124,7 @@ export class GameSimulator {
     dawnRes.run = () => {
       const promise = origRun();
       this.pendingDawnPromise = promise;
+
       return promise;
     };
 
@@ -149,9 +151,11 @@ export class GameSimulator {
 
   roleOf(sid: string): Role | undefined {
     const player = this.game.getPlayerBySocketId(sid);
+
     if (!player) {
       return undefined;
     }
+
     try {
       return player.getRole();
     } catch {
@@ -161,6 +165,7 @@ export class GameSimulator {
 
   isLover(sid: string): boolean {
     const player = this.game.getPlayerBySocketId(sid);
+
     return player ? this.game.isPlayerLover(player) : false;
   }
 
@@ -181,6 +186,7 @@ export class GameSimulator {
     } finally {
       this.dispose();
     }
+
     return this;
   }
 
@@ -205,6 +211,7 @@ export class GameSimulator {
     }
 
     const count = this.opts.playerCount;
+
     for (let i = 0; i < count; i++) {
       const name = this.opts.playerNames[i] ?? `Player${i + 1}`;
       const sid = `sim-${i + 1}`;
@@ -230,7 +237,9 @@ export class GameSimulator {
     } else {
       process.env.DAY_VOTE_DELAY_MS = this.savedDelayEnv;
     }
+
     Math.random = this.savedMathRandom;
+
     if (this.savedHunterEnv === undefined) {
       delete process.env.DEV_FORCE_HUNTER;
     } else {
@@ -240,27 +249,35 @@ export class GameSimulator {
 
   private chooseLovers() {
     const spec = this.opts.lovers;
+
     if (spec === null) {
       return;
     }
+
     if (Array.isArray(spec)) {
       this.game.setLovers(spec);
+
       return;
     }
+
     const pool = [...this.players];
     let loverA: Player | undefined;
     let loverB: Player | undefined;
+
     if (spec === 'random-with-hunter') {
       const hunter = this.game.getSpecialRolePlayer('HUNTER');
+
       if (hunter) {
         loverA = hunter;
         loverB = this.pickRandom(pool.filter((p) => p !== hunter));
       }
     }
+
     if (!loverA || !loverB) {
       loverA = this.pickRandom(pool);
       loverB = this.pickRandom(pool.filter((p) => p !== loverA));
     }
+
     if (loverA && loverB) {
       this.game.setLovers([loverA.getSocketId(), loverB.getSocketId()]);
     }
@@ -284,12 +301,15 @@ export class GameSimulator {
       this.rounds++;
       await this.playSeerPhase();
       await this.playWerewolfPhase();
+
       if (this.game.checkIfWinner() !== null) {
         break;
       }
+
       await this.playWitchPhase('WITCH-HEAL');
       await this.playWitchPhase('WITCH-POISON');
       await this.playDayPhase();
+
       if (this.game.checkIfWinner() !== null) {
         break;
       }
@@ -300,6 +320,7 @@ export class GameSimulator {
     if (this.segmentsManager.getCurrentSegmentType() !== 'SEER') {
       return;
     }
+
     await this.segmentsManager.finishSegment();
     await this.flush();
   }
@@ -308,14 +329,18 @@ export class GameSimulator {
     const aliveWerewolves = this.game
       .getWerewolfList()
       .filter((w) => w.isAlive);
+
     if (aliveWerewolves.length === 0) {
       return; // no werewolves → villagers win (caught by the drive loop)
     }
+
     const target = this.pickWerewolfTarget();
+
     if (!target) {
       // No alive non-werewolf left to kill — a winner should already be set.
       return;
     }
+
     for (const werewolf of aliveWerewolves) {
       // handleWerewolfVote calls finishSegment() itself once all werewolves
       // agree, so the last vote advances the segment to the witch phase.
@@ -328,6 +353,7 @@ export class GameSimulator {
     const candidates = this.game
       .getAlivePlayers()
       .filter((p) => p.getRole() !== 'WEREWOLF');
+
     return this.pickRandom(candidates)?.getSocketId();
   }
 
@@ -335,8 +361,10 @@ export class GameSimulator {
     if (this.segmentsManager.getCurrentSegmentType() !== segment) {
       return; // segment was skipped
     }
+
     const witch = this.game.getSpecialRolePlayer('WITCH');
     const witchAlive = witch?.isAlive ?? false;
+
     if (segment === 'WITCH-HEAL') {
       if (
         witchAlive &&
@@ -352,11 +380,13 @@ export class GameSimulator {
         this.strategyDecide('witchPoisonStrategy')
       ) {
         const target = this.pickWitchPoisonTarget();
+
         if (target) {
           this.game.witchKill(target);
         }
       }
     }
+
     // The witch prompt was emitted to the witch's socket during the segment
     // action; the simulator decides proactively (heal / poison / skip) and
     // advances, mirroring the server handlers' effect without waiting on a
@@ -369,6 +399,7 @@ export class GameSimulator {
     const candidates = this.game
       .getAlivePlayers()
       .filter((p) => p.getRole() !== 'WITCH');
+
     return this.pickRandom(candidates)?.getSocketId();
   }
 
@@ -380,14 +411,18 @@ export class GameSimulator {
     // deaths + audio).
     let dawn = this.pendingDawnPromise;
     let waits = 0;
+
     while (!dawn && waits++ < 20) {
       await this.flush();
       dawn = this.pendingDawnPromise;
     }
+
     this.pendingDawnPromise = null;
+
     if (!dawn) {
       return; // segment never reached DAY
     }
+
     await this.resolveWithHunterPick(dawn);
 
     if (this.game.checkIfWinner() !== null) {
@@ -400,21 +435,26 @@ export class GameSimulator {
     // the village is at risk of being overrun, else a random alive player.
     const alive = this.game.getAlivePlayers();
     const target = this.pickDayVoteTarget(alive);
+
     if (!target) {
       return;
     }
+
     let lastVote: Promise<unknown> = Promise.resolve();
+
     for (const voter of alive) {
       const result = this.eventsActions.handleDayVote(
         voter.getSocketId(),
         target
       );
+
       // The vote that makes hasAllPlayersVoted() true triggers the day-vote
       // resolution (an async program); that's the promise to feed picks into.
       if (result && typeof (result as Promise<unknown>).then === 'function') {
         lastVote = result as Promise<unknown>;
       }
     }
+
     await this.resolveWithHunterPick(lastVote);
   }
 
@@ -446,22 +486,28 @@ export class GameSimulator {
     let scanned = 0;
     let iterations = 0;
     const maxIterations = 500;
+
     while (!settled && iterations++ < maxIterations) {
       await this.flush();
       const pending = this.io.eventsOfSince('hunter:pick-required', scanned);
+
       for (const record of pending) {
         scanned = this.io.emits.indexOf(record) + 1;
         const target = this.pickHunterTarget();
+
         if (target) {
           this.eventsActions.submitHunterPick(target);
         }
       }
     }
+
     await promise;
     await this.flush();
+
     // Capture deaths in order (lobby:player-died is emitted by Player.kill).
     for (const record of this.io.eventsOf('lobby:player-died')) {
       const sid = record.args[0];
+
       if (typeof sid === 'string' && !this.deathLog.includes(sid)) {
         this.deathLog.push(sid);
       }
@@ -470,9 +516,11 @@ export class GameSimulator {
 
   private pickHunterTarget(): string | undefined {
     const hunterSid = this.game.getSpecialRolePlayer('HUNTER')?.getSocketId();
+
     const candidates = this.game
       .getAlivePlayers()
       .filter((p) => p.getSocketId() !== hunterSid);
+
     return this.pickRandom(candidates)?.getSocketId();
   }
 
@@ -480,12 +528,15 @@ export class GameSimulator {
 
   private strategyDecide(opt: 'witchHealStrategy' | 'witchPoisonStrategy') {
     const strategy = this.opts[opt];
+
     if (strategy === 'always') {
       return true;
     }
+
     if (strategy === 'never') {
       return false;
     }
+
     return this.rng() < 0.5;
   }
 
@@ -493,6 +544,7 @@ export class GameSimulator {
     if (items.length === 0) {
       return undefined;
     }
+
     return items[Math.floor(this.rng() * items.length)];
   }
 }

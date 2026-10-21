@@ -39,6 +39,7 @@ export class MockScenario {
     const daySegmentIndex = this.segmentsManager.segments.findIndex(
       (s) => s.type === 'DAY'
     );
+
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();
   }
@@ -91,6 +92,7 @@ export class MockScenario {
     const daySegmentIndex = this.segmentsManager.segments.findIndex(
       (s) => s.type === 'DAY'
     );
+
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();
     setTimeout(() => {
@@ -134,6 +136,7 @@ export class MockScenario {
     const daySegmentIndex = this.segmentsManager.segments.findIndex(
       (s) => s.type === 'DAY'
     );
+
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();
     setTimeout(() => {
@@ -286,6 +289,7 @@ export class MockScenario {
     const daySegmentIndex = this.segmentsManager.segments.findIndex(
       (s) => s.type === 'DAY'
     );
+
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();
 
@@ -304,6 +308,7 @@ export class MockScenario {
   private createPlayer(name: string, sid: string, role: Role) {
     const player = new Player(name, sid, this.io);
     player.setRole(role);
+
     return player;
   }
 }

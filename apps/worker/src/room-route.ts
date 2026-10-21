@@ -18,10 +18,13 @@ export function routeRoom(pathname: string): RoomRoute {
   if (!pathname.startsWith(ROOM_PREFIX)) {
     return { kind: 'other' };
   }
+
   const code = pathname.slice(ROOM_PREFIX.length).replace(TRAILING_SLASH, '');
+
   if (!isRoomCode(code)) {
     return { kind: 'bad-code' };
   }
+
   return { kind: 'room', code: code.toUpperCase() };
 }
 

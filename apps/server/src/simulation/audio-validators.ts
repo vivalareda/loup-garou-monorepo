@@ -64,6 +64,7 @@ export function assertCompleted(sim: GameSimulator) {
  */
 export function assertDeathAudioInvariants(sim: GameSimulator) {
   const loverDied = sim.deathLog.some((sid) => sim.isLover(sid));
+
   if (loverDied) {
     expect(intersects(sim.audioLog, LOVER_CUES)).toBe(true);
   }
@@ -71,6 +72,7 @@ export function assertDeathAudioInvariants(sim: GameSimulator) {
   const hunterDied = sim.deathLog.some(
     (sid) => sim.roleOf(sid) === 'HUNTER'
   );
+
   if (hunterDied) {
     expect(intersects(sim.audioLog, HUNTER_CUES)).toBe(true);
   }
@@ -94,6 +96,7 @@ export function placeholderAudio(sim: GameSimulator): string[] {
 
 export function assertOnlyKnownPlaceholders(sim: GameSimulator) {
   const placeholders = placeholderAudio(sim);
+
   for (const file of placeholders) {
     expect(file).toBe(PLACEHOLDER_SENTINEL);
   }

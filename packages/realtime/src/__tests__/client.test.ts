@@ -27,15 +27,18 @@ class FakeWebSocket implements ClientWebSocket {
       FakeWebSocket.failNext = false;
       throw new Error('bad url');
     }
+
     this.url = url;
     FakeWebSocket.instances.push(this);
   }
 
   static latest() {
     const [socket] = FakeWebSocket.instances.slice(-1);
+
     if (!socket) {
       throw new Error('no socket was opened');
     }
+
     return socket;
   }
 
@@ -43,6 +46,7 @@ class FakeWebSocket implements ClientWebSocket {
     if (this.readyState !== OPEN) {
       throw new Error('not open');
     }
+
     this.sent.push(data);
   }
 
@@ -161,6 +165,7 @@ describe('RealtimeClient', () => {
 
     it('uses the global WebSocket when none is injected', () => {
       vi.stubGlobal('WebSocket', FakeWebSocket);
+
       try {
         createRealtimeClient(ROOM_URL);
         expect(FakeWebSocket.instances).toHaveLength(1);
@@ -201,6 +206,7 @@ describe('RealtimeClient', () => {
       const client = makeClient({
         bufferBeforeConnect: ['player:join', 'lobby:get-players-list'],
       });
+
       const socket = FakeWebSocket.latest();
       let sentWhenConnectFired: unknown[] = [];
       client.on('connect', () => {
@@ -234,6 +240,7 @@ describe('RealtimeClient', () => {
       const client = makeClient({
         bufferBeforeConnect: ['admin:next-segment'],
       });
+
       FakeWebSocket.latest().open();
       FakeWebSocket.latest().drop();
 
@@ -584,18 +591,23 @@ describe('RealtimeClient', () => {
       FakeWebSocket.latest().drop();
 
       const delays: number[] = [];
+
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const before = FakeWebSocket.instances.length;
         let waited = 0;
+
         while (FakeWebSocket.instances.length === before) {
           vi.advanceTimersByTime(10);
           waited += 10;
         }
+
         delays.push(waited);
+
         if (attempt < 4) {
           FakeWebSocket.latest().drop();
         }
       }
+
       expect(delays).toEqual([100, 200, 400, 500, 500]);
 
       FakeWebSocket.latest().open();
@@ -723,6 +735,7 @@ describe('RealtimeClient', () => {
       const client = makeClient({
         bufferBeforeConnect: ['lobby:get-players-list', 'agent:get-state'],
       });
+
       const callback = vi.fn();
       client.emit('lobby:get-players-list');
       client.emit('agent:get-state', callback);

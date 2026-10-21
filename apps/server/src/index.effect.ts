@@ -87,13 +87,16 @@ const makeGameState = Effect.gen(function* () {
   // Speaker playback only; this entry doesn't support NARRATOR=dashboard
   const audioManager = new AudioManager(deathManager, new LocalNarrator());
   const specialScenarios = new SpecialScenarios(game, audioManager);
+
   const segmentsManager = new SegmentsManager(
     game,
     socketServer,
     audioManager,
     specialScenarios
   );
+
   const eventsActions = new EventsActions(game, segmentsManager, socketServer);
+
   const gameEvents = new GameEvents(
     game,
     segmentsManager,
@@ -130,11 +133,13 @@ export const resetLoversAlertCount = Effect.gen(function* () {
 export const incrementLoversAlertCount = Effect.gen(function* () {
   const { loversAlertCount } = yield* GameState;
   yield* Ref.update(loversAlertCount, (n) => n + 1);
+
   return yield* Ref.get(loversAlertCount);
 });
 
 export const getLoversAlertCount = Effect.gen(function* () {
   const { loversAlertCount } = yield* GameState;
+
   return yield* Ref.get(loversAlertCount);
 });
 

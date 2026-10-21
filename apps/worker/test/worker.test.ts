@@ -22,6 +22,7 @@ class Client {
     this.socket = socket;
     socket.addEventListener('message', (message) => {
       this.frames.push(JSON.parse(String(message.data)) as Frame);
+
       for (const wake of this.waiters.splice(0)) {
         wake();
       }
@@ -43,16 +44,20 @@ class Client {
   /** The first frame matching `match`, waiting up to 2s for it. */
   async next(match: (frame: Frame) => boolean): Promise<Frame> {
     const deadline = Date.now() + 2000;
+
     while (Date.now() < deadline) {
       const found = this.frames.find(match);
+
       if (found) {
         return found;
       }
+
       await new Promise<void>((resolve) => {
         this.waiters.push(resolve);
         setTimeout(resolve, 50);
       });
     }
+
     throw new Error(`No matching frame; got ${JSON.stringify(this.frames)}`);
   }
 
@@ -74,12 +79,15 @@ const upgrade = { headers: { Upgrade: 'websocket' } };
 async function connect(code: string, upgraded?: Response) {
   const response = upgraded ?? (await request(`/room/${code}`, upgrade));
   const socket = response.webSocket;
+
   if (response.status !== 101 || !socket) {
     throw new Error(`Upgrade failed with ${response.status}`);
   }
+
   socket.accept();
   const client = new Client(socket);
   open.push(client);
+
   return client;
 }
 
@@ -91,11 +99,14 @@ type Room = { host: WebSocketHost; runtime: GameRuntime };
 /** Runs `inspect` inside a room's Durable Object, on its game. */
 function inRoom<R>(code: string, inspect: (room: Room) => R) {
   const stub = env.GAME_ROOM.get(env.GAME_ROOM.idFromName(code));
+
   return runInDurableObject(stub, (instance) => {
     const { room } = instance as unknown as { room: Room | undefined };
+
     if (!room) {
       throw new Error(`Room ${code} has no game`);
     }
+
     return inspect(room);
   });
 }
@@ -106,8 +117,10 @@ async function emptied(code: string) {
     if ((await inRoom(code, (room) => room.host.size)) === 0) {
       return;
     }
+
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
+
   throw new Error(`Room ${code} still has sockets`);
 }
 
@@ -116,13 +129,16 @@ async function startGame(code: string) {
   const players = await Promise.all(
     ['A', 'B', 'C', 'D'].map(() => connect(code))
   );
+
   for (const [index, player] of players.entries()) {
     player.emit('player:join', `Player ${index + 1}`);
     await player.event('lobby:player-data');
   }
+
   for (const player of players) {
     await player.event('lobby:villagers-list');
   }
+
   return players;
 }
 
@@ -134,6 +150,7 @@ function finishGame(code: string) {
         player.kill();
       }
     }
+
     return runtime.segmentsManager.isGameOver();
   });
 }
@@ -151,6 +168,7 @@ describe('routing', () => {
       const response = await request(path, {
         headers: { Upgrade: 'websocket' },
       });
+
       expect(response.status).toBe(400);
     }
   );
@@ -241,8 +259,10 @@ describe('admission', () => {
   });
 
   const withToken = { ...env, ACCESS_TOKEN: 's3cret' };
+
   const fetchWith = (url: string, workerEnv: Env & { ACCESS_TOKEN?: string }) =>
     worker.fetch(new Request(url, upgrade), workerEnv);
+
   const httpRoomUrl = (token?: string) =>
     roomUrl(ORIGIN, 'GATED', token).replace(WS_SCHEME, 'http');
 
@@ -260,6 +280,7 @@ describe('admission', () => {
       'GATED',
       await fetchWith(httpRoomUrl('s3cret'), withToken)
     );
+
     client.ping(1);
     await client.next((frame) => frame.pong === 1);
   });
@@ -302,9 +323,11 @@ describe('room lifecycle', () => {
   it('resets a finished game its last client left', async () => {
     const players = await startGame('LEFT-DONE');
     await finishGame('LEFT-DONE');
+
     for (const player of players) {
       player.close();
     }
+
     await emptied('LEFT-DONE');
     expect(
       await inRoom('LEFT-DONE', ({ runtime }) => ({
@@ -320,9 +343,11 @@ describe('room lifecycle', () => {
 
   it('keeps a game in progress for its players to come back', async () => {
     const players = await startGame('LEFT-MID');
+
     for (const player of players) {
       player.close();
     }
+
     await emptied('LEFT-MID');
     expect(
       await inRoom('LEFT-MID', ({ runtime }) => ({

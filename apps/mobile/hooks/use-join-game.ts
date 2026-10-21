@@ -22,10 +22,13 @@ export function translateJoinRejection(reason: string) {
  */
 export function submitJoin(name: string) {
   const trimmedName = name.trim();
+
   if (!trimmedName) {
     return false;
   }
+
   socket.emit('player:join', trimmedName);
+
   return true;
 }
 
@@ -41,6 +44,7 @@ export function registerJoinListeners(handlers: {
   const onPlayerData = (player: Player) => {
     handlers.onJoined(player);
   };
+
   const onRejection = (reason: string) => {
     handlers.onRejected(translateJoinRejection(reason));
   };

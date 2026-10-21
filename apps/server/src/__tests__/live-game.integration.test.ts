@@ -55,10 +55,13 @@ class EventRecorder {
   constructor(socket: Client) {
     socket.onAny((event, ...args) => {
       const waiter = this.waiters.get(event)?.shift();
+
       if (waiter) {
         waiter(args);
+
         return;
       }
+
       const queue = this.queues.get(event) ?? [];
       queue.push(args);
       this.queues.set(event, queue);
@@ -67,8 +70,10 @@ class EventRecorder {
 
   take(event: string, timeoutMs = 10_000): Promise<unknown[]> {
     const queued = this.queues.get(event);
+
     if (queued && queued.length > 0) {
       const args = queued.shift();
+
       return Promise.resolve(args ?? []);
     }
 
@@ -77,6 +82,7 @@ class EventRecorder {
         () => reject(new Error(`Timed out waiting for "${event}"`)),
         timeoutMs
       );
+
       const list = this.waiters.get(event) ?? [];
       list.push((args) => {
         clearTimeout(timer);
@@ -111,6 +117,7 @@ describe('live-socket happy path', () => {
     ]) {
       savedEnv[key] = process.env[key];
     }
+
     process.env.DEBUG_AUDIO = '1';
     process.env.DAY_VOTE_DELAY_MS = '0';
     process.env.LOVER_ALERT_DELAY_MS = '0';
@@ -121,16 +128,20 @@ describe('live-socket happy path', () => {
 
     // Same wiring as src/index.ts initGame(), with deterministic roles
     const deathManager = new DeathManager();
+
     const game = new Game(host, deathManager, {
       shuffleRoles: () => [...DETERMINISTIC_ROLES],
     });
+
     const audioManager = new AudioManager(deathManager);
+
     const segmentsManager = new SegmentsManager(
       game,
       host,
       audioManager,
       new SpecialScenarios(game, audioManager)
     );
+
     const eventsActions = new EventsActions(game, segmentsManager, host);
     new GameEvents(
       game,
@@ -147,6 +158,7 @@ describe('live-socket happy path', () => {
 
     players = Array.from({ length: 6 }, (_, index) => {
       const socket = connectLikeMobile(url);
+
       return {
         name: `P${index + 1}`,
         socket,
@@ -162,8 +174,10 @@ describe('live-socket happy path', () => {
     for (const player of players ?? []) {
       player.socket.disconnect();
     }
+
     wss?.close();
     httpServer?.close();
+
     for (const [key, value] of Object.entries(savedEnv)) {
       if (value === undefined) {
         delete process.env[key];
@@ -178,9 +192,11 @@ describe('live-socket happy path', () => {
     // deterministic role assignment) is stable
     for (const player of players) {
       player.socket.emit('player:join', player.name);
+
       const [data] = (await player.events.take('lobby:player-data')) as [
         { socketId: string; sessionToken?: string },
       ];
+
       player.sid = data.socketId;
       player.sessionToken = data.sessionToken ?? '';
     }
@@ -189,15 +205,18 @@ describe('live-socket happy path', () => {
       const [role] = (await player.events.take('player:role-assigned')) as [
         Role,
       ];
+
       player.role = role;
     }
   };
 
   const byRole = (role: Role) => {
     const matches = players.filter((player) => player.role === role);
+
     if (matches.length === 0) {
       throw new Error(`No player was assigned the ${role} role`);
     }
+
     return matches;
   };
 
@@ -228,6 +247,7 @@ describe('live-socket happy path', () => {
       const [wolf1LoverName] = (await wolf1.events.take(
         'alert:player-is-lover'
       )) as [string];
+
       expect(wolf1LoverName).toBe(wolf2.name);
       await wolf2.events.take('alert:player-is-lover');
       wolf1.socket.emit('alert:lover-closed-alert');
@@ -256,9 +276,11 @@ describe('live-socket happy path', () => {
       recoveredSocket.emit('werewolf:player-voted', villager1.sid);
       recoveredSocket.emit('player:rejoin', wolf2.sessionToken);
       await wolf2.events.take('alert:action-error');
+
       const [snapshot] = (await wolf2.events.take('game:snapshot')) as [
         PlayerGameSnapshot,
       ];
+
       expect(snapshot.phase).toBe('WEREWOLF');
       expect(snapshot.pendingPrompt).toEqual({ kind: 'WEREWOLF' });
       expect(snapshot.loverName).toBe(wolf1.name);
@@ -271,6 +293,7 @@ describe('live-socket happy path', () => {
       const [healTargetSid] = (await witch.events.take('witch:can-heal')) as [
         string,
       ];
+
       expect(healTargetSid).toBe(villager1.sid);
       witch.socket.emit('witch:skipped-heal');
       await witch.events.take('witch:pick-poison-player');
@@ -278,9 +301,11 @@ describe('live-socket happy path', () => {
 
       // --- Dawn: the victim dies and everyone hears about it ---------------
       await villager1.events.take('alert:player-is-dead');
+
       const [deaths] = (await cupid.events.take('night:deaths-announced')) as [
         DeathInfo[],
       ];
+
       expect(deaths).toHaveLength(1);
       expect(deaths[0]).toMatchObject({
         playerId: villager1.sid,
@@ -295,12 +320,14 @@ describe('live-socket happy path', () => {
           player.events.take('day:voting-phase-start')
         )
       );
+
       for (const voter of aliveVoters) {
         voter.socket.emit('day:player-voted', wolf1.sid);
       }
 
       // wolf1 is eliminated; wolf2 (the lover) dies of grief; the village wins
       const winners = [cupid, witch, villager1, ...byRole('VILLAGER').slice(1)];
+
       const results = (
         await Promise.all(
           winners.map(
@@ -309,9 +336,11 @@ describe('live-socket happy path', () => {
           )
         )
       ).map(([result]) => result);
+
       const [wolfResult] = (await wolf1.events.take('alert:player-lost')) as [
         GameEndResult,
       ];
+
       await wolf2.events.take('alert:player-lost');
 
       // A player who died on the FIRST night still received the winner event
@@ -321,6 +350,7 @@ describe('live-socket happy path', () => {
       // --- Role reveal -------------------------------------------------------
       expect(wolfResult.winningFaction).toBe('villagers');
       expect(wolfResult.players).toHaveLength(6);
+
       for (const player of players) {
         expect(wolfResult.players).toContainEqual(
           expect.objectContaining({
@@ -330,9 +360,11 @@ describe('live-socket happy path', () => {
           })
         );
       }
+
       const revealedVictim = wolfResult.players.find(
         (revealed) => revealed.socketId === villager1.sid
       );
+
       expect(revealedVictim?.isAlive).toBe(false);
 
       // --- Restart from a phone (any player, even a dead one) ---------------

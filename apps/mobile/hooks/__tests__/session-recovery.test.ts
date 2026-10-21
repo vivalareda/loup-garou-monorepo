@@ -16,8 +16,10 @@ vi.mock('@/utils/sockets', () => ({
     off: vi.fn((event: string, handler?: (...args: unknown[]) => void) => {
       if (!handler) {
         listeners.delete(event);
+
         return;
       }
+
       const list = (listeners.get(event) ?? []).filter((h) => h !== handler);
       listeners.set(event, list);
     }),
@@ -31,6 +33,7 @@ vi.mock('@/utils/sockets', () => ({
 const getSessionToken = vi.fn();
 const clearSessionToken = vi.fn().mockResolvedValue(undefined);
 const saveSessionToken = vi.fn().mockResolvedValue(undefined);
+
 vi.mock('@/utils/session', () => ({
   getSessionToken: () => getSessionToken(),
   clearSessionToken: () => clearSessionToken(),
@@ -157,6 +160,7 @@ describe('applyGameSnapshot', () => {
   it('routes to the result screens with the reveal after the game finished', async () => {
     const { applyGameSnapshot } = await import('@/hooks/game-snapshot');
     const { useGameStore } = await import('@/hooks/use-game-store');
+
     const gameResult = {
       winningFaction: 'villagers' as const,
       players: [],
@@ -201,6 +205,7 @@ describe('registerSessionRecovery', () => {
     const { registerSessionRecovery } = await import(
       '@/hooks/use-session-recovery'
     );
+
     return registerSessionRecovery(router);
   };
 

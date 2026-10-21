@@ -9,6 +9,7 @@ const DEFAULT_MAX_CONNECTIONS = 32;
 /** A positive integer var, or the default when unset or invalid. */
 function positiveInt(raw: string | undefined, fallback: number) {
   const value = Number(raw);
+
   return Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
@@ -31,18 +32,23 @@ export class GameRoom extends DurableObject<Env> {
     if (!isWebSocketUpgrade(request)) {
       return upgradeRequired();
     }
+
     const { host } = this.getRoom();
+
     const maxConnections = positiveInt(
       this.env.MAX_CONNECTIONS_PER_ROOM,
       DEFAULT_MAX_CONNECTIONS
     );
+
     if (host.size >= maxConnections) {
       return new Response('Room is full', { status: 503 });
     }
+
     // biome-ignore lint/correctness/noUndeclaredVariables: a workerd global
     const { 0: client, 1: server } = new WebSocketPair();
     server.accept();
     host.accept(server);
+
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -54,11 +60,13 @@ export class GameRoom extends DurableObject<Env> {
   private getRoom(): Room {
     if (!this.room) {
       const host = new WebSocketHost();
+
       const runtime = createGameRuntime({
         host,
         narrator: new DashboardNarrator(host),
         adminEvents: this.env.ENABLE_ADMIN_EVENTS === 'true',
       });
+
       // Registered after the game's own handlers, so a lobby player who
       // left is already removed when this runs
       host.on('connection', (connection) => {
@@ -66,6 +74,7 @@ export class GameRoom extends DurableObject<Env> {
       });
       this.room = { host, runtime };
     }
+
     return this.room;
   }
 
@@ -76,10 +85,13 @@ export class GameRoom extends DurableObject<Env> {
    */
   private resetIfAbandoned() {
     const room = this.room;
+
     if (!room || room.host.size > 0) {
       return;
     }
+
     const { segmentsManager } = room.runtime;
+
     if (!segmentsManager.hasStarted() || segmentsManager.hasFinished()) {
       console.log('Room is empty, resetting it');
       room.runtime.reset();

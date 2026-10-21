@@ -38,10 +38,13 @@ describe('role distribution', () => {
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
     } satisfies Broadcaster;
+
     const game = new Game(mockIo, new DeathManager());
+
     for (let index = 0; index < playerCount; index++) {
       game.addPlayer(`Player${index}`, `socket-${index}`);
     }
+
     return game;
   };
 
@@ -75,6 +78,7 @@ describe('role distribution', () => {
 
       // Every player ends up with exactly one role
       game.assignRoles();
+
       for (const player of game.getPlayerList().values()) {
         expect(player.role).not.toBeNull();
       }
@@ -84,21 +88,25 @@ describe('role distribution', () => {
 
 describe('PLAYER_COUNT driven auto-start', () => {
   type Handler = (...args: unknown[]) => void;
+
   let connectionHandler: ((socket: Connection) => void) | undefined;
   let game: Game;
   let segmentsManager: SegmentsManager;
 
   const makeMockSocket = (id: string) => {
     const handlers = new Map<string, Handler>();
+
     const socket = {
       id,
       on: vi.fn((event: string, cb: Handler) => {
         handlers.set(event, cb);
+
         return socket;
       }),
       emit: vi.fn(),
       broadcast: { emit: vi.fn() },
     };
+
     return {
       socket: socket satisfies Connection,
       fire: (event: string, ...args: unknown[]) =>
@@ -140,6 +148,7 @@ describe('PLAYER_COUNT driven auto-start', () => {
   const connect = (sid: string) => {
     const mock = makeMockSocket(sid);
     connectionHandler?.(mock.socket);
+
     return mock;
   };
 
@@ -150,9 +159,11 @@ describe('PLAYER_COUNT driven auto-start', () => {
     const sockets = Array.from({ length: 5 }, (_, index) =>
       connect(`p${index + 1}-sid`)
     );
+
     for (let index = 0; index < 3; index++) {
       sockets[index].fire('player:join', `P${index + 1}`);
     }
+
     expect(start).not.toHaveBeenCalled();
 
     sockets[3].fire('player:join', 'P4');

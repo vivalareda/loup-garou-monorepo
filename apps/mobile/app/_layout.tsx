@@ -14,6 +14,7 @@ const LIGHT_THEME = {
   ...DefaultTheme,
   colors: NAV_THEME.light,
 };
+
 const DARK_THEME = {
   ...DarkTheme,
   colors: NAV_THEME.dark,
@@ -36,6 +37,7 @@ export default function RootLayout() {
     if (Platform.OS === 'web') {
       document.documentElement.classList.add('bg-background');
     }
+
     setAndroidNavigationBar(colorScheme);
     setIsColorSchemeLoaded(true);
     hasMounted.current = true;
@@ -44,6 +46,7 @@ export default function RootLayout() {
   if (!isColorSchemeLoaded) {
     return null;
   }
+
   return (
     <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
       <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />

@@ -24,10 +24,13 @@ export function attachWebSocketServer(
 
   httpServer.on('upgrade', (request, socket, head) => {
     const pathname = (request.url ?? '').split('?')[0] ?? '';
+
     if (parseRoomPath(pathname) === null) {
       socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n');
+
       return;
     }
+
     wss.handleUpgrade(request, socket, head, (ws) => {
       host.accept(ws);
     });

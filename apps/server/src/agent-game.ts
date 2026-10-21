@@ -7,11 +7,13 @@ import {
 } from '@repo/types';
 
 const serverUrl = process.env.SERVER_URL ?? 'http://localhost:3000';
+
 const url = roomUrl(
   serverUrl,
   process.env.ROOM_CODE || undefined,
   process.env.ACCESS_TOKEN || undefined
 );
+
 const names = process.argv.slice(2).length >= 6
   ? process.argv.slice(2)
   : ['agent-1', 'agent-2', 'agent-3', 'agent-4', 'agent-5', 'agent-6'];
@@ -22,6 +24,7 @@ let finished = false;
 
 const pick = (players: SnapshotPlayer[], selfId: string) => {
   const alive = players.filter((player) => player.isAlive && player.socketId !== selfId);
+
   return alive[Math.floor(Math.random() * alive.length)];
 };
 
@@ -29,11 +32,13 @@ const act = (client: (typeof clients)[number], snapshot: PlayerGameSnapshot) => 
   if (finished || !snapshot.pendingPrompt || !snapshot.self.socketId) return;
   const prompt = snapshot.pendingPrompt;
   const key = `${snapshot.phase}:${prompt.kind}`;
+
   if (client.acted === key) return;
   client.acted = key;
 
   const selfId = snapshot.self.socketId;
   const target = pick(snapshot.players, selfId);
+
   if (prompt.kind === 'CUPID') {
     const choices = snapshot.players.filter((p) => p.isAlive && p.socketId !== selfId).slice(0, 2);
     client.socket.emit('cupid:lovers-pick', choices.map((p) => p.socketId));
@@ -63,23 +68,31 @@ for (const name of names) {
       });
     }, 50);
   });
+
   const requestState = () => socket.emit('agent:get-state', (snapshot: PlayerGameSnapshot) => {
     client.acted = '';
     process.stdout.write(`${JSON.stringify({ agent: name, ...snapshot })}\\n`);
+
     if (snapshot.phase === 'FINISHED') finished = true;
     else act(client, snapshot);
   });
+
   socket.on('game:phase-changed', requestState);
   const promptEvents: (keyof ServerToClientEvents)[] = ['cupid:pick-required', 'werewolf:pick-required', 'witch:can-heal', 'witch:pick-poison-player', 'hunter:pick-required', 'day:voting-phase-start'];
+
   for (const promptEvent of promptEvents) {
     socket.on(promptEvent, requestState);
   }
+
   socket.on('game:snapshot', (snapshot: PlayerGameSnapshot) => {
     process.stdout.write(`${JSON.stringify({ agent: name, ...snapshot })}\n`);
+
     if (snapshot.phase === 'FINISHED') {
       finished = true;
+
       return;
     }
+
     act(client, snapshot);
   });
   socket.on('lobby:player-data', () => {

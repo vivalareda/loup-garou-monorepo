@@ -45,9 +45,11 @@ describe('Post day-vote death scenarios (notes.md)', () => {
     const player = game.addPlayer(name, sid);
     player.setRole(role);
     game.setPlayerTeams(player);
+
     if (role === 'HUNTER' || role === 'WITCH' || role === 'CUPID') {
       game.setSpecialRolePlayer(player);
     }
+
     return player;
   };
 
@@ -55,6 +57,7 @@ describe('Post day-vote death scenarios (notes.md)', () => {
     (mockIo.to as unknown as ReturnType<typeof vi.fn>).mock.calls.map(
       (call) => call[0]
     );
+
   const playedAudio = () => playAudioSpy.mock.calls.map((call) => call[0]);
 
   it('village killed hunter → pauses for revenge pick, then kills the target', async () => {
@@ -214,6 +217,7 @@ describe('Post day-vote death scenarios (notes.md)', () => {
     const tieCall = emitSpy.mock.calls.find(
       (call) => call[0] === 'day:vote-tie'
     );
+
     expect(tieCall?.[1]).toEqual(
       expect.arrayContaining(['VillagerA', 'Werewolf'])
     );

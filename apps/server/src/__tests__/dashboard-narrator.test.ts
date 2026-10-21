@@ -29,6 +29,7 @@ describe('DashboardNarrator', () => {
       settled = true;
     });
     await vi.advanceTimersByTimeAsync(0);
+
     return settled;
   };
 

@@ -17,6 +17,7 @@ describe('Night dawn scenarios', () => {
 
   beforeEach(() => {
     emitSpy = vi.fn();
+
     const mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: emitSpy,
@@ -59,6 +60,7 @@ describe('Night dawn scenarios', () => {
     const daySegmentIndex = segmentsManager.segments.findIndex(
       (s) => s.type === 'DAY'
     );
+
     segmentsManager.currentSegment = daySegmentIndex;
     await segmentsManager.playSegment();
     await tick();
@@ -95,6 +97,7 @@ describe('Night dawn scenarios', () => {
     const daySegmentIndex = segmentsManager.segments.findIndex(
       (s) => s.type === 'DAY'
     );
+
     segmentsManager.currentSegment = daySegmentIndex;
     segmentsManager.playSegment();
     await tick();

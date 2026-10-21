@@ -13,6 +13,7 @@ import { useModalStore } from '@/hooks/use-modal-store';
 
 export function GlobalModal() {
   const { isOpen, modalData, closeModal } = useModalStore();
+
   const {
     villagersList,
     playersList,
@@ -22,6 +23,7 @@ export function GlobalModal() {
     isVotingComplete,
     resetVoting,
   } = useGameStore();
+
   const [selection, setSelection] = useState<string[]>([]);
   const [isDelayActive, setIsDelayActive] = useState(false);
   const totalWerewolves = playersList.length - villagersList.length + 1;
@@ -38,6 +40,7 @@ export function GlobalModal() {
         modalData.onConfirm(selection); // Pass full array for multi-selection
       }
     }
+
     closeModal();
   }, [modalData, selection, closeModal]);
 
@@ -50,6 +53,7 @@ export function GlobalModal() {
     if (modalData?.onConfirm) {
       modalData.onConfirm('yes');
     }
+
     closeModal();
   }, [modalData, closeModal]);
 
@@ -57,12 +61,14 @@ export function GlobalModal() {
     if (modalData?.onConfirm) {
       modalData.onConfirm('no');
     }
+
     closeModal();
   }, [modalData, closeModal]);
 
   useEffect(() => {
     if (modalData?.buttonDelay) {
       setIsDelayActive(true);
+
       const timer = setTimeout(() => {
         setIsDelayActive(false);
       }, modalData.buttonDelay);
@@ -113,6 +119,7 @@ export function GlobalModal() {
     if (modalData.selectionCount && !isSelected(item)) {
       return selection.length >= modalData.selectionCount;
     }
+
     return false;
   };
 
@@ -135,9 +142,11 @@ export function GlobalModal() {
   const handleSelection = (item: string) => {
     if (isSelected(item)) {
       setSelection(selection.filter((i) => i !== item));
+
       if (modalData.werewolfModal) {
         sendVote(item);
       }
+
       return;
     }
 
@@ -156,6 +165,7 @@ export function GlobalModal() {
   const renderPlayerList = () => {
     if (!(modalData.data && Array.isArray(modalData.data))) {
       console.error('Modal data is not an array:', modalData.data);
+
       return null;
     }
 

@@ -121,6 +121,7 @@ export const setupSocketEventHandlers = (
           game['io'],
           eventsActions
         );
+
         mockScenario.runWerewolfKillHunter();
       }).pipe(Effect.runPromise);
     });
@@ -133,6 +134,7 @@ export const setupSocketEventHandlers = (
           game['io'],
           eventsActions
         );
+
         mockScenario.runWerewolfKillLover();
       }).pipe(Effect.runPromise);
     });
@@ -145,6 +147,7 @@ export const setupSocketEventHandlers = (
           game['io'],
           eventsActions
         );
+
         mockScenario.runWerewolfKillLoverSecondIsHunter();
       }).pipe(Effect.runPromise);
     });
@@ -157,6 +160,7 @@ export const setupSocketEventHandlers = (
           game['io'],
           eventsActions
         );
+
         mockScenario.runWerewolfKillLoverWhoIsHunter();
       }).pipe(Effect.runPromise);
     });
@@ -169,6 +173,7 @@ export const setupSocketEventHandlers = (
           game['io'],
           eventsActions
         );
+
         mockScenario.runDayVoteKillHunter();
       }).pipe(Effect.runPromise);
     });
@@ -181,6 +186,7 @@ export const setupSocketEventHandlers = (
           game['io'],
           eventsActions
         );
+
         mockScenario.runDayVoteKillLover();
       }).pipe(Effect.runPromise);
     });
@@ -193,6 +199,7 @@ export const setupSocketEventHandlers = (
           game['io'],
           eventsActions
         );
+
         mockScenario.runDayVoteKillLoverWhoIsHunter();
       }).pipe(Effect.runPromise);
     });
@@ -205,6 +212,7 @@ export const setupSocketEventHandlers = (
           game['io'],
           eventsActions
         );
+
         mockScenario.runDayVoteKillLoverSecondIsHunter();
       }).pipe(Effect.runPromise);
     });
@@ -217,6 +225,7 @@ export const setupSocketEventHandlers = (
           game['io'],
           eventsActions
         );
+
         mockScenario.runHunterRevengeKillsLover();
       }).pipe(Effect.runPromise);
     });

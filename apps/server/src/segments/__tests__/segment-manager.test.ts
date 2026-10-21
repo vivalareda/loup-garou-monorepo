@@ -151,6 +151,7 @@ describe('SegmentsManager', () => {
 
     // Each is overridable by its own env var without touching the others
     vi.stubEnv('DAY_VOTE_TIMEOUT_MS', '5000');
+
     try {
       expect(resolveSegmentTimeoutMs('DAY')).toBe(5000);
       expect(resolveSegmentTimeoutMs('CUPID')).toBe(120_000);
@@ -160,6 +161,7 @@ describe('SegmentsManager', () => {
 
     // The global override still wins over defaults for every segment
     vi.stubEnv('SEGMENT_TIMEOUT_MS', '1234');
+
     try {
       expect(resolveSegmentTimeoutMs('CUPID')).toBe(1234);
       expect(resolveSegmentTimeoutMs('DAY')).toBe(1234);
@@ -174,6 +176,7 @@ describe('SegmentsManager', () => {
     vi.stubEnv('LOVERS_TIMEOUT_MS', '500');
     vi.spyOn(segmentsManager, 'playSegment').mockResolvedValue(undefined);
     vi.mocked(mockGame.getLovers).mockReturnValue([]);
+
     const schedule = (
       segmentsManager as unknown as {
         scheduleDeadline: (segment: string) => void;

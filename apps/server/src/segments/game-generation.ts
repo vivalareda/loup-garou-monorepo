@@ -30,6 +30,7 @@ export class GameGeneration {
 
   bump() {
     this.value++;
+
     for (const listener of this.listeners) {
       listener();
     }

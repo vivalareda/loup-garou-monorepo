@@ -84,6 +84,7 @@ export const resetLoversAlertCount = Effect.gen(function* () {
 export const incrementLoversAlertCount = Effect.gen(function* () {
   const { loversAlertCount } = yield* GameState;
   yield* Ref.update(loversAlertCount, (n) => n + 1);
+
   return yield* Ref.get(loversAlertCount);
 });
 
@@ -92,5 +93,6 @@ export const incrementLoversAlertCount = Effect.gen(function* () {
  */
 export const getLoversAlertCount = Effect.gen(function* () {
   const { loversAlertCount } = yield* GameState;
+
   return yield* Ref.get(loversAlertCount);
 });

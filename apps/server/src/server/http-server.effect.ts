@@ -36,6 +36,7 @@ const make = Effect.gen(function* () {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
         res.end('Werewolf Game Server');
       });
+
       return httpServer;
     }),
     (server) =>

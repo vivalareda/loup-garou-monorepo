@@ -81,6 +81,7 @@ describe('Audio segment order', () => {
       const daySegmentIndex = segmentsManager.segments.findIndex(
         (s) => s.type === 'DAY'
       );
+
       segmentsManager.currentSegment = daySegmentIndex;
 
       // A hunter victim would park the dawn on the revenge pick; this test
@@ -88,9 +89,11 @@ describe('Audio segment order', () => {
       const victim = players.find(
         (player, index) => index >= 2 && player.getRole() !== 'HUNTER'
       );
+
       if (!victim) {
         throw new Error('no non-hunter victim available');
       }
+
       game.addPendingDeath(victim.getSocketId(), 'WEREWOLVES');
 
       const playAudioSpy = vi.spyOn(audioManager, 'playAudio');
@@ -124,6 +127,7 @@ describe('Audio segment order', () => {
       const daySegmentIndex = segmentsManager.segments.findIndex(
         (s) => s.type === 'DAY'
       );
+
       segmentsManager.currentSegment = daySegmentIndex;
 
       const audioManagerSpy = vi.spyOn(audioManager, 'playSegmentAudio');

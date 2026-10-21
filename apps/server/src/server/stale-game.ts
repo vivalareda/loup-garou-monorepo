@@ -18,9 +18,11 @@ export function narration(
         if (error instanceof StaleGame) {
           return error;
         }
+
         throw error;
       }
     );
+
   return Effect.flatMap(Effect.promise(settled), (stale) =>
     stale ? Effect.fail(stale) : Effect.void
   );

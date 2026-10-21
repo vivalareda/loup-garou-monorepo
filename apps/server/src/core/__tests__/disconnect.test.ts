@@ -17,10 +17,12 @@ describe('Game.handleDisconnect', () => {
     mockIo = {
       to: vi.fn((sid: string) => {
         let emit = socketEmit.get(sid);
+
         if (!emit) {
           emit = vi.fn();
           socketEmit.set(sid, emit);
         }
+
         return { emit };
       }),
       emit: ioEmitSpy,
@@ -37,6 +39,7 @@ describe('Game.handleDisconnect', () => {
     const player = game.addPlayer(name, sid);
     player.setRole(role);
     game.setPlayerTeams(player);
+
     return player;
   };
 
@@ -113,9 +116,11 @@ describe('Game.handleDisconnect', () => {
 
     // Kill once
     game.handleDisconnect('a-sid');
+
     const firstDeathEmits = ioEmitSpy.mock.calls.filter(
       (c) => c[0] === 'lobby:player-died'
     ).length;
+
     const firstSocketEmits = socketEmit.get('a-sid')?.mock.calls.filter(
       (c) => c[0] === 'alert:player-is-dead'
     ).length;
@@ -126,6 +131,7 @@ describe('Game.handleDisconnect', () => {
     const secondDeathEmits = ioEmitSpy.mock.calls.filter(
       (c) => c[0] === 'lobby:player-died'
     ).length;
+
     const secondSocketEmits = socketEmit.get('a-sid')?.mock.calls.filter(
       (c) => c[0] === 'alert:player-is-dead'
     ).length;

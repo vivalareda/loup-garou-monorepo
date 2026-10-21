@@ -49,9 +49,11 @@ describe('Night dawn death scenarios', () => {
     const player = game.addPlayer(name, sid);
     player.setRole(role);
     game.setPlayerTeams(player);
+
     if (role === 'HUNTER' || role === 'WITCH' || role === 'CUPID') {
       game.setSpecialRolePlayer(player);
     }
+
     return player;
   };
 
@@ -59,6 +61,7 @@ describe('Night dawn death scenarios', () => {
     const daySegmentIndex = segmentsManager.segments.findIndex(
       (s) => s.type === 'DAY'
     );
+
     segmentsManager.currentSegment = daySegmentIndex;
   };
 

@@ -13,15 +13,18 @@ type Handler = (...args: unknown[]) => void;
 
 function makeMockSocket(id: string) {
   const handlers = new Map<string, Handler>();
+
   const socket = {
     id,
     on: vi.fn((event: string, cb: Handler) => {
       handlers.set(event, cb);
+
       return socket;
     }),
     emit: vi.fn(),
     broadcast: { emit: vi.fn() },
   };
+
   return {
     socket: socket satisfies Connection,
     fire: (event: string, ...args: unknown[]) => handlers.get(event)?.(...args),
@@ -70,6 +73,7 @@ describe('Seer phase', () => {
   const connect = (sid: string) => {
     const mock = makeMockSocket(sid);
     connectionHandler?.(mock.socket);
+
     return mock;
   };
 
@@ -81,17 +85,21 @@ describe('Seer phase', () => {
     const player = game.addPlayer(name, sid);
     player.setRole(role);
     game.setPlayerTeams(player);
+
     if (role !== 'WEREWOLF' && role !== 'VILLAGER') {
       game.setSpecialRolePlayer(player);
     }
+
     return player;
   };
 
   const setSegment = (type: string) => {
     (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
+
     const index = segmentsManager.segments.findIndex(
       (segment) => segment.type === type
     );
+
     segmentsManager.currentSegment = index;
   };
 
@@ -110,6 +118,7 @@ describe('Seer phase', () => {
     addPlayer('Wolf', 'wolf-sid', 'WEREWOLF');
     addPlayer('A', 'a-sid', 'VILLAGER');
     setSegment('SEER');
+
     const finish = vi
       .spyOn(segmentsManager, 'finishSegment')
       .mockResolvedValue(undefined);
@@ -129,6 +138,7 @@ describe('Seer phase', () => {
     addPlayer('Seer', 'seer-sid', 'SEER');
     addPlayer('Wolf', 'wolf-sid', 'WEREWOLF');
     setSegment('SEER');
+
     const finish = vi
       .spyOn(segmentsManager, 'finishSegment')
       .mockResolvedValue(undefined);
@@ -162,11 +172,13 @@ describe('Seer phase', () => {
     const dead = addPlayer('Dead', 'dead-sid', 'VILLAGER');
     dead.setIsAlive(false);
     setSegment('SEER');
+
     const finish = vi
       .spyOn(segmentsManager, 'finishSegment')
       .mockResolvedValue(undefined);
 
     const seerSocket = connect('seer-sid');
+
     for (const target of ['dead-sid', 'nobody-sid', 'seer-sid']) {
       seerSocket.fire('seer:picked-player', target);
       expect(seerSocket.socket.emit).toHaveBeenCalledWith(
@@ -174,6 +186,7 @@ describe('Seer phase', () => {
         'Invalid Seer target'
       );
     }
+
     expect(finish).not.toHaveBeenCalled();
   });
 
@@ -182,6 +195,7 @@ describe('Seer phase', () => {
     addPlayer('A', 'a-sid', 'VILLAGER');
     seer.setIsAlive(false);
     setSegment('SEER');
+
     const advance = vi
       .spyOn(segmentsManager, 'advanceSegment')
       .mockResolvedValue(undefined);
@@ -194,6 +208,7 @@ describe('Seer phase', () => {
   it('auto-skips the segment when no seer exists', async () => {
     addPlayer('A', 'a-sid', 'VILLAGER');
     setSegment('SEER');
+
     const advance = vi
       .spyOn(segmentsManager, 'advanceSegment')
       .mockResolvedValue(undefined);
@@ -207,10 +222,13 @@ describe('Seer phase', () => {
     const seerSegment = segmentsManager.segments.find(
       (segment) => segment.type === 'SEER'
     );
+
     expect(seerSegment).toBeDefined();
+
     if (!seerSegment) {
       return;
     }
+
     segmentsManager.markFirstNightSegment(seerSegment);
     expect(seerSegment.skip).toBe(false);
   });

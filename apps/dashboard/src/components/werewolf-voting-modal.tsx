@@ -67,6 +67,7 @@ export function WerewolfVotingModal({
 
       if (playerVote) {
         updateVote(targetPlayerSocketId);
+
         return;
       }
 
@@ -115,8 +116,10 @@ export function WerewolfVotingModal({
   const handleVote = (playerName: string) => {
     // Find the target player's socket ID
     const targetPlayer = playersList.find((p) => p.name === playerName);
+
     if (!targetPlayer) {
       console.error(`Player ${playerName} not found in players list`);
+
       return;
     }
 

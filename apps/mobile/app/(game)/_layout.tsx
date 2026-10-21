@@ -24,6 +24,7 @@ export default function GameLayout() {
     pendingRedirect,
     setPendingRedirect,
   } = useGameStore();
+
   const { modalState } = useModalStore();
   const connectionStatus = useConnectionStore((state) => state.status);
   const router = useRouter();
@@ -31,6 +32,7 @@ export default function GameLayout() {
   useEffect(() => {
     initializeSocketListeners();
     socket.emit('lobby:get-players-list');
+
     return cleanupSocketListeners;
   }, [initializeSocketListeners, cleanupSocketListeners]);
 

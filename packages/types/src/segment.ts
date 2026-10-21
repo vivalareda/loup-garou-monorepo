@@ -9,6 +9,7 @@ export const segments = [
 ] as const;
 
 type WitchPhase = 'HEAL' | 'POISON';
+
 type BaseSegment = (typeof segments)[number];
 
 export type SegmentType = Exclude<BaseSegment, 'WITCH'> | `WITCH-${WitchPhase}`;

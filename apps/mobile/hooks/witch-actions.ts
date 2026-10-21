@@ -10,6 +10,7 @@
 
 /** Loose emit signature — the component bridges it to its typed socket. */
 export type WitchEmit = (event: string, ...args: unknown[]) => void;
+
 export type CloseModal = () => void;
 
 /**

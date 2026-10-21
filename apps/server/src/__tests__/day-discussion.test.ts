@@ -13,15 +13,18 @@ type Handler = (...args: unknown[]) => void;
 
 function makeMockSocket(id: string) {
   const handlers = new Map<string, Handler>();
+
   const socket = {
     id,
     on: vi.fn((event: string, cb: Handler) => {
       handlers.set(event, cb);
+
       return socket;
     }),
     emit: vi.fn(),
     broadcast: { emit: vi.fn() },
   };
+
   return {
     socket: socket satisfies Connection,
     fire: (event: string, ...args: unknown[]) => handlers.get(event)?.(...args),
@@ -76,6 +79,7 @@ describe('day discussion and countdowns', () => {
   const connect = (sid: string) => {
     const mock = makeMockSocket(sid);
     connectionHandler?.(mock.socket);
+
     return mock;
   };
 
@@ -87,6 +91,7 @@ describe('day discussion and countdowns', () => {
     const player = game.addPlayer(name, sid);
     player.setRole(role);
     game.setPlayerTeams(player);
+
     return player;
   };
 
@@ -230,7 +235,9 @@ describe('day discussion and countdowns', () => {
       mockIo,
       new EventsActions(game, segmentsManager, mockIo)
     );
+
     const player = game.getPlayerBySocketId('a-sid');
+
     if (!player) {
       throw new Error('player not found');
     }

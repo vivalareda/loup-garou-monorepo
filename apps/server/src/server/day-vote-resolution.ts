@@ -42,6 +42,7 @@ export class DayVoteResolution {
 
     this.pendingHunterPick = null;
     Deferred.unsafeDone(pick, Effect.succeed(targetSid));
+
     return true;
   }
 
@@ -51,6 +52,7 @@ export class DayVoteResolution {
 
   private cancelPendingPick() {
     const pick = this.pendingHunterPick;
+
     if (pick) {
       this.pendingHunterPick = null;
       Deferred.unsafeDone(pick, Effect.fail(new StaleGame()));
@@ -138,6 +140,7 @@ export class DayVoteResolution {
       const pick = yield* Deferred.make<string, StaleGame>();
       this.pendingHunterPick = pick;
       const hunter = this.game.getSpecialRolePlayer('HUNTER');
+
       if (hunter) {
         this.io.to(hunter.getSocketId()).emit('hunter:pick-required');
       }
@@ -146,6 +149,7 @@ export class DayVoteResolution {
         Deferred.await(pick),
         Duration.seconds(60)
       );
+
       // A newer pick may be pending by now: only clear our own
       if (this.pendingHunterPick === pick) {
         this.pendingHunterPick = null;
@@ -153,6 +157,7 @@ export class DayVoteResolution {
 
       if (result._tag === 'None') {
         console.warn('Hunter pick timed out — skipping revenge kill');
+
         return null;
       }
 

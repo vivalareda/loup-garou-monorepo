@@ -8,6 +8,7 @@ export function useWerewolfVotes() {
   const [isVotingComplete, setIsVotingComplete] = useState(false);
   const [votingResult, setVotingResult] = useState<string | null>(null);
   const mockModal = process.env.EXPO_PUBLIC_MOCK_MODAL === 'true';
+
   const [mockVotes, setMockVotes] = useState<WerewolvesVoteState>({
     'socket-id-1': 1,
     'socket-id-2': 2,
@@ -19,8 +20,10 @@ export function useWerewolfVotes() {
   useEffect(() => {
     if (mockModal) {
       setVotes(mockVotes);
+
       return;
     }
+
     socket.on('werewolf:current-votes', (currentVotes: WerewolvesVoteState) => {
       setVotes(currentVotes);
     });
@@ -77,6 +80,7 @@ export function useWerewolfVotes() {
     (targetPlayerSid: string) => {
       if (playerVote) {
         updateVote(targetPlayerSid);
+
         return;
       }
 

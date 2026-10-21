@@ -55,12 +55,15 @@ describe('GameActions', () => {
         timestamp: new Date(),
       },
     ];
+
     const mockGame = {
       processPendingDeaths: vi.fn().mockReturnValue(deaths),
     } as unknown as Game;
+
     const mockIo = {
       emit: vi.fn(),
     } as unknown as SocketType;
+
     const gameActions = new GameActions(
       mockGame,
       mockIo,
@@ -77,17 +80,21 @@ describe('GameActions', () => {
       getSocketId: () => 'lover-1-sid',
       getName: () => 'Alice',
     };
+
     const lover2 = {
       getSocketId: () => 'lover-2-sid',
       getName: () => 'Bob',
     };
+
     const mockGame = {
       getLovers: vi.fn().mockReturnValue([lover1, lover2]),
     } as unknown as Game;
+
     const mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
     } as unknown as SocketType;
+
     const gameActions = new GameActions(
       mockGame,
       mockIo,

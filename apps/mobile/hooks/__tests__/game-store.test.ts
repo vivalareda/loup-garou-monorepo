@@ -77,6 +77,7 @@ describe('useGameStore socket listeners', () => {
 
   it('stores phase, night deaths, and day vote ties from server events', async () => {
     const { useGameStore } = await import('@/hooks/use-game-store');
+
     const deaths: DeathInfo[] = [
       {
         playerId: 'player-1',

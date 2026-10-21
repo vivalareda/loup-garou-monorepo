@@ -31,6 +31,7 @@ class FakeSocket implements WebSocketLike {
     if (this.failSends) {
       throw new Error('socket is gone');
     }
+
     this.sent.push(data);
   }
 
@@ -70,6 +71,7 @@ class FakeSocket implements WebSocketLike {
 function connect(host: WebSocketHost) {
   const socket = new FakeSocket();
   const connection = host.accept(socket);
+
   return { socket, connection };
 }
 
@@ -114,6 +116,7 @@ describe('WebSocketHost', () => {
       host = new WebSocketHost({
         createId: () => {
           next += 1;
+
           return `c${next}`;
         },
       });
@@ -280,6 +283,7 @@ describe('WebSocketHost', () => {
           players: [],
           self: { type: 'waiting' as const, name: '', socketId: '' },
         };
+
         reply(snapshot);
         reply(snapshot);
       });
@@ -345,6 +349,7 @@ describe('WebSocketHost', () => {
       sender.connection.broadcast.emit('lobby:player-left', 'Alice');
 
       expect(sender.socket.sent).toEqual([]);
+
       for (const { socket } of others) {
         expect(socket.frames()).toEqual([
           { event: 'lobby:player-left', args: ['Alice'] },
@@ -537,14 +542,17 @@ describe('WebSocketHost', () => {
     it('runs on injected timers', () => {
       const pending = new Map<number, () => void>();
       let nextHandle = 0;
+
       const timers: HostTimers = {
         setTimeout: (callback) => {
           nextHandle += 1;
           pending.set(nextHandle, callback);
+
           return nextHandle;
         },
         clearTimeout: (handle) => pending.delete(handle as number),
       };
+
       host = new WebSocketHost({ idleTimeoutMs: 1000, timers });
       const { connection } = connect(host);
       const onDisconnect = vi.fn();
@@ -563,6 +571,7 @@ describe('WebSocketHost', () => {
     const frameOfSize = (bytes: number, char = 'a') => {
       const empty = JSON.stringify({ event: 'player:join', args: [''] });
       const padding = Math.floor((bytes - empty.length) / char.length);
+
       return JSON.stringify({
         event: 'player:join',
         args: [char.repeat(padding)],

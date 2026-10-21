@@ -33,6 +33,7 @@ export class DeathManager {
       if (death.metadata?.hunterId === oldSid) {
         death.metadata.hunterId = newSid;
       }
+
       if (death.metadata?.loverId === oldSid) {
         death.metadata.loverId = newSid;
       }
@@ -56,6 +57,7 @@ export class DeathManager {
     console.log(
       `checking if sid ${playerSid} in in map ${JSON.stringify(Array.from(this.pendingDeaths))}`
     );
+
     return this.pendingDeaths.has(playerSid);
   }
 
@@ -64,13 +66,16 @@ export class DeathManager {
       playerId: player.getSocketId(),
       cause,
     };
+
     this.pendingDeaths.set(player.getSocketId(), pendingDeath);
   }
 
   removePendingDeath(playerId: string) {
     const pendingDeath = this.pendingDeaths.get(playerId);
+
     if (pendingDeath) {
       this.pendingDeaths.delete(playerId);
+
       return pendingDeath;
     }
   }
@@ -93,6 +98,7 @@ export class DeathManager {
       cause: 'PARTNER_SUICIDE',
       metadata: { loverId: deadLoverId },
     };
+
     this.pendingDeaths.set(partnerId, pendingDeath);
   }
 
@@ -102,6 +108,7 @@ export class DeathManager {
       cause: 'HUNTER_REVENGE',
       metadata: { hunterId },
     };
+
     this.pendingDeaths.set(victimId, pendingDeath);
   }
 
@@ -111,6 +118,7 @@ export class DeathManager {
       cause: 'DAY_VOTE',
       metadata: { voteCount },
     };
+
     this.pendingDeaths.set(victimId, pendingDeath);
   }
 
@@ -119,6 +127,7 @@ export class DeathManager {
       playerId: victimId,
       cause: 'WITCH_POISON',
     };
+
     this.pendingDeaths.set(victimId, pendingDeath);
   }
 }

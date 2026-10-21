@@ -3,6 +3,7 @@ export type {
   DeathInfo,
   PendingDeath,
 } from './src/death';
+
 export {
   type ClientToServerEvents,
   type Countdown,
@@ -16,6 +17,7 @@ export {
   type SnapshotPlayer,
   type WerewolvesVoteState,
 } from './src/event';
+
 export {
   type GameEndResult,
   type GamePlayer,
@@ -27,12 +29,15 @@ export {
   type RevealedPlayer,
   type WaitingRoomPlayer,
 } from './src/player';
+
 export { getRoleDescription, type Role } from './src/role';
+
 export type {
   Segment,
   SegmentType,
   segments,
 } from './src/segment';
+
 export {
   type AckFrame,
   type ClientEventFrame,

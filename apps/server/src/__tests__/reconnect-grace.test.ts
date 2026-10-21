@@ -16,15 +16,18 @@ type Handler = (...args: unknown[]) => void;
 
 function makeMockSocket(id: string) {
   const handlers = new Map<string, Handler>();
+
   const socket = {
     id,
     on: vi.fn((event: string, cb: Handler) => {
       handlers.set(event, cb);
+
       return socket;
     }),
     emit: vi.fn(),
     broadcast: { emit: vi.fn() },
   };
+
   return {
     socket: socket satisfies Connection,
     fire: (event: string, ...args: unknown[]) => handlers.get(event)?.(...args),
@@ -74,6 +77,7 @@ describe('disconnect grace period and reconnection', () => {
   const connect = (sid: string) => {
     const mock = makeMockSocket(sid);
     connectionHandler?.(mock.socket);
+
     return mock;
   };
 
@@ -85,18 +89,22 @@ describe('disconnect grace period and reconnection', () => {
     const player = game.addPlayer(name, sid);
     player.setRole(role);
     game.setPlayerTeams(player);
+
     if (role !== 'WEREWOLF' && role !== 'VILLAGER') {
       game.setSpecialRolePlayer(player);
     }
+
     return player;
   };
 
   const setSegment = (type: string) => {
     (segmentsManager as unknown as { gameStarted: boolean }).gameStarted =
       true;
+
     const index = segmentsManager.segments.findIndex(
       (segment) => segment.type === type
     );
+
     if (index !== -1) {
       segmentsManager.currentSegment = index;
     }
@@ -168,9 +176,11 @@ describe('disconnect grace period and reconnection', () => {
 
     // The second wolf agreeing must complete the vote against the NEW sid
     const wolf2Socket = connect('wolf2-sid');
+
     const finish = vi
       .spyOn(segmentsManager, 'finishSegment')
       .mockResolvedValue(undefined);
+
     wolf2Socket.fire('werewolf:player-voted', 'a-new-sid');
 
     expect(game.getWerewolfTarget()).toBe('a-new-sid');
@@ -186,6 +196,7 @@ describe('disconnect grace period and reconnection', () => {
     setSegment('WEREWOLF');
     const wolf1Socket = connect('wolf1-sid');
     const wolf2Socket = connect('wolf2-sid');
+
     const finish = vi
       .spyOn(segmentsManager, 'finishSegment')
       .mockResolvedValue(undefined);
@@ -213,6 +224,7 @@ describe('disconnect grace period and reconnection', () => {
     for (const socket of sockets) {
       socket.fire('day:player-voted', 'e-sid');
     }
+
     await Promise.resolve();
     expect(victim.isAlive).toBe(true);
 
@@ -231,6 +243,7 @@ describe('disconnect grace period and reconnection', () => {
     addPlayer('A', 'a-sid', 'VILLAGER');
     setSegment('WITCH-HEAL');
     const witchSocket = connect('witch-sid');
+
     const finish = vi
       .spyOn(segmentsManager, 'finishSegment')
       .mockResolvedValue(undefined);
@@ -254,9 +267,11 @@ describe('disconnect grace period and reconnection', () => {
 
     const witch = game.getPlayerBySocketId('witch-sid');
     expect(witch).toBeDefined();
+
     if (!witch) {
       return;
     }
+
     const snapshot: PlayerGameSnapshot = gameEvents.buildSnapshotFor(witch);
 
     expect(snapshot.pendingPrompt).toEqual({
@@ -264,6 +279,7 @@ describe('disconnect grace period and reconnection', () => {
       victimSid: 'a-sid',
       victimName: victim.getName(),
     });
+
     // The roster never carries roles — only the player's own `self` does
     for (const rosterEntry of snapshot.players) {
       expect(rosterEntry).not.toHaveProperty('role');
@@ -324,11 +340,13 @@ describe('disconnect grace period and reconnection', () => {
         self: expect.objectContaining({ isAlive: false }),
       })
     );
+
     const snapshot = (
       newSocket.socket.emit as unknown as ReturnType<typeof vi.fn>
     ).mock.calls.find((call) => call[0] === 'game:snapshot')?.[1] as
       | { pendingPrompt?: unknown }
       | undefined;
+
     expect(snapshot?.pendingPrompt).toBeUndefined();
   });
 
@@ -370,6 +388,7 @@ describe('disconnect grace period and reconnection', () => {
     const cupidSocket = connect('cupid-sid');
     connect('p2-sid');
     const lover2Socket = connect('p3-sid');
+
     const finish = vi
       .spyOn(segmentsManager, 'finishSegment')
       .mockResolvedValue(undefined);
@@ -437,6 +456,7 @@ describe('disconnect grace period and reconnection', () => {
       segmentsManager.getGameActions(),
       'broadcastWerewolfVotes'
     );
+
     const newSocket = connect('wolf-new-sid');
     newSocket.fire('player:rejoin', wolf.sessionToken);
 

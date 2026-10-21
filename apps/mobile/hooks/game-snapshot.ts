@@ -74,8 +74,10 @@ export function applyGameSnapshot(
   }
 
   playerStore.setPlayer(snapshot.self);
+
   if (isGamePlayer(snapshot.self)) {
     gameStore.setRoleAssigned(snapshot.self.role);
+
     if (!snapshot.self.isAlive) {
       playerStore.playerIsDead();
     }
@@ -97,6 +99,7 @@ export function applyGameSnapshot(
         }
       : null
   );
+
   if (snapshot.gameResult) {
     gameStore.setGameResult(snapshot.gameResult);
   }
@@ -104,6 +107,7 @@ export function applyGameSnapshot(
   // A modal left open from before the disconnect may belong to a phase that
   // completed while we were gone — the snapshot's prompt is the truth
   useModalStore.getState().closeModal();
+
   if (snapshot.pendingPrompt) {
     applyPendingPrompt(snapshot.pendingPrompt);
     gameStore.setWaitingForPlayers(false);
@@ -111,16 +115,19 @@ export function applyGameSnapshot(
 
   if (snapshot.phase === 'FINISHED' && snapshot.gameResult) {
     router.replace(snapshot.didWin ? '/winner-screen' : '/loser-screen');
+
     return;
   }
 
   if (isGamePlayer(snapshot.self) && !snapshot.self.isAlive) {
     router.replace('/death-screen');
+
     return;
   }
 
   if (snapshot.phase === 'LOBBY') {
     router.replace('/waiting-room');
+
     return;
   }
 

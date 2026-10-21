@@ -15,14 +15,17 @@ function getStatusClassName(
   if (status === 'in-game') {
     return 'bg-green-100 text-green-800';
   }
+
   if (status === 'waiting') {
     return 'bg-yellow-100 text-yellow-800';
   }
+
   return 'bg-gray-100 text-gray-600';
 }
 
 export function PlayerView() {
   const [isWerewolfVotingOpen, setIsWerewolfVotingOpen] = useState(false);
+
   const [isWerewolfSimulationOpen, setIsWerewolfSimulationOpen] =
     useState(false);
 
@@ -406,11 +409,13 @@ export function PlayerView() {
                   const mockPlayerWithRole = Array.from(players.values()).find(
                     (mockPlayer) => mockPlayer.name === player.name
                   );
+
                   const playerRole =
                     mockPlayerWithRole?.player &&
                     isGamePlayer(mockPlayerWithRole.player)
                       ? mockPlayerWithRole.player.role
                       : null;
+
                   const isPlayerAlive =
                     mockPlayerWithRole?.player &&
                     isGamePlayer(mockPlayerWithRole.player)

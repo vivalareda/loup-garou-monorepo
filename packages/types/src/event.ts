@@ -24,6 +24,7 @@ export type PendingPrompt =
 export type SnapshotPlayer = PlayerListItem & { isAlive: boolean };
 
 type EventName = `${EventType}:${string}`;
+
 type EventType =
   | 'lobby'
   | 'player'
@@ -37,11 +38,15 @@ type EventType =
   | Lowercase<Role>;
 
 export type WerewolvesVoteState = Record<string, number>;
+
 export type GamePhase = SegmentType | 'LOBBY' | 'FINISHED';
+
 /** What a client-visible countdown is for: a phase deadline, or the
  * day-discussion window that precedes the vote. */
 export type CountdownPhase = GamePhase | 'DAY-DISCUSSION';
+
 export type Countdown = { phase: CountdownPhase; remainingMs: number };
+
 export type PlayerGameSnapshot = {
   phase: GamePhase;
   players: SnapshotPlayer[];
@@ -57,6 +62,7 @@ export type PlayerGameSnapshot = {
   /** The running deadline (or discussion window), when one is active. */
   countdown?: Countdown;
 };
+
 const serverEventSchemas = {
   'lobby:player-data': null as unknown as (player: Player) => void,
   'lobby:join-rejected': null as unknown as (reason: string) => void,

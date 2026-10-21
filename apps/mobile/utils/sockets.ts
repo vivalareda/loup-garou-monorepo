@@ -8,6 +8,7 @@ if (!process.env.EXPO_PUBLIC_BACKEND_SERVER_URL) {
 // The http(s) base URL of the game server; the socket connects to the
 // ws(s) room endpoint derived from it
 const backendUrl = process.env.EXPO_PUBLIC_BACKEND_SERVER_URL;
+
 // The Worker's optional shared token: compiled into the app, so it only
 // keeps random scanners out, it is not authentication
 const url = roomUrl(

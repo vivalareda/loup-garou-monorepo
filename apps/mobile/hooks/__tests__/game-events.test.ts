@@ -19,6 +19,7 @@ vi.mock('@/utils/sockets', () => ({
 }));
 
 const clearSessionToken = vi.fn().mockResolvedValue(undefined);
+
 vi.mock('@/utils/session', () => ({
   clearSessionToken: () => clearSessionToken(),
 }));
@@ -57,6 +58,7 @@ describe('registerGameEventListeners', () => {
     const { registerGameEventListeners } = await import(
       '@/hooks/use-game-events'
     );
+
     return registerGameEventListeners(router);
   };
 

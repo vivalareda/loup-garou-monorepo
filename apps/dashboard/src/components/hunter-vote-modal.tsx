@@ -9,6 +9,7 @@ type HunterVoteModalProps = {
 export const HunterVoteModal = ({ playerId }: HunterVoteModalProps) => {
   const { players, killPlayerAsHunter, closeHunterModal } =
     useMockPlayerStore();
+
   const player = players.get(playerId);
 
   if (!player?.showHunterModal) {

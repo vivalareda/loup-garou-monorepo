@@ -35,6 +35,7 @@ export function useWerewolfVotes() {
     (targetPlayer: string) => {
       if (playerVote) {
         updateVote(targetPlayer);
+
         return;
       }
 

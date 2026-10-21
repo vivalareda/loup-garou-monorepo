@@ -56,7 +56,9 @@ const make = (config: SocketIOConfig = defaultConfig) =>
           ClientToServerEvents,
           ServerToClientEvents
         >(server, config);
+
         console.log('Socket.IO server initialized');
+
         return socketServer;
       }),
       (io) =>

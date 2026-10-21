@@ -42,6 +42,7 @@ export class DashboardNarrator implements Narrator {
       console.log(`[NARRATOR] ${socketId} left, clips will be skipped`);
       this.narratorSocketId = undefined;
     }
+
     // Clips sent to this socket will never be acknowledged
     for (const clip of [...this.inFlight.values()]) {
       if (clip.socketId === socketId) {
@@ -53,6 +54,7 @@ export class DashboardNarrator implements Narrator {
   /** Only the socket a clip was sent to can report it done. */
   complete(socketId: string, clipId: string) {
     const clip = this.inFlight.get(clipId);
+
     if (clip?.socketId === socketId) {
       clip.finish();
     }
@@ -60,18 +62,22 @@ export class DashboardNarrator implements Narrator {
 
   play(clip: string) {
     const socketId = this.narratorSocketId;
+
     if (socketId === undefined) {
       console.warn(`[NARRATOR] No narrator connected, skipping ${clip}`);
+
       return Promise.resolve();
     }
 
     const clipId = String(this.nextClipId++);
+
     return new Promise<void>((resolve) => {
       const finish = () => {
         clearTimeout(timer);
         this.inFlight.delete(clipId);
         resolve();
       };
+
       const timer = setTimeout(() => {
         console.warn(`[NARRATOR] ${clip} timed out, moving on`);
         finish();

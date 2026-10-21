@@ -71,6 +71,7 @@ function formatRemaining(ms: number) {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
+
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
@@ -83,10 +84,12 @@ function PhaseCountdown({
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
+
     return () => clearInterval(timer);
   }, []);
 
   const remaining = countdown.endsAt - now;
+
   if (remaining <= 0) {
     return null;
   }
@@ -102,6 +105,7 @@ function PhaseCountdown({
 async function loverHapticAlert() {
   await new Promise((resolve) => setTimeout(resolve, 1000));
   console.log('promised resolved, sending haptics');
+
   try {
     await impactAsync(ImpactFeedbackStyle.Heavy);
     console.log('Haptic feedback triggered');
@@ -293,6 +297,7 @@ function presentModalForState(type: OpenModalType, ctx: ModalPresentContext) {
 
 export default function GameInterface() {
   const { player, isAlive } = usePlayerStore();
+
   const {
     playersList,
     villagersList,
@@ -311,6 +316,7 @@ export default function GameInterface() {
     setActionError,
     loverPartnerName,
   } = useGameStore();
+
   const { openModal, closeModal, modalState } = useModalStore();
   const { isRevealed, flipCard, animations } = useCardFlip();
 
@@ -333,7 +339,9 @@ export default function GameInterface() {
     if (!phaseTimedOut) {
       return;
     }
+
     const timer = setTimeout(() => setPhaseTimedOut(null), 8000);
+
     return () => clearTimeout(timer);
   }, [phaseTimedOut, setPhaseTimedOut]);
 
@@ -341,7 +349,9 @@ export default function GameInterface() {
     if (!actionError) {
       return;
     }
+
     const timer = setTimeout(() => setActionError(null), 6000);
+
     return () => clearTimeout(timer);
   }, [actionError, setActionError]);
 
@@ -387,9 +397,11 @@ export default function GameInterface() {
       if (!victimSid) {
         return null;
       }
+
       if (victimSid === player?.socketId) {
         return player?.name ?? victimSid;
       }
+
       return getPlayerNameFromSid(victimSid);
     },
     [player, getPlayerNameFromSid]
@@ -400,6 +412,7 @@ export default function GameInterface() {
       if (socketId === player?.socketId) {
         return player.name;
       }
+
       return getPlayerNameFromSid(socketId);
     },
     [player, getPlayerNameFromSid]
@@ -409,6 +422,7 @@ export default function GameInterface() {
     if (!seerVision) {
       return null;
     }
+
     return (
       <View className="items-center justify-center py-4">
         <Text className="text-lg text-slate-700">{seerVision.playerName}</Text>
@@ -451,6 +465,7 @@ export default function GameInterface() {
 
     if (!isModalAllowed(modalState.type, player)) {
       closeModal();
+
       return;
     }
 

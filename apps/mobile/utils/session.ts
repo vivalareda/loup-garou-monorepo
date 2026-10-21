@@ -11,21 +11,26 @@ export function getSessionToken() {
   if (isWeb) {
     return Promise.resolve(localStorage.getItem(SESSION_TOKEN_KEY));
   }
+
   return getItemAsync(SESSION_TOKEN_KEY);
 }
 
 export function saveSessionToken(token: string) {
   if (isWeb) {
     localStorage.setItem(SESSION_TOKEN_KEY, token);
+
     return Promise.resolve();
   }
+
   return setItemAsync(SESSION_TOKEN_KEY, token);
 }
 
 export function clearSessionToken() {
   if (isWeb) {
     localStorage.removeItem(SESSION_TOKEN_KEY);
+
     return Promise.resolve();
   }
+
   return deleteItemAsync(SESSION_TOKEN_KEY);
 }

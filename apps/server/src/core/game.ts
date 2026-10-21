@@ -46,6 +46,7 @@ export class Game {
 
   addPlayer(name: string, sid: string) {
     const existing = this.players.get(sid);
+
     if (existing) {
       return existing;
     }
@@ -55,6 +56,7 @@ export class Game {
     console.log(
       `new players list: ${JSON.stringify(Array.from(this.players.keys()))}`
     );
+
     return player;
   }
 
@@ -109,6 +111,7 @@ export class Game {
 
   reconnectPlayer(sessionToken: string, newSocketId: string) {
     const player = this.getPlayerBySessionToken(sessionToken);
+
     if (!player) {
       return null;
     }
@@ -119,6 +122,7 @@ export class Game {
     player.isConnected = true;
     this.players.set(newSocketId, player);
     this.remapSocketId(oldSocketId, newSocketId);
+
     return player;
   }
 
@@ -134,10 +138,12 @@ export class Game {
 
     for (const votes of [this.werewolfVotes, this.dayVotes]) {
       const ownVote = votes.get(oldSid);
+
       if (ownVote !== undefined) {
         votes.delete(oldSid);
         votes.set(newSid, ownVote);
       }
+
       for (const [voterSid, targetSid] of votes.entries()) {
         if (targetSid === oldSid) {
           votes.set(voterSid, newSid);
@@ -155,10 +161,13 @@ export class Game {
    */
   markDisconnected(socketId: string) {
     const player = this.players.get(socketId);
+
     if (!player) {
       return null;
     }
+
     player.isConnected = false;
+
     return player;
   }
 
@@ -176,12 +185,14 @@ export class Game {
       this.availableRoles.push('CUPID');
       this.availableRoles.push('WITCH');
       this.availableRoles.push('HUNTER');
+
       // The Seer joins from 5 players up: at 4 there is no free slot left
       if (playerCount > this.availableRoles.length) {
         this.availableRoles.push('SEER');
       }
 
       const remainingSlots = playerCount - this.availableRoles.length;
+
       for (let i = 0; i < remainingSlots; i++) {
         this.availableRoles.push('VILLAGER');
       }
@@ -205,11 +216,13 @@ export class Game {
       if (!player.isAlive) {
         continue;
       }
+
       villagers.push({
         socketId: player.getSocketId(),
         name: player.getName(),
       });
     }
+
     return villagers;
   }
 
@@ -219,10 +232,12 @@ export class Game {
 
   shuffleArray<T>(array: T[]): T[] {
     const shuffled = [...array];
+
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
+
     return shuffled;
   }
 
@@ -243,6 +258,7 @@ export class Game {
     // otherwise a random player could pop it first and the fallback
     // splice(0, 1) would remove the wrong role, creating two hunters.
     const forcedHunterName = process.env.DEV_FORCE_HUNTER;
+
     const forcedHunterPlayer = forcedHunterName
       ? [...this.players.values()].find(
           (p) => p.getName() === forcedHunterName
@@ -252,9 +268,11 @@ export class Game {
     if (forcedHunterPlayer) {
       forcedHunterPlayer.assignRole('HUNTER');
       const hunterIndex = shuffledRoles.indexOf('HUNTER');
+
       if (hunterIndex !== -1) {
         shuffledRoles.splice(hunterIndex, 1);
       }
+
       this.setPlayerTeams(forcedHunterPlayer);
       this.setSpecialRolePlayer(forcedHunterPlayer);
     }
@@ -263,7 +281,9 @@ export class Game {
       if (player === forcedHunterPlayer) {
         continue;
       }
+
       const role = shuffledRoles.pop();
+
       if (!role) {
         throw new Error('No roles available to assign, this shouldnt happen');
       }
@@ -288,9 +308,11 @@ export class Game {
     for (const player of this.players.values()) {
       const role = player.getRole();
       console.log(`Assigning role ${role} to player ${player.getName()}`);
+
       if (!role) {
         return;
       }
+
       this.io.to(player.getSocketId()).emit('player:role-assigned', role);
     }
   }
@@ -302,6 +324,7 @@ export class Game {
   setPlayerTeams(player: Player) {
     if (player.getRole() === 'WEREWOLF') {
       this.deathManager.addTeamWerewolf(player);
+
       return;
     }
 
@@ -314,6 +337,7 @@ export class Game {
         return true;
       }
     }
+
     return false;
   }
 
@@ -323,6 +347,7 @@ export class Game {
         return true;
       }
     }
+
     return false;
   }
 
@@ -332,6 +357,7 @@ export class Game {
         return true;
       }
     }
+
     return false;
   }
 
@@ -341,16 +367,20 @@ export class Game {
         return true;
       }
     }
+
     return false;
   }
 
   setLovers(selectedPlayers: string[]) {
     this.lovers.length = 0;
+
     for (const sid of selectedPlayers) {
       const player = this.players.get(sid);
+
       if (!player) {
         throw new Error(`Player with sid ${sid} not found`);
       }
+
       this.lovers.push(player);
     }
   }
@@ -365,11 +395,13 @@ export class Game {
 
   isWerewolf(socketId: string) {
     const player = this.players.get(socketId);
+
     return player?.getRole() === 'WEREWOLF';
   }
 
   isValidTarget(targetSid: string) {
     const target = this.players.get(targetSid);
+
     return target?.getRole() !== 'WEREWOLF';
   }
 
@@ -416,6 +448,7 @@ export class Game {
 
     // Validate old vote exists
     const currentVote = this.werewolfVotes.get(voterSid);
+
     if (currentVote !== oldTargetSid) {
       throw new Error(
         `Vote mismatch: expected ${oldTargetSid}, but current vote is ${currentVote}`
@@ -435,9 +468,11 @@ export class Game {
   handleAllWerewolvesAgree() {
     const victim = this.getWerewolfTarget();
     console.log('victim is', victim);
+
     if (!victim) {
       throw new Error('The victim does not exist, this is not normal');
     }
+
     console.log('calling add pending death');
     this.addPendingDeath(victim, 'WEREWOLVES');
     this.alertAllWerewolvesOfVotes();
@@ -505,6 +540,7 @@ export class Game {
 
     // Check if they all agree (all votes are for the same target)
     const firstVote = votes[0];
+
     return votes.every((vote) => vote === firstVote);
   }
 
@@ -536,9 +572,11 @@ export class Game {
 
   isHunterInLove() {
     const hunter = this.getSpecialRolePlayer('HUNTER');
+
     if (!hunter) {
       return;
     }
+
     const hasLover = this.isPlayerLover(hunter);
 
     if (hasLover) {
@@ -568,6 +606,7 @@ export class Game {
   processPendingDeaths() {
     // PASS 1: Identify cascade deaths and add them to the queue
     const initialDeaths = this.deathManager.getPendingDeaths();
+
     for (const pendingDeath of initialDeaths) {
       const player = this.players.get(pendingDeath.playerId);
 
@@ -581,6 +620,7 @@ export class Game {
         pendingDeath.cause !== 'PARTNER_SUICIDE'
       ) {
         const partner = this.getPartner(player);
+
         if (
           partner?.isAlive &&
           !this.deathManager.isInDeathQueue(partner.getSocketId())
@@ -684,6 +724,7 @@ export class Game {
    */
   handleDisconnect(socketId: string) {
     const player = this.players.get(socketId);
+
     if (!player) {
       return; // unknown socket (never joined as a player)
     }
@@ -705,6 +746,7 @@ export class Game {
 
     if (this.isPlayerLover(player)) {
       const partner = this.getPartner(player);
+
       if (partner?.isAlive) {
         this.deathManager.addPartnerSuicide(
           partner.getSocketId(),
@@ -830,6 +872,7 @@ export class Game {
     console.log('day vote tallies', tallies);
 
     const maxVotes = Math.max(0, ...Object.values(tallies));
+
     const leadingSids = Object.entries(tallies)
       .filter(([, votes]) => votes === maxVotes)
       .map(([sid]) => sid);
@@ -842,6 +885,7 @@ export class Game {
       const tiedPlayerNames = leadingSids.map(
         (sid) => this.players.get(sid)?.getName() ?? sid
       );
+
       return { kind: 'tie', tiedPlayerNames };
     }
 
@@ -890,6 +934,7 @@ export class Game {
       for (const player of this.deathManager.getTeamVillagers()) {
         this.io.to(player.getSocketId()).emit('alert:player-won', result);
       }
+
       this.alertLosers('werewolves', result);
     }
 
@@ -897,6 +942,7 @@ export class Game {
       for (const player of this.deathManager.getTeamWerewolves()) {
         this.io.to(player.getSocketId()).emit('alert:player-won', result);
       }
+
       this.alertLosers('villagers', result);
     }
   }
@@ -925,6 +971,7 @@ export class Game {
     const villagers = this.deathManager
       .getTeamVillagers()
       .filter((p) => p.isAlive);
+
     const werewolves = this.deathManager
       .getTeamWerewolves()
       .filter((p) => p.isAlive);
@@ -946,9 +993,11 @@ export class Game {
     // witch can still swing the numbers at night with a potion
     if (werewolves.length >= villagers.length) {
       const witch = villagers.find((player) => player.role === 'WITCH');
+
       if (witch && (this.witchHasHealPotion || this.witchHasPoisonPotion)) {
         return null; // Game continues
       }
+
       return 'werewolves';
     }
 

@@ -18,11 +18,17 @@
  * their own payloads.
  */
 export type EventFrame = { event: string; args: unknown[] };
+
 export type ClientEventFrame = EventFrame & { ack?: number };
+
 export type AckFrame = { ack: number; args: unknown[] };
+
 export type PingFrame = { ping: number };
+
 export type PongFrame = { pong: number };
+
 export type ClientFrame = ClientEventFrame | PingFrame;
+
 export type ServerFrame = EventFrame | AckFrame | PongFrame;
 
 export function encodeFrame(frame: ClientFrame | ServerFrame): string {
@@ -33,15 +39,19 @@ function parseObject(data: unknown): Record<string, unknown> | null {
   if (typeof data !== 'string') {
     return null;
   }
+
   let value: unknown;
+
   try {
     value = JSON.parse(data);
   } catch {
     return null;
   }
+
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return null;
   }
+
   return value as Record<string, unknown>;
 }
 
@@ -53,15 +63,19 @@ function isFrameId(value: unknown): value is number {
 /** A frame a client sent, or null when it is malformed. */
 export function parseClientFrame(data: unknown): ClientFrame | null {
   const frame = parseObject(data);
+
   if (frame && frame.event === undefined && isFrameId(frame.ping)) {
     return { ping: frame.ping };
   }
+
   if (!frame || typeof frame.event !== 'string' || !Array.isArray(frame.args)) {
     return null;
   }
+
   if (frame.ack === undefined) {
     return { event: frame.event, args: frame.args };
   }
+
   return isFrameId(frame.ack)
     ? { event: frame.event, args: frame.args, ack: frame.ack }
     : null;
@@ -70,18 +84,23 @@ export function parseClientFrame(data: unknown): ClientFrame | null {
 /** A frame the server sent, or null when it is malformed. */
 export function parseServerFrame(data: unknown): ServerFrame | null {
   const frame = parseObject(data);
+
   if (frame && frame.event === undefined && isFrameId(frame.pong)) {
     return { pong: frame.pong };
   }
+
   if (!(frame && Array.isArray(frame.args))) {
     return null;
   }
+
   if (typeof frame.event === 'string') {
     return { event: frame.event, args: frame.args };
   }
+
   if (isFrameId(frame.ack)) {
     return { ack: frame.ack, args: frame.args };
   }
+
   return null;
 }
 
@@ -100,6 +119,7 @@ export function isRoomCode(code: string): boolean {
 /** The room code in a `/room/<code>` path, or null for any other path. */
 export function parseRoomPath(pathname: string): string | null {
   const code = ROOM_PATH.exec(pathname)?.[1];
+
   return code !== undefined && isRoomCode(code) ? code : null;
 }
 
@@ -119,10 +139,13 @@ export function roomUrl(
       `Invalid room code "${roomCode}": use 1-64 letters, digits, - or _`
     );
   }
+
   const base = baseUrl
     .trim()
     .replace(HTTP_SCHEME, 'ws$1://')
     .replace(TRAILING_SLASHES, '');
+
   const query = accessToken ? `?token=${encodeURIComponent(accessToken)}` : '';
+
   return `${base}/room/${roomCode}${query}`;
 }

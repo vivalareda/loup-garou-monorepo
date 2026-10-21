@@ -45,7 +45,9 @@ export type ReservedEvents = {
 };
 
 export type ListenEvents = ServerToClientEvents & ReservedEvents;
+
 type ListenEvent = keyof ListenEvents;
+
 type EmitEvent = keyof ClientToServerEvents;
 
 export type RealtimeClientOptions = {
@@ -80,18 +82,23 @@ export type RealtimeClientOptions = {
 };
 
 type Listener = (...args: unknown[]) => void;
+
 /** Sees every server event (never the reserved ones), as Socket.io's `onAny`. */
 export type AnyListener = (
   event: keyof ServerToClientEvents,
   ...args: unknown[]
 ) => void;
+
 type ListenerEntry = { listener: Listener; once: boolean };
+
 type PendingAck = { callback: Listener; sent: boolean };
+
 type Timer = ReturnType<typeof setTimeout> | undefined;
 
 /** `WebSocket.OPEN`, without depending on a global `WebSocket`. */
 const OPEN = 1;
 const NORMAL_CLOSURE = 1000;
+
 /** Private-range code for a connection this client gave up on. */
 const ABANDONED = 4000;
 
@@ -101,9 +108,11 @@ function resolveWebSocket(
   const WebSocketImpl =
     injected ??
     (globalThis as { WebSocket?: ClientWebSocketConstructor }).WebSocket;
+
   if (!WebSocketImpl) {
     throw new Error('No global WebSocket: pass options.WebSocket');
   }
+
   return WebSocketImpl;
 }
 
@@ -175,6 +184,7 @@ export class RealtimeClient {
     this.pingTimeoutMs = options.pingTimeoutMs ?? 10_000;
     this.connectTimeoutMs = options.connectTimeoutMs ?? 10_000;
     this.bufferable = new Set(options.bufferBeforeConnect ?? []);
+
     if (options.autoConnect ?? true) {
       this.connect();
     }
@@ -188,11 +198,14 @@ export class RealtimeClient {
   /** Opens the connection (now, even if a reconnect was pending). */
   connect(): this {
     this.active = true;
+
     if (this.socket) {
       return this;
     }
+
     this.clearReconnectTimer();
     this.open();
+
     return this;
   }
 
@@ -204,14 +217,17 @@ export class RealtimeClient {
     const wasOpen = this.release();
     this.queue = [];
     this.pendingAcks.clear();
+
     try {
       socket?.close(NORMAL_CLOSURE);
     } catch {
       // Already closing
     }
+
     if (wasOpen) {
       this.dispatch('disconnect', ['client disconnect']);
     }
+
     return this;
   }
 
@@ -227,22 +243,27 @@ export class RealtimeClient {
   off<E extends ListenEvent>(event: E, listener?: ListenEvents[E]): this {
     if (listener === undefined) {
       this.listeners.delete(event);
+
       return this;
     }
+
     const remaining = (this.listeners.get(event) ?? []).filter(
       (entry) => entry.listener !== listener
     );
+
     if (remaining.length > 0) {
       this.listeners.set(event, remaining);
     } else {
       this.listeners.delete(event);
     }
+
     return this;
   }
 
   /** Adds a listener for every server event (debugging, recording). */
   onAny(listener: AnyListener): this {
     this.anyListeners.push(listener);
+
     return this;
   }
 
@@ -256,6 +277,7 @@ export class RealtimeClient {
   ): boolean {
     const payload: unknown[] = [...args];
     const [last] = payload.slice(-1);
+
     if (typeof last !== 'function') {
       return (
         this.send(event, encodeFrame({ event, args: payload })) !== 'dropped'
@@ -265,16 +287,19 @@ export class RealtimeClient {
     payload.pop();
     const ack = this.nextAckId;
     this.nextAckId += 1;
+
     const outcome = this.send(
       event,
       encodeFrame({ event, args: payload, ack })
     );
+
     if (outcome !== 'dropped') {
       this.pendingAcks.set(ack, {
         callback: last as Listener,
         sent: outcome === 'sent',
       });
     }
+
     return outcome !== 'dropped';
   }
 
@@ -282,6 +307,7 @@ export class RealtimeClient {
     const entries = this.listeners.get(event) ?? [];
     entries.push({ listener, once });
     this.listeners.set(event, entries);
+
     return this;
   }
 
@@ -293,11 +319,15 @@ export class RealtimeClient {
     if (this.trySend(frame)) {
       return 'sent';
     }
+
     if (!this.hasConnected && this.bufferable.has(event)) {
       this.queue.push(frame);
+
       return 'queued';
     }
+
     console.warn(`[realtime] Dropped "${event}": not connected`);
+
     return 'dropped';
   }
 
@@ -305,8 +335,10 @@ export class RealtimeClient {
     if (!(this.isOpen && this.socket?.readyState === OPEN)) {
       return false;
     }
+
     try {
       this.socket.send(frame);
+
       return true;
     } catch {
       // The socket is going down: its `close` event follows
@@ -316,20 +348,25 @@ export class RealtimeClient {
 
   private open() {
     let socket: ClientWebSocket;
+
     try {
       socket = new this.WebSocketImpl(this.url);
     } catch (error) {
       this.dispatch('connect_error', [toError(error)]);
       this.scheduleReconnect();
+
       return;
     }
+
     this.socket = socket;
+
     if (this.connectTimeoutMs > 0) {
       this.connectTimer = setTimeout(
         () => this.abandon('WebSocket handshake timed out'),
         this.connectTimeoutMs
       );
     }
+
     // Events from a socket this client already let go of are ignored
     socket.addEventListener('open', () => {
       if (socket === this.socket) {
@@ -358,12 +395,15 @@ export class RealtimeClient {
     this.attempts = 0;
     const queued = this.queue;
     this.queue = [];
+
     for (const frame of queued) {
       this.trySend(frame);
     }
+
     for (const pending of this.pendingAcks.values()) {
       pending.sent = true;
     }
+
     this.schedulePing();
     this.dispatch('connect', []);
   }
@@ -372,6 +412,7 @@ export class RealtimeClient {
     if (this.pingIntervalMs <= 0) {
       return;
     }
+
     this.pingTimer = setTimeout(() => this.sendPing(), this.pingIntervalMs);
   }
 
@@ -389,6 +430,7 @@ export class RealtimeClient {
     if (seq !== this.pingSeq || this.pongTimer === undefined) {
       return;
     }
+
     this.pongTimer = clear(this.pongTimer);
     this.schedulePing();
   }
@@ -400,6 +442,7 @@ export class RealtimeClient {
   private abandon(failure: string) {
     const socket = this.socket;
     this.handleClose(failure);
+
     try {
       socket?.close(ABANDONED, failure);
     } catch {
@@ -415,22 +458,26 @@ export class RealtimeClient {
     this.connectTimer = clear(this.connectTimer);
     this.pingTimer = clear(this.pingTimer);
     this.pongTimer = clear(this.pongTimer);
+
     return wasOpen;
   }
 
   /** The socket closed (or was abandoned); `failure` describes a failed attempt. */
   private handleClose(failure: string) {
     const wasOpen = this.release();
+
     for (const [id, pending] of this.pendingAcks) {
       if (pending.sent) {
         this.pendingAcks.delete(id);
       }
     }
+
     if (wasOpen) {
       this.dispatch('disconnect', ['transport close']);
     } else {
       this.dispatch('connect_error', [new Error(failure)]);
     }
+
     // A listener may have called disconnect() or connect() meanwhile
     if (this.active && this.reconnects && !this.socket) {
       this.scheduleReconnect();
@@ -439,47 +486,62 @@ export class RealtimeClient {
 
   private receive(data: unknown) {
     const frame = parseServerFrame(data);
+
     if (!frame) {
       console.warn('[realtime] Ignored a malformed frame');
+
       return;
     }
+
     if ('pong' in frame) {
       this.handlePong(frame.pong);
+
       return;
     }
+
     if ('ack' in frame) {
       const pending = this.pendingAcks.get(frame.ack);
+
       if (pending) {
         this.pendingAcks.delete(frame.ack);
         runListener('ack', () => pending.callback(...frame.args));
       }
+
       return;
     }
+
     // Unknown events (a newer server) are ignored, and the server can
     // never trigger the reserved lifecycle events
     const { event, args } = frame;
+
     if (!isServerEvent(event)) {
       return;
     }
+
     for (const listener of [...this.anyListeners]) {
       runListener(event, () => listener(event, ...args));
     }
+
     this.dispatch(event, args);
   }
 
   private dispatch(event: string, args: unknown[]) {
     const entries = this.listeners.get(event);
+
     if (!entries) {
       return;
     }
+
     if (entries.some((entry) => entry.once)) {
       const kept = entries.filter((entry) => !entry.once);
+
       if (kept.length > 0) {
         this.listeners.set(event, kept);
       } else {
         this.listeners.delete(event);
       }
     }
+
     for (const { listener } of [...entries]) {
       runListener(event, () => listener(...args));
     }
@@ -489,11 +551,13 @@ export class RealtimeClient {
     if (!(this.active && this.reconnects)) {
       return;
     }
+
     const delay = this.backoffDelay(this.attempts);
     this.attempts += 1;
     this.clearReconnectTimer();
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = undefined;
+
       if (this.active && !this.socket) {
         this.open();
       }
@@ -504,6 +568,7 @@ export class RealtimeClient {
   private backoffDelay(attempt: number) {
     const base = Math.min(this.delayMaxMs, this.delayMs * 2 ** attempt);
     const deviation = base * this.jitter * (Math.random() * 2 - 1);
+
     return Math.round(Math.max(0, Math.min(this.delayMaxMs, base + deviation)));
   }
 
@@ -517,6 +582,7 @@ function clear(timer: Timer): undefined {
   if (timer !== undefined) {
     clearTimeout(timer);
   }
+
   return;
 }
 

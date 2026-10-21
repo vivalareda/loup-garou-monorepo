@@ -30,6 +30,7 @@ const SEGMENT_TIMEOUTS: Record<string, { defaultMs: number; envVar: string }> =
 
 export function resolveSegmentTimeoutMs(segmentType: string): number {
   const config = SEGMENT_TIMEOUTS[segmentType];
+
   const rawValue =
     (config ? process.env[config.envVar] : undefined) ??
     process.env.SEGMENT_TIMEOUT_MS;
@@ -205,6 +206,7 @@ export class SegmentsManager {
     if (!this.isFirstNightSegment(segment.type)) {
       return;
     }
+
     segment.skip = true;
   }
 
@@ -275,9 +277,11 @@ export class SegmentsManager {
   private async narrate(narration: Promise<void>) {
     try {
       await narration;
+
       return true;
     } catch (error) {
       ignoreStaleGame(error);
+
       return false;
     }
   }
@@ -290,6 +294,7 @@ export class SegmentsManager {
 
     if (this.shouldAutoSkipSegment(segment.type)) {
       await this.advanceSegment({ playEndAudio: false });
+
       return;
     }
 
@@ -300,17 +305,20 @@ export class SegmentsManager {
       this.nightDawnResolution.run().catch((error) => {
         console.error('night dawn resolution failed:', error);
       });
+
       return;
     }
 
     const narrated = await this.narrate(
       this.audioManager.playSegmentAudio(segment.type, true)
     );
+
     // Reset, finished, or already moved past (admin:next-segment) while
     // the intro played
     if (!narrated || run !== this.segmentRun) {
       return;
     }
+
     segment.action();
     this.scheduleDeadline(segment.type);
   }
@@ -318,11 +326,13 @@ export class SegmentsManager {
   private shouldAutoSkipSegment(segmentType: string) {
     if (segmentType === 'SEER') {
       const seer = this.game.getSpecialRolePlayer('SEER');
+
       return !seer || !seer.isAlive;
     }
 
     if (segmentType === 'WITCH-HEAL') {
       const witch = this.game.getSpecialRolePlayer('WITCH');
+
       return (
         !witch ||
         !witch.isAlive ||
@@ -333,6 +343,7 @@ export class SegmentsManager {
 
     if (segmentType === 'WITCH-POISON') {
       const witch = this.game.getSpecialRolePlayer('WITCH');
+
       return !witch || !witch.isAlive || !this.game.canWitchPoison();
     }
 
@@ -341,17 +352,20 @@ export class SegmentsManager {
 
   private scheduleDeadline(segmentType: string) {
     const timeoutMs = resolveSegmentTimeoutMs(segmentType);
+
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
       return;
     }
 
     this.clearDeadline();
     this.deadlineEndsAt = Date.now() + timeoutMs;
+
     if (segmentType !== 'DAY') {
       // DAY announces its own countdowns: first the discussion window,
       // then the vote's remaining time
       this.io.emit('game:countdown', segmentType as GamePhase, timeoutMs);
     }
+
     this.segmentDeadline = setTimeout(() => {
       if (this.getCurrentSegmentType() !== segmentType) {
         return;
@@ -368,6 +382,7 @@ export class SegmentsManager {
       clearTimeout(this.segmentDeadline);
       this.segmentDeadline = null;
     }
+
     this.deadlineEndsAt = null;
   }
 
@@ -375,6 +390,7 @@ export class SegmentsManager {
     if (this.deadlineEndsAt === null) {
       return null;
     }
+
     return Math.max(0, this.deadlineEndsAt - Date.now());
   }
 
@@ -389,6 +405,7 @@ export class SegmentsManager {
 
     if (segmentType === 'CUPID' && this.game.getLovers().length === 0) {
       const cupidSid = this.game.getSpecialRolePlayer('CUPID')?.getSocketId();
+
       const lovers = this.game
         .getAlivePlayers()
         .filter((player) => player.getSocketId() !== cupidSid)
@@ -410,6 +427,7 @@ export class SegmentsManager {
       this.audioManager.playVillagersWonAudio().catch(ignoreStaleGame);
       this.game.alertWinnersAndLosers(winner);
       this.markFinished();
+
       return true;
     }
 
@@ -417,6 +435,7 @@ export class SegmentsManager {
       this.audioManager.playWerewolvesWonAudio().catch(ignoreStaleGame);
       this.game.alertWinnersAndLosers(winner);
       this.markFinished();
+
       return true;
     }
 
@@ -449,6 +468,7 @@ export class SegmentsManager {
     if (this.endingRun === this.segmentRun) {
       return;
     }
+
     this.endingRun = this.segmentRun;
     this.clearDeadline();
     const segment = this.segments[this.currentSegment];

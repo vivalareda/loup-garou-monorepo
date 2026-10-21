@@ -17,22 +17,28 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const route = routeRoom(url.pathname);
+
     if (route.kind === 'other') {
       return env.ASSETS.fetch(request);
     }
+
     if (route.kind === 'bad-code') {
       return new Response(
         'Invalid room code: use 1-64 letters, digits, - or _',
         { status: 400 }
       );
     }
+
     if (!isWebSocketUpgrade(request)) {
       return upgradeRequired();
     }
+
     if (!(await hasAccess(url, env.ACCESS_TOKEN))) {
       return new Response('Missing or wrong access token', { status: 401 });
     }
+
     const room = env.GAME_ROOM.get(env.GAME_ROOM.idFromName(route.code));
+
     return room.fetch(request);
   },
 } satisfies ExportedHandler<WorkerEnv>;

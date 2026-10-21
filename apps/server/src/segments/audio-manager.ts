@@ -124,6 +124,7 @@ export class AudioManager {
         default:
           await this.playAudio(startAudioFile);
       }
+
       // Return early after playing start audio - don't play ending audio yet!
       return;
     }
@@ -189,6 +190,7 @@ export class AudioManager {
   async playWinnerAudio(winner: 'werewolves' | 'villagers') {
     if (winner === 'werewolves') {
       await this.playWerewolvesWonAudio();
+
       return;
     }
 
@@ -204,6 +206,7 @@ export class AudioManager {
   async playAudio(file: string) {
     const generation = this.generation.current();
     await this.narrator.play(file);
+
     if (!this.generation.isCurrent(generation)) {
       throw new StaleGame();
     }

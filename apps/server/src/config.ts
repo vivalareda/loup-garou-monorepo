@@ -15,6 +15,7 @@ export function resolvePlayerCount(
   }
 
   const count = Number(rawValue);
+
   if (!Number.isInteger(count) || count < MIN_PLAYER_COUNT) {
     throw new Error(
       `Invalid PLAYER_COUNT "${rawValue}": must be an integer >= ${MIN_PLAYER_COUNT}`

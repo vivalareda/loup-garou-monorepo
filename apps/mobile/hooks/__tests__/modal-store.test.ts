@@ -56,6 +56,7 @@ describe('useModalStore', () => {
     const onSkip = () => {
       // identity only — the test asserts the same reference is stored
     };
+
     useModalStore.getState().openModal({
       type: 'selection',
       title: 'poison?',

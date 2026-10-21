@@ -10,6 +10,7 @@ import {
 const serverUrl = process.env.SERVER_URL ?? 'http://localhost:3000';
 const roomCode = process.env.ROOM_CODE || undefined;
 const name = process.argv[2];
+
 if (!name) {
   console.error('Usage: pnpm --filter server agent <name>');
   process.exit(1);
@@ -17,6 +18,7 @@ if (!name) {
 
 const accessToken = process.env.ACCESS_TOKEN || undefined;
 const socket = createRealtimeClient(roomUrl(serverUrl, roomCode, accessToken));
+
 const emitState = () => {
   socket.emit('agent:get-state', (snapshot: PlayerGameSnapshot) => {
     process.stdout.write(`${JSON.stringify({ type: 'state', ...snapshot })}\n`);
@@ -24,34 +26,43 @@ const emitState = () => {
 };
 
 socket.on('connect', () => socket.emit('player:join', name));
+
 socket.on('lobby:player-data', () => emitState());
+
 socket.on('game:snapshot', (snapshot) => {
   process.stdout.write(`${JSON.stringify({ type: 'state', ...snapshot })}\n`);
 });
+
 socket.on('alert:action-error', (message) => {
   process.stdout.write(`${JSON.stringify({ type: 'error', message })}\n`);
   emitState();
 });
 
 const input = createInterface({ input: process.stdin });
+
 input.on('line', (line) => {
   try {
     const command = JSON.parse(line) as {
       event: string;
       args?: unknown[];
     };
+
     if (command.event === 'agent:get-state') {
       emitState();
+
       return;
     }
+
     if (!isClientEvent(command.event)) {
       throw new Error(`Unknown event "${command.event}"`);
     }
+
     // Commands come from stdin: the server validates their payloads
     const emit = socket.emit.bind(socket) as (
       event: keyof ClientToServerEvents,
       ...args: unknown[]
     ) => void;
+
     emit(command.event, ...(command.args ?? []));
     setTimeout(emitState, 25);
   } catch (error) {

@@ -9,6 +9,7 @@ export default function ModalTestScreen() {
   const { openModal } = useModalStore();
   const { setPlayersList, getPlayerNameFromSid } = useGameStore();
   const [lastSelection, setLastSelection] = useState<string>('');
+
   const [selectionHistory, setSelectionHistory] = useState<
     Array<{ timestamp: string; selection: string; playerName: string }>
   >([]);
@@ -32,6 +33,7 @@ export default function ModalTestScreen() {
     (selection: string, action: string) => {
       try {
         const playerName = getPlayerNameFromSid(selection);
+
         const logEntry = {
           timestamp: new Date().toLocaleTimeString(),
           selection,
@@ -165,11 +167,13 @@ export default function ModalTestScreen() {
       data: getWitchModalData(),
       onConfirm: (result) => {
         console.log(`Witch chose: ${result}`);
+
         if (result === 'yes') {
           console.log('🧙 Witch healed the victim!');
         } else {
           console.log('🧙 Witch chose not to heal.');
         }
+
         setLastSelection(`Witch Heal Decision: ${result}`);
       },
     });
@@ -188,6 +192,7 @@ export default function ModalTestScreen() {
       onConfirm: (selections) => {
         try {
           const lovers = Array.isArray(selections) ? selections : [selections];
+
           const loverNames = lovers.map((socketId) => {
             try {
               return getPlayerNameFromSid(socketId);

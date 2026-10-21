@@ -143,6 +143,7 @@ export const handleWerewolfUpdateVote = (
 
     yield* Effect.sync(() => {
       game.handleWerewolfUpdateVote(werewolfSid, targetPlayer, oldVote);
+
       if (game.hasAllWerewolvesAgreed()) {
         game.handleAllWerewolvesAgree();
         segmentsManager.finishSegment();
@@ -251,16 +252,20 @@ export const handleAdminSimulateWerewolfVote = (targetPlayer: string) =>
     yield* Effect.sync(() => {
       console.log(`🐺 Admin simulating werewolf vote for: ${targetPlayer}`);
       const werewolves = game.getWerewolves();
+
       for (const werewolf of werewolves) {
         game.handleWerewolfVote(werewolf.getSocketId(), targetPlayer);
       }
+
       segmentsManager.getGameActions().broadcastWerewolfVotes();
 
       if (game.hasAllWerewolvesAgreed()) {
         const victim = game.getWerewolfTarget();
+
         if (!victim) {
           throw new Error('The victim does not exist, this is not normal');
         }
+
         game.addPendingDeath(victim, 'WEREWOLVES');
         segmentsManager.finishSegment();
       }

@@ -27,6 +27,7 @@ socket.on('night:deaths-announced', (deaths: DeathInfo[]) => {
   console.log('💀 Night deaths:', deaths);
   gameEvents.deaths = deaths;
   gameEvents.logs.push(`💀 ${deaths.length} player(s) died during the night`);
+
   for (const death of deaths) {
     gameEvents.logs.push(`  💀 ${death.playerName} died from ${death.cause}`);
   }

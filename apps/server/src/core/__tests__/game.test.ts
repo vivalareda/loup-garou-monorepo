@@ -77,6 +77,7 @@ describe('Game class', () => {
       game.assignRoles();
 
       const players = Array.from(game.getPlayerList().values());
+
       for (const player of players) {
         expect(player.getRole()).toBeDefined();
       }
@@ -118,11 +119,13 @@ describe('Game class', () => {
       for (let i = 0; i < 4; i++) {
         game.addPlayer(`Player${i}`, `socket-${i}`);
       }
+
       game.assignRoles();
     });
 
     it('should handle werewolf vote', () => {
       const werewolves = game.getWerewolfList();
+
       const victim = Array.from(game.getPlayerList().values()).find(
         (p) => p.getRole() !== 'WEREWOLF'
       );
@@ -152,6 +155,7 @@ describe('Game class', () => {
 
     it('should calculate werewolf vote tallies', () => {
       const werewolves = game.getWerewolfList();
+
       const victim = Array.from(game.getPlayerList().values()).find(
         (p) => p.getRole() !== 'WEREWOLF'
       );
@@ -168,6 +172,7 @@ describe('Game class', () => {
 
     it('should detect when all werewolves agree', () => {
       const werewolves = game.getWerewolfList();
+
       const victim = Array.from(game.getPlayerList().values()).find(
         (p) => p.getRole() !== 'WEREWOLF'
       );
@@ -176,12 +181,14 @@ describe('Game class', () => {
         for (const werewolf of werewolves) {
           game.handleWerewolfVote(werewolf.getSocketId(), victim.getSocketId());
         }
+
         expect(game.hasAllWerewolvesAgreed()).toBe(true);
       }
     });
 
     it('should get werewolf target when agreed', () => {
       const werewolves = game.getWerewolfList();
+
       const victim = Array.from(game.getPlayerList().values()).find(
         (p) => p.getRole() !== 'WEREWOLF'
       );
@@ -190,6 +197,7 @@ describe('Game class', () => {
         for (const werewolf of werewolves) {
           game.handleWerewolfVote(werewolf.getSocketId(), victim.getSocketId());
         }
+
         const target = game.getWerewolfTarget();
         expect(target).toBe(victim.getSocketId());
       }
@@ -201,6 +209,7 @@ describe('Game class', () => {
       for (let i = 0; i < 4; i++) {
         game.addPlayer(`Player${i}`, `socket-${i}`);
       }
+
       game.assignRoles();
     });
 
@@ -225,6 +234,7 @@ describe('Game class', () => {
       for (let i = 0; i < 4; i++) {
         game.addPlayer(`Player${i}`, `socket-${i}`);
       }
+
       game.assignRoles();
     });
 
@@ -307,6 +317,7 @@ describe('Game class', () => {
       for (let i = 0; i < 6; i++) {
         game.addPlayer(`Player${i}`, `socket-${i}`);
       }
+
       game.assignRoles();
     });
 
@@ -335,11 +346,13 @@ describe('Game class', () => {
       for (let i = 0; i < 4; i++) {
         game.addPlayer(`Player${i}`, `socket-${i}`);
       }
+
       game.assignRoles();
     });
 
     it('should identify werewolves', () => {
       const werewolves = game.getWerewolves();
+
       for (const werewolf of werewolves) {
         expect(game.isWerewolf(werewolf.getSocketId())).toBe(true);
       }
@@ -356,6 +369,7 @@ describe('Game class', () => {
 
     it('should check for winners - villagers win when no werewolves', () => {
       const werewolves = game.getWerewolves();
+
       for (const werewolf of werewolves) {
         game.addPendingDeath(werewolf.getSocketId(), 'DAY_VOTE');
         game.processPendingDeaths();
@@ -377,10 +391,12 @@ describe('Game class', () => {
       mockIo = {
         to: vi.fn((sid: string) => {
           let emit = socketEmit.get(sid);
+
           if (!emit) {
             emit = vi.fn();
             socketEmit.set(sid, emit);
           }
+
           return { emit };
         }),
         emit: vi.fn(),
@@ -391,6 +407,7 @@ describe('Game class', () => {
       for (let i = 0; i < 4; i++) {
         game.addPlayer(`Player${i}`, `socket-${i}`);
       }
+
       game.assignRoles();
     });
 
@@ -427,6 +444,7 @@ describe('Game class', () => {
     it('reveals every player with name, role, and alive state at game end', () => {
       const dead = game.getPlayerBySocketId('socket-0');
       expect(dead).toBeDefined();
+
       if (dead) {
         dead.isAlive = false;
       }
@@ -435,11 +453,13 @@ describe('Game class', () => {
 
       expect(result.winningFaction).toBe('villagers');
       expect(result.players).toHaveLength(4);
+
       for (const revealed of result.players) {
         expect(revealed.name).toBeTruthy();
         expect(revealed.role).not.toBeNull();
         expect(typeof revealed.isAlive).toBe('boolean');
       }
+
       expect(
         result.players.find((revealed) => revealed.socketId === 'socket-0')
           ?.isAlive

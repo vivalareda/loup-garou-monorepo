@@ -22,9 +22,11 @@ import type { EventsActions } from '@/server/events-actions';
  */
 function resolveDisconnectGraceMs() {
   const raw = process.env.DISCONNECT_GRACE_MS;
+
   if (raw === undefined || raw === '') {
     return 90_000;
   }
+
   return Number(raw);
 }
 
@@ -65,8 +67,10 @@ export class GameEvents {
       socket.on('game:restart', () => {
         if (!this.segmentsManager.hasFinished()) {
           socket.emit('alert:action-error', 'Game is not finished');
+
           return;
         }
+
         console.log(`🔄 Game restart requested by ${socket.id}`);
         this.resetGame();
       });
@@ -84,6 +88,7 @@ export class GameEvents {
       this.setupWitchEvents(socket);
       this.setupDayVoteEvents(socket);
       this.setupHunterEvents(socket);
+
       if (adminEvents) {
         this.setupAdminEvents(socket);
       }
@@ -95,8 +100,10 @@ export class GameEvents {
     socket.on('admin:start-game', () => {
       if (this.segmentsManager.hasStarted()) {
         socket.emit('alert:action-error', 'Game already started');
+
         return;
       }
+
       console.log('🎮 Admin starting game manually');
       this.game.assignRandomRoles();
       this.game.alertPlayersOfRoles();
@@ -107,8 +114,10 @@ export class GameEvents {
     socket.on('admin:next-segment', () => {
       if (this.segmentsManager.hasFinished()) {
         socket.emit('alert:action-error', 'Game is finished');
+
         return;
       }
+
       console.log('⏭ Admin advancing to next segment');
       this.segmentsManager.finishSegment();
     });
@@ -116,16 +125,20 @@ export class GameEvents {
     socket.on('admin:simulate-werewolf-vote', (targetPlayer: string) => {
       console.log(`🐺 Admin simulating werewolf vote for: ${targetPlayer}`);
       const werewolves = this.game.getWerewolves();
+
       for (const werewolf of werewolves) {
         this.game.handleWerewolfVote(werewolf.getSocketId(), targetPlayer);
       }
+
       this.segmentsManager.getGameActions().broadcastWerewolfVotes();
 
       if (this.game.hasAllWerewolvesAgreed()) {
         const victim = this.game.getWerewolfTarget();
+
         if (!victim) {
           throw new Error('The victim does not exist, this is not normal');
         }
+
         this.game.addPendingDeath(victim, 'WEREWOLVES');
         this.segmentsManager.finishSegment();
       }
@@ -147,14 +160,17 @@ export class GameEvents {
 
     socket.on('agent:get-state', (callback) => {
       const player = this.game.getPlayerBySocketId(socket.id);
+
       if (!player) {
         callback({
           phase: this.segmentsManager.getCurrentSegmentType(),
           players: this.game.getRosterForClient(),
           self: { type: 'waiting', name: '', socketId: socket.id },
         });
+
         return;
       }
+
       callback(this.buildSnapshotFor(player));
     });
 
@@ -162,9 +178,12 @@ export class GameEvents {
       const previousSid = this.game
         .getPlayerBySessionToken(sessionToken)
         ?.getSocketId();
+
       const player = this.game.reconnectPlayer(sessionToken, socket.id);
+
       if (!player) {
         socket.emit('player:rejoin-failed');
+
         return;
       }
 
@@ -174,8 +193,10 @@ export class GameEvents {
 
   private handlePlayerJoin(socket: Connection, name: string) {
     const trimmedName = typeof name === 'string' ? name.trim() : '';
+
     if (!trimmedName) {
       socket.emit('lobby:join-rejected', 'Invalid name');
+
       return;
     }
 
@@ -185,23 +206,28 @@ export class GameEvents {
       if (this.reclaimSeatByName(trimmedName, socket)) {
         return;
       }
+
       socket.emit('lobby:join-rejected', 'Game already started');
+
       return;
     }
 
     if (this.game.getPlayerBySocketId(socket.id)) {
       socket.emit('lobby:join-rejected', 'Player already joined');
+
       return;
     }
 
     if (this.game.getPlayerList().size >= this.requiredPlayerCount) {
       socket.emit('lobby:join-rejected', 'Game is full');
+
       return;
     }
 
     // Unique names keep the reclaim-seat-by-name recovery unambiguous
     if (this.isNameTaken(trimmedName)) {
       socket.emit('lobby:join-rejected', 'Name already taken');
+
       return;
     }
 
@@ -225,6 +251,7 @@ export class GameEvents {
 
   private isNameTaken(trimmedName: string) {
     const wanted = trimmedName.toLowerCase();
+
     return Array.from(this.game.getPlayerList().values()).some(
       (candidate) => candidate.getName().trim().toLowerCase() === wanted
     );
@@ -238,6 +265,7 @@ export class GameEvents {
    */
   private reclaimSeatByName(name: string, socket: Connection) {
     const wanted = name.trim().toLowerCase();
+
     const match = Array.from(this.game.getPlayerList().values()).find(
       (candidate) => candidate.getName().trim().toLowerCase() === wanted
     );
@@ -248,12 +276,14 @@ export class GameEvents {
 
     const previousSid = match.getSocketId();
     const player = this.game.reconnectPlayer(match.sessionToken, socket.id);
+
     if (!player) {
       return false;
     }
 
     console.log(`Player ${player.getName()} reclaimed their seat by name`);
     this.completeRejoin(player, previousSid, socket);
+
     return true;
   }
 
@@ -283,6 +313,7 @@ export class GameEvents {
       this.game.getClientPlayerList(),
       this.requiredPlayerCount
     );
+
     if (this.segmentsManager.hasStarted()) {
       this.io.emit('lobby:villagers-list', this.game.getVillagersList());
     }
@@ -299,6 +330,7 @@ export class GameEvents {
   setupCupidEvents(socket: Connection) {
     socket.on('cupid:lovers-pick', (selectedPlayers: string[]) => {
       const cupid = this.game.getSpecialRolePlayer('CUPID');
+
       if (
         !cupid ||
         cupid.getSocketId() !== socket.id ||
@@ -307,6 +339,7 @@ export class GameEvents {
       ) {
         socket.emit('alert:action-error', 'Cupid action is not allowed now');
         console.warn(`cupid:lovers-pick rejected from ${socket.id}`);
+
         return;
       }
 
@@ -315,6 +348,7 @@ export class GameEvents {
         console.warn(
           `cupid:lovers-pick rejected from ${socket.id} (bad payload)`
         );
+
         return;
       }
 
@@ -330,12 +364,14 @@ export class GameEvents {
     }
 
     const uniquePlayers = new Set(selectedPlayers);
+
     if (uniquePlayers.size !== 2 || uniquePlayers.has(cupidSid)) {
       return false;
     }
 
     return selectedPlayers.every((sid) => {
       const player = this.game.getPlayerBySocketId(sid);
+
       return player?.isAlive === true;
     });
   }
@@ -347,11 +383,13 @@ export class GameEvents {
           'alert:action-error',
           'Lover acknowledgement is not allowed now'
         );
+
         return;
       }
 
       if (!this.pendingLoverAcks.delete(socket.id)) {
         console.warn(`alert:lover-closed-alert ignored from ${socket.id}`);
+
         return;
       }
 
@@ -364,6 +402,7 @@ export class GameEvents {
   setupSeerEvents(socket: Connection) {
     socket.on('seer:picked-player', (targetSid: string) => {
       const seer = this.game.getSpecialRolePlayer('SEER');
+
       if (
         !this.segmentsManager.isCurrentSegment('SEER') ||
         !seer ||
@@ -372,15 +411,18 @@ export class GameEvents {
       ) {
         socket.emit('alert:action-error', 'Seer action is not allowed now');
         console.warn(`seer:picked-player rejected from ${socket.id}`);
+
         return;
       }
 
       const target = this.game.getPlayerBySocketId(targetSid);
+
       if (!target || !target.isAlive || target === seer) {
         socket.emit('alert:action-error', 'Invalid Seer target');
         console.warn(
           `seer:picked-player rejected: invalid target ${targetSid}`
         );
+
         return;
       }
 
@@ -397,6 +439,7 @@ export class GameEvents {
 
       if (!this.isValidWerewolfTarget(targetPlayer)) {
         socket.emit('alert:action-error', 'Invalid werewolf target');
+
         return;
       }
 
@@ -412,6 +455,7 @@ export class GameEvents {
 
         if (!this.isValidWerewolfTarget(targetPlayer)) {
           socket.emit('alert:action-error', 'Invalid werewolf target');
+
           return;
         }
 
@@ -420,6 +464,7 @@ export class GameEvents {
           console.warn(
             `werewolf:player-update-vote rejected from ${socket.id} (stale oldVote)`
           );
+
           return;
         }
 
@@ -438,15 +483,18 @@ export class GameEvents {
   private isLivingWerewolfSender(socket: Connection) {
     if (!this.segmentsManager.isCurrentSegment('WEREWOLF')) {
       socket.emit('alert:action-error', 'Werewolf vote is not allowed now');
+
       return false;
     }
 
     const voter = this.game.getPlayerBySocketId(socket.id);
+
     if (!voter || !voter.isAlive || voter.role !== 'WEREWOLF') {
       socket.emit('alert:action-error', 'Werewolf vote is not allowed now');
       console.warn(
         `werewolf vote rejected from ${socket.id} (not a living werewolf)`
       );
+
       return false;
     }
 
@@ -455,12 +503,14 @@ export class GameEvents {
 
   private isValidWerewolfTarget(targetSid: string) {
     const target = this.game.getPlayerBySocketId(targetSid);
+
     return !!target && target.isAlive && target.getRole() !== 'WEREWOLF';
   }
 
   setupWitchEvents(socket: Connection) {
     socket.on('witch:healed-player', () => {
       const witch = this.game.getSpecialRolePlayer('WITCH');
+
       if (
         !this.segmentsManager.isCurrentSegment('WITCH-HEAL') ||
         !witch ||
@@ -469,8 +519,10 @@ export class GameEvents {
       ) {
         socket.emit('alert:action-error', 'Witch heal is not allowed now');
         console.warn(`witch:healed-player rejected from ${socket.id}`);
+
         return;
       }
+
       this.game.healWerewolfVictim();
       this.segmentsManager.finishSegment();
     });
@@ -478,6 +530,7 @@ export class GameEvents {
     socket.on('witch:poisoned-player', (playerSid: string) => {
       const witch = this.game.getSpecialRolePlayer('WITCH');
       const target = this.game.getPlayerBySocketId(playerSid);
+
       if (
         !this.segmentsManager.isCurrentSegment('WITCH-POISON') ||
         !witch ||
@@ -488,14 +541,17 @@ export class GameEvents {
       ) {
         socket.emit('alert:action-error', 'Witch poison is not allowed now');
         console.warn(`witch:poisoned-player rejected from ${socket.id}`);
+
         return;
       }
+
       this.game.witchKill(playerSid);
       this.segmentsManager.finishSegment();
     });
 
     socket.on('witch:skipped-heal', () => {
       const witch = this.game.getSpecialRolePlayer('WITCH');
+
       if (
         !this.segmentsManager.isCurrentSegment('WITCH-HEAL') ||
         !witch ||
@@ -503,14 +559,17 @@ export class GameEvents {
       ) {
         socket.emit('alert:action-error', 'Witch heal is not allowed now');
         console.warn(`witch:skipped-heal rejected from ${socket.id}`);
+
         return;
       }
+
       console.log('🧙 Witch skipped heal action');
       this.segmentsManager.finishSegment();
     });
 
     socket.on('witch:skipped-poison', () => {
       const witch = this.game.getSpecialRolePlayer('WITCH');
+
       if (
         !this.segmentsManager.isCurrentSegment('WITCH-POISON') ||
         !witch ||
@@ -518,8 +577,10 @@ export class GameEvents {
       ) {
         socket.emit('alert:action-error', 'Witch poison is not allowed now');
         console.warn(`witch:skipped-poison rejected from ${socket.id}`);
+
         return;
       }
+
       console.log('🧙 Witch skipped poison action');
       this.segmentsManager.finishSegment();
     });
@@ -532,6 +593,7 @@ export class GameEvents {
         !this.segmentsManager.getGameActions().isDayVotingOpen()
       ) {
         socket.emit('alert:action-error', 'Day vote is not allowed now');
+
         return;
       }
 
@@ -541,12 +603,14 @@ export class GameEvents {
     socket.on('day:start-vote', () => {
       const gameActions = this.segmentsManager.getGameActions();
       const player = this.game.getPlayerBySocketId(socket.id);
+
       if (
         !player?.isAlive ||
         !this.segmentsManager.isCurrentSegment('DAY') ||
         !gameActions.isDiscussionActive()
       ) {
         socket.emit('alert:action-error', 'Cannot start the vote now');
+
         return;
       }
 
@@ -559,10 +623,12 @@ export class GameEvents {
     socket.on('hunter:killed-player', (targetSid: string) => {
       const hunter = this.game.getSpecialRolePlayer('HUNTER');
       const target = this.game.getPlayerBySocketId(targetSid);
+
       if (!hunter || hunter.getSocketId() !== socket.id) {
         console.warn(
           `hunter:killed-player rejected from ${socket.id} (not hunter)`
         );
+
         return;
       }
 
@@ -575,6 +641,7 @@ export class GameEvents {
         console.warn(
           `hunter:killed-player rejected: invalid target ${targetSid}`
         );
+
         return;
       }
 
@@ -595,6 +662,7 @@ export class GameEvents {
         this.io,
         this.eventsActions
       );
+
       mockScenario.runWerewolfKillHunter();
     });
 
@@ -605,6 +673,7 @@ export class GameEvents {
         this.io,
         this.eventsActions
       );
+
       mockScenario.runWerewolfKillLover();
     });
 
@@ -615,6 +684,7 @@ export class GameEvents {
         this.io,
         this.eventsActions
       );
+
       mockScenario.runWerewolfKillLoverSecondIsHunter();
     });
 
@@ -625,6 +695,7 @@ export class GameEvents {
         this.io,
         this.eventsActions
       );
+
       mockScenario.runWerewolfKillLoverWhoIsHunter();
     });
 
@@ -635,6 +706,7 @@ export class GameEvents {
         this.io,
         this.eventsActions
       );
+
       mockScenario.runDayVoteKillHunter();
     });
 
@@ -645,6 +717,7 @@ export class GameEvents {
         this.io,
         this.eventsActions
       );
+
       mockScenario.runDayVoteKillLover();
     });
 
@@ -655,6 +728,7 @@ export class GameEvents {
         this.io,
         this.eventsActions
       );
+
       mockScenario.runDayVoteKillLoverWhoIsHunter();
     });
 
@@ -665,6 +739,7 @@ export class GameEvents {
         this.io,
         this.eventsActions
       );
+
       mockScenario.runDayVoteKillLoverSecondIsHunter();
     });
 
@@ -675,6 +750,7 @@ export class GameEvents {
         this.io,
         this.eventsActions
       );
+
       mockScenario.runHunterRevengeKillsLover();
     });
   }
@@ -687,6 +763,7 @@ export class GameEvents {
    */
   private handleTransportDisconnect(socketId: string) {
     const player = this.game.getPlayerBySocketId(socketId);
+
     if (!player?.isAlive) {
       return;
     }
@@ -696,11 +773,13 @@ export class GameEvents {
       this.game.removePlayer(socketId);
       this.io.emit('lobby:player-died', socketId);
       console.log(`Player ${player.getName()} left the lobby`);
+
       return;
     }
 
     if (this.segmentsManager.hasFinished()) {
       this.game.markDisconnected(socketId);
+
       return;
     }
 
@@ -713,16 +792,20 @@ export class GameEvents {
     this.reevaluatePhaseCompletion();
 
     const graceMs = resolveDisconnectGraceMs();
+
     if (!Number.isFinite(graceMs) || graceMs <= 0) {
       this.expireGrace(player.sessionToken);
+
       return;
     }
 
     this.clearGraceTimer(player.sessionToken);
+
     const timer = setTimeout(
       () => this.expireGrace(player.sessionToken),
       graceMs
     );
+
     timer.unref?.();
     this.graceTimers.set(player.sessionToken, timer);
   }
@@ -731,6 +814,7 @@ export class GameEvents {
   private expireGrace(sessionToken: string) {
     this.clearGraceTimer(sessionToken);
     const player = this.game.getPlayerBySessionToken(sessionToken);
+
     if (!player || player.isConnected || !player.isAlive) {
       return;
     }
@@ -754,6 +838,7 @@ export class GameEvents {
 
   private clearGraceTimer(sessionToken: string) {
     const timer = this.graceTimers.get(sessionToken);
+
     if (timer) {
       clearTimeout(timer);
       this.graceTimers.delete(sessionToken);
@@ -782,17 +867,21 @@ export class GameEvents {
         // Only a dead witch skips the phase; one merely in her grace period
         // may still come back and act before the segment deadline
         const witch = this.game.getSpecialRolePlayer('WITCH');
+
         if (!witch?.isAlive) {
           this.segmentsManager.finishSegment();
         }
+
         break;
       }
 
       case 'SEER': {
         const seer = this.game.getSpecialRolePlayer('SEER');
+
         if (!seer?.isAlive) {
           this.segmentsManager.finishSegment();
         }
+
         break;
       }
 
@@ -808,6 +897,7 @@ export class GameEvents {
    */
   buildSnapshotFor(player: Player): PlayerGameSnapshot {
     const phase = this.segmentsManager.getCurrentSegmentType();
+
     const self = player.role
       ? {
           type: 'game' as const,
@@ -822,6 +912,7 @@ export class GameEvents {
     const partner = this.game.isPlayerLover(player)
       ? this.game.getPartner(player)
       : undefined;
+
     const gameResult = this.game.getLastGameResult();
 
     return {
@@ -846,6 +937,7 @@ export class GameEvents {
     const discussionMs = this.segmentsManager
       .getGameActions()
       .getDiscussionRemainingMs();
+
     if (phase === 'DAY' && discussionMs !== null) {
       return {
         countdown: { phase: 'DAY-DISCUSSION', remainingMs: discussionMs },
@@ -853,9 +945,11 @@ export class GameEvents {
     }
 
     const remainingMs = this.segmentsManager.getRemainingDeadlineMs();
+
     if (remainingMs === null || phase === 'LOBBY' || phase === 'FINISHED') {
       return {};
     }
+
     return { countdown: { phase, remainingMs } };
   }
 
@@ -864,6 +958,7 @@ export class GameEvents {
     phase: GamePhase
   ): { pendingPrompt?: PendingPrompt } {
     const prompt = this.resolvePendingPrompt(player, phase);
+
     return prompt ? { pendingPrompt: prompt } : {};
   }
 
@@ -901,6 +996,7 @@ export class GameEvents {
 
   private cupidPrompt(player: Player): PendingPrompt | undefined {
     const cupid = this.game.getSpecialRolePlayer('CUPID');
+
     return cupid === player && this.game.getLovers().length === 0
       ? { kind: 'CUPID' }
       : undefined;
@@ -910,7 +1006,9 @@ export class GameEvents {
     if (!this.pendingLoverAcks.has(player.getSocketId())) {
       return;
     }
+
     const partner = this.game.getPartner(player);
+
     return partner
       ? { kind: 'LOVERS', partnerName: partner.getName() }
       : undefined;
@@ -918,10 +1016,13 @@ export class GameEvents {
 
   private witchHealPrompt(player: Player): PendingPrompt | undefined {
     const victimSid = this.game.getWerewolfTarget();
+
     if (player.role !== 'WITCH' || !this.game.canWitchHeal() || !victimSid) {
       return;
     }
+
     const victim = this.game.getPlayerBySocketId(victimSid);
+
     return {
       kind: 'WITCH-HEAL',
       victimSid,
@@ -933,12 +1034,15 @@ export class GameEvents {
     // Both death-chain resolutions pause for the hunter inside the DAY
     // segment; a reconnecting hunter must get his pick back, not a vote
     const hunterPrompt = this.hunterPrompt(player);
+
     if (hunterPrompt) {
       return hunterPrompt;
     }
+
     if (!this.segmentsManager.getGameActions().isDayVotingOpen()) {
       return;
     }
+
     return this.game.hasPlayerDayVoted(player.getSocketId())
       ? undefined
       : { kind: 'DAY-VOTE' };
@@ -961,9 +1065,11 @@ export class GameEvents {
     this.game.removeAllPlayers();
     this.segmentsManager.resetForNewGame();
     this.pendingLoverAcks.clear();
+
     for (const timer of this.graceTimers.values()) {
       clearTimeout(timer);
     }
+
     this.graceTimers.clear();
     this.io.emit('game:restarted');
   }

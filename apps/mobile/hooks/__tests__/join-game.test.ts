@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Handler = (...args: unknown[]) => void;
+
 const listeners = new Map<string, Handler[]>();
 
 vi.mock('@/utils/sockets', () => ({
@@ -67,6 +68,7 @@ describe('registerJoinListeners', () => {
       socketId: 'alice-sid',
       sessionToken: 'token-1',
     };
+
     fire('lobby:player-data', playerData);
     fire('lobby:join-rejected', 'Game is full');
 
@@ -112,6 +114,7 @@ describe('registerJoinListeners', () => {
       onJoined: first,
       onRejected: vi.fn(),
     });
+
     registerJoinListeners({ onJoined: second, onRejected: vi.fn() });
     cleanupFirst();
 

@@ -41,9 +41,11 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   getPlayerRole: () => {
     const { player } = get();
+
     if (!(player && isGamePlayer(player))) {
       throw new Error('player does not have a role yet');
     }
+
     return player.role;
   },
 }));

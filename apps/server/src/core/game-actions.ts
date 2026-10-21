@@ -6,9 +6,11 @@ import type { Game } from './game';
 function resolveDayDiscussionMs() {
   const raw =
     process.env.DAY_DISCUSSION_MS ?? process.env.DAY_VOTE_DELAY_MS ?? '';
+
   if (raw === '') {
     return 120_000;
   }
+
   return Number(raw);
 }
 
@@ -29,9 +31,11 @@ export class GameActions {
   cupidAction() {
     const cupid = this.game.getSpecialRolePlayer('CUPID');
     const socket = cupid?.getSocketId();
+
     if (!socket) {
       throw new Error('Cupid player not found');
     }
+
     this.io.to(socket).emit('cupid:pick-required');
   }
 
@@ -48,6 +52,7 @@ export class GameActions {
       if (!sameGame()) {
         return;
       }
+
       this.io
         .to(lovers[0].getSocketId())
         .emit('alert:player-is-lover', lovers[1].getName());
@@ -62,6 +67,7 @@ export class GameActions {
         if (!sameGame()) {
           return;
         }
+
         this.io
           .to(lovers[0].getSocketId())
           .emit('alert:lovers-can-close-alert');
@@ -75,9 +81,11 @@ export class GameActions {
 
   seerAction() {
     const seer = this.game.getSpecialRolePlayer('SEER');
+
     if (!seer) {
       return;
     }
+
     this.io.to(seer.getSocketId()).emit('seer:pick-required');
   }
 
@@ -86,6 +94,7 @@ export class GameActions {
     // leave a stale entry that makes hasAllWerewolvesAgreed() return false
     // forever (the surviving werewolves would never reach agreement).
     this.game.clearWerewolfVotes();
+
     for (const werewolf of this.game.getWerewolfList()) {
       this.io.to(werewolf.getSocketId()).emit('werewolf:pick-required');
     }
@@ -97,6 +106,7 @@ export class GameActions {
 
     if (!witch) {
       console.log('No witch in the game, skipping witch heal action');
+
       return;
     }
 
@@ -116,6 +126,7 @@ export class GameActions {
 
     if (!witch) {
       console.error('Witch player not found');
+
       return;
     }
 
@@ -161,6 +172,7 @@ export class GameActions {
   async dayAction() {
     this.closeDayVote();
     const deaths = this.game.processPendingDeaths();
+
     if (deaths.length > 0) {
       this.announceNightDeaths(deaths);
     }
@@ -173,8 +185,10 @@ export class GameActions {
     }
 
     const discussionMs = resolveDayDiscussionMs();
+
     if (!Number.isFinite(discussionMs) || discussionMs <= 0) {
       this.startDayVote();
+
       return;
     }
 
@@ -195,6 +209,7 @@ export class GameActions {
     this.io.emit('day:voting-phase-start');
 
     const remainingMs = this.segmentsManager.getRemainingDeadlineMs();
+
     if (remainingMs !== null && remainingMs > 0) {
       this.io.emit('game:countdown', 'DAY', remainingMs);
     }
@@ -212,6 +227,7 @@ export class GameActions {
     if (!this.isDiscussionActive() || this.discussionEndsAt === null) {
       return null;
     }
+
     return Math.max(0, this.discussionEndsAt - Date.now());
   }
 
@@ -225,6 +241,7 @@ export class GameActions {
       clearTimeout(this.discussionTimer);
       this.discussionTimer = null;
     }
+
     this.discussionEndsAt = null;
   }
 
@@ -232,6 +249,7 @@ export class GameActions {
     // Emit only to the dead Hunter, not every connected client — other
     // players (and spectators) must not see the revenge-pick prompt.
     const hunter = this.game.getSpecialRolePlayer('HUNTER');
+
     if (hunter) {
       this.io.to(hunter.getSocketId()).emit('hunter:pick-required');
     }

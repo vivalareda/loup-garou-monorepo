@@ -13,15 +13,18 @@ type Handler = (...args: unknown[]) => void;
 
 function makeMockSocket(id: string) {
   const handlers = new Map<string, Handler>();
+
   const socket = {
     id,
     on: vi.fn((event: string, cb: Handler) => {
       handlers.set(event, cb);
+
       return socket;
     }),
     emit: vi.fn(),
     broadcast: { emit: vi.fn() },
   };
+
   return {
     socket: socket satisfies Connection,
     fire: (event: string, ...args: unknown[]) => handlers.get(event)?.(...args),
@@ -55,12 +58,14 @@ describe('lobby join validation', () => {
       new SpecialScenarios(game, audioManager)
     );
     const eventsActions = new EventsActions(game, segmentsManager, mockIo);
+
     const gameEvents = new GameEvents(
       game,
       segmentsManager,
       mockIo,
       eventsActions
     );
+
     gameEvents.setupSocketHandlers();
 
     vi.spyOn(segmentsManager, 'playSegment').mockResolvedValue(undefined);
@@ -69,6 +74,7 @@ describe('lobby join validation', () => {
   const connect = (sid: string) => {
     const mock = makeMockSocket(sid);
     connectionHandler?.(mock.socket);
+
     return mock;
   };
 
@@ -145,6 +151,7 @@ describe('villagers target list', () => {
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
     } satisfies Broadcaster;
+
     const deathManager = new DeathManager();
     const game = new Game(mockIo, deathManager);
 

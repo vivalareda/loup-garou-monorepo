@@ -57,6 +57,7 @@ describe('Night dawn: hunter who is a lover dies during the night', () => {
     const daySegmentIndex = segmentsManager.segments.findIndex(
       (s) => s.type === 'DAY'
     );
+
     segmentsManager.currentSegment = daySegmentIndex;
     segmentsManager.playSegment();
     await tick();
@@ -81,6 +82,7 @@ describe('Night dawn: hunter who is a lover dies during the night', () => {
     const lobbyDeathCallsForRevengeTarget = emitSpy.mock.calls.filter(
       (call) => call[0] === 'lobby:player-died' && call[1] === 'mock-id-3'
     );
+
     expect(lobbyDeathCallsForRevengeTarget).toHaveLength(1);
   });
 });

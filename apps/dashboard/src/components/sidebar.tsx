@@ -27,9 +27,11 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
     if (status === 'in-game') {
       return 'bg-green-100 text-green-800';
     }
+
     if (status === 'waiting') {
       return 'bg-yellow-100 text-yellow-800';
     }
+
     return 'bg-gray-100 text-gray-600';
   };
 
@@ -46,6 +48,7 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
 
   const handleSimulateWerewolfVote = () => {
     const alivePlayers = playersArray.filter((p) => p.isConnected);
+
     if (alivePlayers.length > 0) {
       const target = alivePlayers[0].name; // Just pick first player
       console.log(`🐺 Simulating werewolf vote for ${target}`);
@@ -294,6 +297,7 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
                       }`}
                       onClick={(e) => {
                         e.stopPropagation();
+
                         if (player.isConnected) {
                           disconnectPlayer(player.id);
                         } else {

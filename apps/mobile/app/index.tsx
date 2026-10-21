@@ -33,9 +33,11 @@ export default function Home() {
       registerJoinListeners({
         onJoined: async (playerData) => {
           console.log('server response', playerData);
+
           if (playerData.sessionToken) {
             await saveSessionToken(playerData.sessionToken);
           }
+
           setIsJoining(false);
           setPlayer(playerData);
           router.push('/waiting-room');
@@ -60,6 +62,7 @@ export default function Home() {
     if (isJoining) {
       return;
     }
+
     setRecoveryFailed(false);
     setJoinError(null);
 
@@ -67,13 +70,16 @@ export default function Home() {
     // are not replayed after an outage) and the button would spin forever
     if (status === 'reconnecting') {
       setJoinError('Connexion au serveur perdue — réessayez dans un instant.');
+
       return;
     }
 
     if (!submitJoin(name)) {
       setJoinError('Entrez un nom valide.');
+
       return;
     }
+
     setIsJoining(true);
   };
 

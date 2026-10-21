@@ -15,6 +15,7 @@ export function AddPlayerModal({ isOpen, onClose }: AddPlayerModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
     if (playerName.trim()) {
       addPlayer(playerName.trim());
       setPlayerName('');

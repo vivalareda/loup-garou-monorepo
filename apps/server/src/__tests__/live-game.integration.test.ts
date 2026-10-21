@@ -1,13 +1,7 @@
 import { createServer, type Server as HttpServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createRealtimeClient, type RealtimeClient } from '@repo/realtime';
-import {
-  type DeathInfo,
-  type GameEndResult,
-  type PlayerGameSnapshot,
-  type Role,
-  roomUrl,
-} from '@repo/types';
+import { type Role, roomUrl, type ServerToClientEvents } from '@repo/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { WebSocketServer } from 'ws';
 import { DeathManager } from '@/core/death-manager';
@@ -68,7 +62,20 @@ class EventRecorder {
     });
   }
 
-  take(event: string, timeoutMs = 10_000): Promise<unknown[]> {
+  /** The arguments of the next `event` this client receives. */
+  async take<E extends keyof ServerToClientEvents>(
+    event: E,
+    timeoutMs = 10_000
+  ): Promise<Parameters<ServerToClientEvents[E]>> {
+    const args = await this.takeArgs(event, timeoutMs);
+
+    // SAFETY: the server only emits through its Broadcaster, whose emit is
+    // typed by ServerToClientEvents, and the client hands each frame to
+    // onAny under its own event name: `event`'s frames carry its arguments
+    return args as Parameters<ServerToClientEvents[E]>;
+  }
+
+  private takeArgs(event: string, timeoutMs: number): Promise<unknown[]> {
     const queued = this.queues.get(event);
 
     if (queued && queued.length > 0) {
@@ -153,6 +160,8 @@ describe('live-socket happy path', () => {
     await new Promise<void>((resolve) => {
       httpServer.listen(0, '127.0.0.1', () => resolve());
     });
+    // SAFETY: the server listens on a TCP host and port (not a pipe) and
+    // has bound by now, so address() is an AddressInfo, not a string or null
     const { port } = httpServer.address() as AddressInfo;
     url = roomUrl(`http://127.0.0.1:${port}`);
 
@@ -193,18 +202,14 @@ describe('live-socket happy path', () => {
     for (const player of players) {
       player.socket.emit('player:join', player.name);
 
-      const [data] = (await player.events.take('lobby:player-data')) as [
-        { socketId: string; sessionToken?: string },
-      ];
+      const [data] = await player.events.take('lobby:player-data');
 
       player.sid = data.socketId;
       player.sessionToken = data.sessionToken ?? '';
     }
 
     for (const player of players) {
-      const [role] = (await player.events.take('player:role-assigned')) as [
-        Role,
-      ];
+      const [role] = await player.events.take('player:role-assigned');
 
       player.role = role;
     }
@@ -244,9 +249,7 @@ describe('live-socket happy path', () => {
       cupid.socket.emit('cupid:lovers-pick', [wolf1.sid, wolf2.sid]);
 
       // --- Lovers acknowledge each other ----------------------------------
-      const [wolf1LoverName] = (await wolf1.events.take(
-        'alert:player-is-lover'
-      )) as [string];
+      const [wolf1LoverName] = await wolf1.events.take('alert:player-is-lover');
 
       expect(wolf1LoverName).toBe(wolf2.name);
       await wolf2.events.take('alert:player-is-lover');
@@ -277,9 +280,7 @@ describe('live-socket happy path', () => {
       recoveredSocket.emit('player:rejoin', wolf2.sessionToken);
       await wolf2.events.take('alert:action-error');
 
-      const [snapshot] = (await wolf2.events.take('game:snapshot')) as [
-        PlayerGameSnapshot,
-      ];
+      const [snapshot] = await wolf2.events.take('game:snapshot');
 
       expect(snapshot.phase).toBe('WEREWOLF');
       expect(snapshot.pendingPrompt).toEqual({ kind: 'WEREWOLF' });
@@ -290,9 +291,7 @@ describe('live-socket happy path', () => {
       wolf2.socket.emit('werewolf:player-voted', villager1.sid);
 
       // --- Witch: skip both potions ----------------------------------------
-      const [healTargetSid] = (await witch.events.take('witch:can-heal')) as [
-        string,
-      ];
+      const [healTargetSid] = await witch.events.take('witch:can-heal');
 
       expect(healTargetSid).toBe(villager1.sid);
       witch.socket.emit('witch:skipped-heal');
@@ -302,9 +301,7 @@ describe('live-socket happy path', () => {
       // --- Dawn: the victim dies and everyone hears about it ---------------
       await villager1.events.take('alert:player-is-dead');
 
-      const [deaths] = (await cupid.events.take('night:deaths-announced')) as [
-        DeathInfo[],
-      ];
+      const [deaths] = await cupid.events.take('night:deaths-announced');
 
       expect(deaths).toHaveLength(1);
       expect(deaths[0]).toMatchObject({
@@ -330,16 +327,11 @@ describe('live-socket happy path', () => {
 
       const results = (
         await Promise.all(
-          winners.map(
-            (player) =>
-              player.events.take('alert:player-won') as Promise<[GameEndResult]>
-          )
+          winners.map((player) => player.events.take('alert:player-won'))
         )
       ).map(([result]) => result);
 
-      const [wolfResult] = (await wolf1.events.take('alert:player-lost')) as [
-        GameEndResult,
-      ];
+      const [wolfResult] = await wolf1.events.take('alert:player-lost');
 
       await wolf2.events.take('alert:player-lost');
 

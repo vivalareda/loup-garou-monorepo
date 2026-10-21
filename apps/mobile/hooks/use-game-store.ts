@@ -7,10 +7,10 @@ import type {
   Role,
   WerewolvesVoteState,
 } from '@repo/types';
+import type { RealtimeClient } from '@repo/realtime';
 import { create } from 'zustand';
 import { useModalStore } from '@/hooks/use-modal-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
-import { socket } from '@/utils/sockets';
 
 /**
  * Modal types that present a given phase's prompt. When the server
@@ -28,7 +28,8 @@ const PHASE_PROMPT_MODALS: Partial<Record<GamePhase, string[]>> = {
   DAY: ['DAY-VOTE'],
 };
 
-type GameState = {
+/** The game's data, everything `resetGame` restores. */
+type GameData = {
   // Existing state
   playersList: PlayerListItem[];
   villagersList: PlayerListItem[];
@@ -61,7 +62,9 @@ type GameState = {
   actionError: string | null;
   /** The other lover's display name (alert:player-is-lover). */
   loverPartnerName: string | null;
+};
 
+type GameState = GameData & {
   // Existing actions
   setRoleAssigned: (role: Role) => void;
   setPlayersList: (players: PlayerListItem[]) => void;
@@ -87,8 +90,8 @@ type GameState = {
   setGameResult: (result: GameEndResult | null) => void;
   setActionError: (message: string | null) => void;
   setLoverPartnerName: (name: string | null) => void;
-  updateVote: (targetPlayer: string) => void;
-  sendVote: (targetPlayerSid: string) => void;
+  updateVote: (socket: RealtimeClient, targetPlayer: string) => void;
+  sendVote: (socket: RealtimeClient, targetPlayerSid: string) => void;
   resetVoting: () => void;
   /** Full reset back to the lobby (server emitted game:restarted). */
   resetGame: () => void;
@@ -96,23 +99,23 @@ type GameState = {
   // Helper functions
   getPlayerNameFromSid: (socketId: string) => string;
 
-  // Socket management
-  initializeSocketListeners: () => void;
-  cleanupSocketListeners: () => void;
+  // Socket management (the app's socket; tests pass one over a fake server)
+  initializeSocketListeners: (socket: RealtimeClient) => void;
+  cleanupSocketListeners: (socket: RealtimeClient) => void;
 };
 
 /** Fresh copies every call so a reset never shares array references. */
-const createInitialGameState = () => ({
-  playersList: [] as PlayerListItem[],
-  villagersList: [] as PlayerListItem[],
+const createInitialGameState = (): GameData => ({
+  playersList: [],
+  villagersList: [],
   roleAssigned: null,
-  werewolfVotes: {} as WerewolvesVoteState,
+  werewolfVotes: {},
   playerVote: '',
   isVotingComplete: false,
   votingResult: null,
-  currentPhase: 'LOBBY' as GamePhase,
-  nightDeaths: [] as DeathInfo[],
-  dayVoteTie: [] as string[],
+  currentPhase: 'LOBBY',
+  nightDeaths: [],
+  dayVoteTie: [],
   isWaitingForPlayers: false,
   requiredPlayerCount: null,
   werewolvesVictim: null,
@@ -164,7 +167,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   setActionError: (message) => set({ actionError: message }),
   setLoverPartnerName: (name) => set({ loverPartnerName: name }),
 
-  updateVote: (targetPlayer: string) => {
+  updateVote: (socket, targetPlayer) => {
     const { playerVote } = get();
     const oldVote = playerVote;
 
@@ -173,11 +176,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     socket.emit('werewolf:player-update-vote', targetPlayer, oldVote);
   },
 
-  sendVote: (targetPlayerSid: string) => {
+  sendVote: (socket, targetPlayerSid) => {
     const { playerVote, updateVote } = get();
 
     if (playerVote) {
-      updateVote(targetPlayerSid);
+      updateVote(socket, targetPlayerSid);
 
       return;
     }
@@ -199,7 +202,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   resetGame: () => set(createInitialGameState()),
 
   // Socket management
-  initializeSocketListeners: () => {
+  initializeSocketListeners: (socket) => {
     // Existing socket listeners
     socket.on('lobby:players-list', (players, requiredPlayerCount) => {
       set(() => {
@@ -281,7 +284,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
 
-  cleanupSocketListeners: () => {
+  cleanupSocketListeners: (socket) => {
     socket.off('lobby:players-list');
     socket.off('lobby:update-players-list');
     socket.off('lobby:player-died');

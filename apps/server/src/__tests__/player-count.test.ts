@@ -32,22 +32,23 @@ describe('resolvePlayerCount', () => {
   });
 });
 
+/** A lobby of `playerCount` joined players, roles not dealt yet. */
+const buildGame = (playerCount: number) => {
+  const mockIo = {
+    to: vi.fn().mockReturnThis(),
+    emit: vi.fn(),
+  } satisfies Broadcaster;
+
+  const game = new Game(mockIo, new DeathManager());
+
+  for (let index = 0; index < playerCount; index++) {
+    game.addPlayer(`Player${index}`, `socket-${index}`);
+  }
+
+  return game;
+};
+
 describe('role distribution', () => {
-  const buildGame = (playerCount: number) => {
-    const mockIo = {
-      to: vi.fn().mockReturnThis(),
-      emit: vi.fn(),
-    } satisfies Broadcaster;
-
-    const game = new Game(mockIo, new DeathManager());
-
-    for (let index = 0; index < playerCount; index++) {
-      game.addPlayer(`Player${index}`, `socket-${index}`);
-    }
-
-    return game;
-  };
-
   it.each([4, 5, 6, 8])(
     'deals exactly %i roles with floor(n / 3) werewolves and one HUNTER',
     (playerCount) => {

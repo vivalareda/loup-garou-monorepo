@@ -1,6 +1,20 @@
+import { Schema } from 'effect';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DashboardNarrator } from '@/server/dashboard-narrator';
 import { RecordingIO } from '@/simulation/recording-io';
+
+/** Whether `promise` has settled once pending microtasks have run. */
+const hasSettled = async (promise: Promise<void>) => {
+  let settled = false;
+  promise.then(() => {
+    settled = true;
+  });
+  await vi.advanceTimersByTimeAsync(0);
+
+  return settled;
+};
+
+const decodeClipId = Schema.decodeUnknownSync(Schema.String);
 
 describe('DashboardNarrator', () => {
   let io: RecordingIO;
@@ -19,19 +33,9 @@ describe('DashboardNarrator', () => {
     vi.restoreAllMocks();
   });
 
+  /** The id of the clip last sent to the narrator tab (throws if none). */
   const lastClipId = () =>
-    io.eventsOf('narrator:play').at(-1)?.args[0] as string;
-
-  /** Whether `promise` has settled once pending microtasks have run. */
-  const hasSettled = async (promise: Promise<void>) => {
-    let settled = false;
-    promise.then(() => {
-      settled = true;
-    });
-    await vi.advanceTimersByTimeAsync(0);
-
-    return settled;
-  };
+    decodeClipId(io.eventsOf('narrator:play').at(-1)?.args[0]);
 
   it('skips clips when no narrator is registered', async () => {
     await narrator.play('Intro');

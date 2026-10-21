@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+// oxlint-disable-next-line import/no-unassigned-import -- NativeWind's stylesheet is loaded for its side effect: it registers the Tailwind classes
 import '../global.css';
 import React, { useRef } from 'react';
 import { Platform } from 'react-native';

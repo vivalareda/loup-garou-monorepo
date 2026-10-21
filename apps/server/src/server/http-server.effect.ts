@@ -39,9 +39,9 @@ const make = Effect.gen(function* () {
 
       return httpServer;
     }),
-    (server) =>
+    (httpServer) =>
       Effect.async<void>((resume) => {
-        server.close(() => {
+        httpServer.close(() => {
           console.log('HTTP server closed');
           resume(Effect.void);
         });

@@ -44,7 +44,6 @@ export class GameRoom extends DurableObject<Env> {
       return new Response('Room is full', { status: 503 });
     }
 
-    // biome-ignore lint/correctness/noUndeclaredVariables: a workerd global
     const { 0: client, 1: server } = new WebSocketPair();
     server.accept();
     host.accept(server);

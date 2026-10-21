@@ -1,7 +1,7 @@
 import {
   type ClientToServerEvents,
   encodeFrame,
-  isServerEvent,
+  type FrameData,
   parseServerFrame,
   type ServerToClientEvents,
 } from '@repo/types';
@@ -19,7 +19,7 @@ export type ClientWebSocket = {
   addEventListener(type: 'open' | 'error', listener: () => void): void;
   addEventListener(
     type: 'message',
-    listener: (event: { data: unknown }) => void
+    listener: (event: { data: FrameData }) => void
   ): void;
   addEventListener(
     type: 'close',
@@ -105,6 +105,10 @@ const ABANDONED = 4000;
 function resolveWebSocket(
   injected: ClientWebSocketConstructor | undefined
 ): ClientWebSocketConstructor {
+  // SAFETY: `globalThis.WebSocket` is either missing (checked below) or the
+  // platform's WebSocket constructor (browser, React Native, Node 22+), and
+  // each of those meets `ClientWebSocket`. Not every platform's lib declares
+  // the global, hence the optional type.
   const WebSocketImpl =
     injected ??
     (globalThis as { WebSocket?: ClientWebSocketConstructor }).WebSocket;
@@ -232,10 +236,14 @@ export class RealtimeClient {
   }
 
   on<E extends ListenEvent>(event: E, listener: ListenEvents[E]): this {
+    // SAFETY: listeners are stored per event name and `dispatch` only calls
+    // them with that event's arguments (the server's frame args, typed by
+    // the event map, or the reserved events' local ones).
     return this.addListener(event, listener as Listener, false);
   }
 
   once<E extends ListenEvent>(event: E, listener: ListenEvents[E]): this {
+    // SAFETY: as in `on`, only `event`'s arguments ever reach the listener.
     return this.addListener(event, listener as Listener, true);
   }
 
@@ -278,7 +286,7 @@ export class RealtimeClient {
     const payload: unknown[] = [...args];
     const [last] = payload.slice(-1);
 
-    if (typeof last !== 'function') {
+    if (!isAckCallback(last)) {
       return (
         this.send(event, encodeFrame({ event, args: payload })) !== 'dropped'
       );
@@ -295,7 +303,7 @@ export class RealtimeClient {
 
     if (outcome !== 'dropped') {
       this.pendingAcks.set(ack, {
-        callback: last as Listener,
+        callback: last,
         sent: outcome === 'sent',
       });
     }
@@ -484,11 +492,11 @@ export class RealtimeClient {
     }
   }
 
-  private receive(data: unknown) {
+  private receive(data: FrameData) {
     const frame = parseServerFrame(data);
 
     if (!frame) {
-      console.warn('[realtime] Ignored a malformed frame');
+      console.warn('[realtime] Ignored a malformed frame or unknown event');
 
       return;
     }
@@ -510,15 +518,12 @@ export class RealtimeClient {
       return;
     }
 
-    // Unknown events (a newer server) are ignored, and the server can
-    // never trigger the reserved lifecycle events
+    // The parser already dropped unknown events (a newer server), so the
+    // server can never trigger the reserved lifecycle events
     const { event, args } = frame;
 
-    if (!isServerEvent(event)) {
-      return;
-    }
-
-    for (const listener of [...this.anyListeners]) {
+    // Iterate a copy: a listener may add listeners while this runs
+    for (const listener of this.anyListeners.slice()) {
       runListener(event, () => listener(event, ...args));
     }
 
@@ -542,7 +547,8 @@ export class RealtimeClient {
       }
     }
 
-    for (const { listener } of [...entries]) {
+    // Iterate a copy: a listener may add listeners while this runs
+    for (const { listener } of entries.slice()) {
       runListener(event, () => listener(...args));
     }
   }
@@ -593,8 +599,18 @@ export function createRealtimeClient(
   return new RealtimeClient(url, options);
 }
 
-function toError(error: unknown) {
-  return error instanceof Error ? error : new Error(String(error));
+/** What a failed `new WebSocket()` threw, as the `connect_error` argument. */
+function toError(cause: unknown) {
+  return cause instanceof Error ? cause : new Error(String(cause));
+}
+
+/**
+ * The ack callback `emit` takes as its last argument. Its parameters are
+ * the server's reply, which (like event payloads) is not checked at runtime.
+ */
+function isAckCallback(value: unknown): value is Listener {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- not input decoding: this tells the caller's own ack callback apart from its typed payload args; `instanceof Function` (the only alternative) trips unicorn/no-instanceof-builtins
+  return typeof value === 'function';
 }
 
 /** A throwing listener must not skip the others or break the client. */

@@ -7,6 +7,7 @@ import { SegmentsManager } from '@/segments/segments-manager';
 import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
+import { finishGame } from './helpers/segments';
 
 type Handler = (...args: unknown[]) => void;
 
@@ -69,10 +70,7 @@ describe('in-place game restart', () => {
     return mock;
   };
 
-  const markFinished = () => {
-    (segmentsManager as unknown as { gameFinished: boolean }).gameFinished =
-      true;
-  };
+  const markFinished = () => finishGame(segmentsManager, game, 'villagers');
 
   it('rejects game:restart while a game is still running', () => {
     vi.spyOn(segmentsManager, 'playSegment').mockResolvedValue(undefined);

@@ -44,7 +44,7 @@ socket.on('narrator:play', (clipId, clip) => {
   // Missing clips (some segments have none yet) are skipped, like the
   // server-side player does
   audio.addEventListener('error', finish);
-  audio.play().catch((error: unknown) => {
+  audio.play().catch((error) => {
     console.error(`Narrator could not play ${clip}:`, error);
     finish();
   });

@@ -8,6 +8,7 @@ import { SegmentsManager } from '@/segments/segments-manager';
 import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
+import { enterSegment } from './helpers/segments';
 
 type Handler = (...args: unknown[]) => void;
 
@@ -95,12 +96,7 @@ describe('day discussion and countdowns', () => {
     return player;
   };
 
-  const setSegment = (type: string) => {
-    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
-    segmentsManager.currentSegment = segmentsManager.segments.findIndex(
-      (segment) => segment.type === type
-    );
-  };
+  const setSegment = (type: string) => enterSegment(segmentsManager, type);
 
   const emittedEvents = () => ioEmit.mock.calls.map((call) => call[0]);
 

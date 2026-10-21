@@ -1,12 +1,18 @@
 import { runInDurableObject } from 'cloudflare:test';
 import { env, exports } from 'cloudflare:workers';
-import { encodeFrame, roomUrl } from '@repo/types';
+import {
+  type ClientToServerEvents,
+  encodeFrame,
+  type EventFrame,
+  type PongFrame,
+  parseServerFrame,
+  roomUrl,
+  type ServerFrame,
+} from '@repo/types';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GameRuntime } from '@/game-runtime';
 import type { WebSocketHost } from '@/server/websocket-host';
 import worker from '../src/index';
-
-type Frame = { event?: string; args?: unknown[]; pong?: number };
 
 const ORIGIN = 'http://game.test';
 const WS_SCHEME = /^ws/;
@@ -14,14 +20,20 @@ const open: Client[] = [];
 
 /** A raw WebSocket client of one room, recording every frame it gets. */
 class Client {
-  readonly frames: Frame[] = [];
+  readonly frames: ServerFrame[] = [];
   private readonly waiters: (() => void)[] = [];
   private readonly socket: WebSocket;
 
   constructor(socket: WebSocket) {
     this.socket = socket;
     socket.addEventListener('message', (message) => {
-      this.frames.push(JSON.parse(String(message.data)) as Frame);
+      const frame = parseServerFrame(String(message.data));
+
+      if (!frame) {
+        throw new Error(`Malformed server frame: ${String(message.data)}`);
+      }
+
+      this.frames.push(frame);
 
       for (const wake of this.waiters.splice(0)) {
         wake();
@@ -29,7 +41,7 @@ class Client {
     });
   }
 
-  emit(event: string, ...args: unknown[]) {
+  emit(event: keyof ClientToServerEvents, ...args: unknown[]) {
     this.socket.send(encodeFrame({ event, args }));
   }
 
@@ -38,11 +50,15 @@ class Client {
   }
 
   events() {
-    return this.frames.flatMap((frame) => (frame.event ? [frame.event] : []));
+    return this.frames.flatMap((frame) =>
+      'event' in frame ? [frame.event] : []
+    );
   }
 
   /** The first frame matching `match`, waiting up to 2s for it. */
-  async next(match: (frame: Frame) => boolean): Promise<Frame> {
+  async next<F extends ServerFrame>(
+    match: (frame: ServerFrame) => frame is F
+  ): Promise<F> {
     const deadline = Date.now() + 2000;
 
     while (Date.now() < deadline) {
@@ -62,7 +78,14 @@ class Client {
   }
 
   event(name: string) {
-    return this.next((frame) => frame.event === name);
+    return this.next(
+      (frame): frame is EventFrame => 'event' in frame && frame.event === name
+    );
+  }
+
+  /** The first heartbeat reply. */
+  pong() {
+    return this.next((frame): frame is PongFrame => 'pong' in frame);
   }
 
   close() {
@@ -101,7 +124,8 @@ function inRoom<R>(code: string, inspect: (room: Room) => R) {
   const stub = env.GAME_ROOM.get(env.GAME_ROOM.idFromName(code));
 
   return runInDurableObject(stub, (instance) => {
-    const { room } = instance as unknown as { room: Room | undefined };
+    // The game is private to the Durable Object; only tests reach in
+    const room = instance['room'];
 
     if (!room) {
       throw new Error(`Room ${code} has no game`);
@@ -182,9 +206,7 @@ describe('routing', () => {
   it('accepts a trailing slash and answers the app-level heartbeat', async () => {
     const client = await connect('HEARTBEAT/');
     client.ping(7);
-    expect(await client.next((frame) => frame.pong !== undefined)).toEqual({
-      pong: 7,
-    });
+    expect(await client.pong()).toEqual({ pong: 7 });
   });
 });
 
@@ -195,9 +217,9 @@ describe('rooms', () => {
 
     alice.emit('player:join', 'Alice');
     const data = await alice.event('lobby:player-data');
-    expect(data.args?.[0]).toMatchObject({ name: 'Alice' });
+    expect(data.args[0]).toMatchObject({ name: 'Alice' });
     const update = await bob.event('lobby:update-players-list');
-    expect(update.args?.[0]).toMatchObject({ name: 'Alice' });
+    expect(update.args[0]).toMatchObject({ name: 'Alice' });
   });
 
   it('isolates rooms from each other', async () => {
@@ -251,6 +273,14 @@ describe('rooms', () => {
   });
 });
 
+/** Calls the Worker directly, so a test can pick its env (ACCESS_TOKEN). */
+const fetchWith = (url: string, workerEnv: Env & { ACCESS_TOKEN?: string }) =>
+  worker.fetch(new Request(url, upgrade), workerEnv);
+
+/** The http URL of the GATED room, with `token` when given. */
+const httpRoomUrl = (token?: string) =>
+  roomUrl(ORIGIN, 'GATED', token).replace(WS_SCHEME, 'http');
+
 describe('admission', () => {
   it('refuses connections over MAX_CONNECTIONS_PER_ROOM with 503', async () => {
     await Promise.all(Array.from({ length: 6 }, () => connect('CAP')));
@@ -259,12 +289,6 @@ describe('admission', () => {
   });
 
   const withToken = { ...env, ACCESS_TOKEN: 's3cret' };
-
-  const fetchWith = (url: string, workerEnv: Env & { ACCESS_TOKEN?: string }) =>
-    worker.fetch(new Request(url, upgrade), workerEnv);
-
-  const httpRoomUrl = (token?: string) =>
-    roomUrl(ORIGIN, 'GATED', token).replace(WS_SCHEME, 'http');
 
   it.each([
     ['missing', undefined],
@@ -282,7 +306,7 @@ describe('admission', () => {
     );
 
     client.ping(1);
-    await client.next((frame) => frame.pong === 1);
+    expect(await client.pong()).toEqual({ pong: 1 });
   });
 
   it('is open when no token is configured', async () => {
@@ -315,9 +339,11 @@ describe('room lifecycle', () => {
     alice.close();
     await emptied('LEFT-LOBBY');
 
+    // The name is free again: the old lobby was reset
     const again = await connect('LEFT-LOBBY');
     again.emit('player:join', 'Alice');
-    await again.event('lobby:player-data');
+    const data = await again.event('lobby:player-data');
+    expect(data.args[0]).toMatchObject({ name: 'Alice' });
   });
 
   it('resets a finished game its last client left', async () => {

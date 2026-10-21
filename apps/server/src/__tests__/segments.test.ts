@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DeathManager } from '@/core/death-manager';
@@ -6,10 +5,10 @@ import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 describe('Audio segment order', () => {
-  let mockIo: SocketType;
+  let mockIo: Broadcaster;
   let game: Game;
   let deathManager: DeathManager;
   let audioManager: AudioManager;
@@ -20,7 +19,7 @@ describe('Audio segment order', () => {
     mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
-    } as unknown as SocketType;
+    } satisfies Broadcaster;
 
     deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);

@@ -1,4 +1,4 @@
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
@@ -9,7 +9,18 @@ import {
   View,
 } from 'react-native';
 import { useGameStore } from '@/hooks/use-game-store';
-import { useModalStore } from '@/hooks/use-modal-store';
+import { type ModalData, useModalStore } from '@/hooks/use-modal-store';
+import { socket } from '@/utils/sockets';
+
+// Shared empty selection, so derived `selection` stays referentially stable
+// across renders and doesn't churn the callbacks that depend on it.
+const NO_SELECTION: string[] = [];
+
+function renderChildren(children: React.ReactNode) {
+  return (
+    <View className="my-5 w-full items-center justify-center">{children}</View>
+  );
+}
 
 export function GlobalModal() {
   const { isOpen, modalData, closeModal } = useModalStore();
@@ -24,8 +35,28 @@ export function GlobalModal() {
     resetVoting,
   } = useGameStore();
 
-  const [selection, setSelection] = useState<string[]>([]);
-  const [isDelayActive, setIsDelayActive] = useState(false);
+  // Selection and the confirm-button delay belong to the modal they were
+  // made for. The store replaces modalData on every open and nulls it on
+  // close, so tagging them with that object makes a new modal start with an
+  // empty selection (a prior modal's picks can't leak into a later one and
+  // submit a stale target) and its own delay.
+  const [picked, setPicked] = useState<{
+    modal: ModalData | null;
+    items: string[];
+  }>({ modal: null, items: [] });
+
+  const selection = picked.modal === modalData ? picked.items : NO_SELECTION;
+
+  const setSelection = (items: string[]) =>
+    setPicked({ modal: modalData, items });
+
+  const [delayElapsedFor, setDelayElapsedFor] = useState<ModalData | null>(
+    null
+  );
+
+  const isDelayActive =
+    Boolean(modalData?.buttonDelay) && delayElapsedFor !== modalData;
+
   const totalWerewolves = playersList.length - villagersList.length + 1;
 
   if (modalData?.data) {
@@ -66,25 +97,16 @@ export function GlobalModal() {
   }, [modalData, closeModal]);
 
   useEffect(() => {
-    if (modalData?.buttonDelay) {
-      setIsDelayActive(true);
-
-      const timer = setTimeout(() => {
-        setIsDelayActive(false);
-      }, modalData.buttonDelay);
-
-      return () => clearTimeout(timer);
+    if (!modalData?.buttonDelay) {
+      return;
     }
-  }, [modalData?.buttonDelay]);
 
-  // Reset the selection whenever a modal opens, closes, or its data changes,
-  // so a prior modal's selection can't leak into a later one and submit a
-  // stale target. (selection is component state, not store state, so the
-  // store's closeModal doesn't touch it.)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: isOpen/modalData are intentional triggers — the reset must run on every modal transition even though the body doesn't read them
-  useEffect(() => {
-    setSelection([]);
-  }, [isOpen, modalData]);
+    const timer = setTimeout(() => {
+      setDelayElapsedFor(modalData);
+    }, modalData.buttonDelay);
+
+    return () => clearTimeout(timer);
+  }, [modalData]);
 
   useEffect(() => {
     if (modalData?.werewolfModal && isVotingComplete) {
@@ -144,7 +166,7 @@ export function GlobalModal() {
       setSelection(selection.filter((i) => i !== item));
 
       if (modalData.werewolfModal) {
-        sendVote(item);
+        sendVote(socket, item);
       }
 
       return;
@@ -152,7 +174,7 @@ export function GlobalModal() {
 
     if (modalData.werewolfModal) {
       setSelection([item]);
-      sendVote(item);
+      sendVote(socket, item);
     } else {
       setSelection([...selection, item]);
     }
@@ -197,14 +219,6 @@ export function GlobalModal() {
           )}
           showsVerticalScrollIndicator={false}
         />
-      </View>
-    );
-  };
-
-  const renderChildren = (children: React.ReactNode) => {
-    return (
-      <View className="my-5 w-full items-center justify-center">
-        {children}
       </View>
     );
   };

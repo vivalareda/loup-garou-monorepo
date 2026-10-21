@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 describe('Game.handleDisconnect', () => {
   let game: Game;
   let deathManager: DeathManager;
-  let mockIo: SocketType;
+  let mockIo: Broadcaster;
   // Per-socket emit spies so we can prove which sid received what.
   let socketEmit: Map<string, ReturnType<typeof vi.fn>>;
   let ioEmitSpy: ReturnType<typeof vi.fn>;
@@ -26,7 +26,7 @@ describe('Game.handleDisconnect', () => {
         return { emit };
       }),
       emit: ioEmitSpy,
-    } as unknown as SocketType;
+    } satisfies Broadcaster;
     deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);
   });

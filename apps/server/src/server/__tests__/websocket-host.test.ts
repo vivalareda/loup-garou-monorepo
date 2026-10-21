@@ -1,3 +1,4 @@
+import type { ClientFrame, FrameData } from '@repo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Connection } from '@/server/connection';
 import {
@@ -16,7 +17,7 @@ function silence() {
   // Expected warnings: keep the test output readable
 }
 
-type FakeListener = (event: { data: unknown }) => void;
+type FakeListener = (event: { data: FrameData }) => void;
 
 /** Just enough of a WebSocket for the host, driven by the test. */
 class FakeSocket implements WebSocketLike {
@@ -48,25 +49,36 @@ class FakeSocket implements WebSocketLike {
   }
 
   /** The client sends a raw frame. */
-  receive(data: unknown) {
+  receive(data: FrameData) {
     this.fire('message', data);
   }
 
   /** The client sends a JSON frame. */
-  receiveFrame(frame: unknown) {
+  receiveFrame(frame: ClientFrame) {
     this.receive(JSON.stringify(frame));
   }
 
-  fire(type: 'message' | 'close' | 'error', data?: unknown) {
+  fire(type: 'message' | 'close' | 'error', data: FrameData = '') {
     for (const listener of this.listeners.get(type) ?? []) {
       listener({ data });
     }
   }
 
   frames() {
-    return this.sent.map((frame) => JSON.parse(frame) as unknown);
+    return this.sent.map((frame) => JSON.parse(frame));
   }
 }
+
+/** A `player:join` text frame padded with `char` to about `bytes` characters. */
+const frameOfSize = (bytes: number, char = 'a') => {
+  const empty = JSON.stringify({ event: 'player:join', args: [''] });
+  const padding = Math.floor((bytes - empty.length) / char.length);
+
+  return JSON.stringify({
+    event: 'player:join',
+    args: [char.repeat(padding)],
+  });
+};
 
 function connect(host: WebSocketHost) {
   const socket = new FakeSocket();
@@ -216,11 +228,11 @@ describe('WebSocketHost', () => {
       const listener = vi.fn();
       connection.on('game:restart', listener);
 
-      socket.receiveFrame({ event: 'game:explode', args: [] });
+      socket.receive(JSON.stringify({ event: 'game:explode', args: [] }));
 
       expect(listener).not.toHaveBeenCalled();
       expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining('game:explode')
+        expect.stringContaining('unknown event')
       );
     });
 
@@ -229,7 +241,7 @@ describe('WebSocketHost', () => {
       const onDisconnect = vi.fn();
       connection.on('disconnect', onDisconnect);
 
-      socket.receiveFrame({ event: 'disconnect', args: [] });
+      socket.receive(JSON.stringify({ event: 'disconnect', args: [] }));
 
       expect(onDisconnect).not.toHaveBeenCalled();
       expect(host.size).toBe(1);
@@ -550,7 +562,11 @@ describe('WebSocketHost', () => {
 
           return nextHandle;
         },
-        clearTimeout: (handle) => pending.delete(handle as number),
+        clearTimeout: (handle) => {
+          if (handle !== undefined) {
+            pending.delete(handle);
+          }
+        },
       };
 
       host = new WebSocketHost({ idleTimeoutMs: 1000, timers });
@@ -558,7 +574,7 @@ describe('WebSocketHost', () => {
       const onDisconnect = vi.fn();
       connection.on('disconnect', onDisconnect);
 
-      for (const callback of [...pending.values()]) {
+      for (const callback of pending.values()) {
         callback();
       }
 
@@ -568,16 +584,6 @@ describe('WebSocketHost', () => {
   });
 
   describe('frame size limit', () => {
-    const frameOfSize = (bytes: number, char = 'a') => {
-      const empty = JSON.stringify({ event: 'player:join', args: [''] });
-      const padding = Math.floor((bytes - empty.length) / char.length);
-
-      return JSON.stringify({
-        event: 'player:join',
-        args: [char.repeat(padding)],
-      });
-    };
-
     it('accepts a frame at the limit', () => {
       const { socket, connection } = connect(host);
       const listener = vi.fn();

@@ -21,6 +21,7 @@ const names =
 
 const clients: Array<{ name: string; socket: RealtimeClient; acted: string }> =
   [];
+
 let started = false;
 let finished = false;
 
@@ -50,6 +51,7 @@ const act = (
     const choices = snapshot.players
       .filter((p) => p.isAlive && p.socketId !== selfId)
       .slice(0, 2);
+
     client.socket.emit(
       'cupid:lovers-pick',
       choices.map((p) => p.socketId)
@@ -101,6 +103,7 @@ for (const name of names) {
     });
 
   socket.on('game:phase-changed', requestState);
+
   const promptEvents: (keyof ServerToClientEvents)[] = [
     'cupid:pick-required',
     'werewolf:pick-required',

@@ -1,5 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: <use of generics> */
-
 import type { DeathInfo } from './death';
 import type { GameEndResult, Player, PlayerListItem } from './player';
 import type { Role } from './role';
@@ -63,160 +61,233 @@ export type PlayerGameSnapshot = {
   countdown?: Countdown;
 };
 
-const serverEventSchemas = {
-  'lobby:player-data': null as unknown as (player: Player) => void,
-  'lobby:join-rejected': null as unknown as (reason: string) => void,
-  'lobby:player-left': null as unknown as (playerName: string) => void,
-  'lobby:player-died': null as unknown as (playerSid: string) => void,
+/**
+ * Checks an event map at compile time: every name is `<type>:<action>` and
+ * every handler is a function. Resolves to the map itself.
+ */
+type EventMap<
+  Events extends {
+    [Name in keyof Events]: Name extends EventName
+      ? (...args: never[]) => void
+      : never;
+  },
+> = Events;
 
-  'lobby:update-players-list': null as unknown as (
-    player: PlayerListItem
-  ) => void,
-  'lobby:players-list': null as unknown as (
+export type ServerToClientEvents = EventMap<{
+  'lobby:player-data': (player: Player) => void;
+  'lobby:join-rejected': (reason: string) => void;
+  'lobby:player-left': (playerName: string) => void;
+  'lobby:player-died': (playerSid: string) => void;
+
+  'lobby:update-players-list': (player: PlayerListItem) => void;
+  'lobby:players-list': (
     playersList: PlayerListItem[],
     requiredPlayerCount: number
-  ) => void,
-  'game:snapshot': null as unknown as (snapshot: PlayerGameSnapshot) => void,
+  ) => void;
+  'game:snapshot': (snapshot: PlayerGameSnapshot) => void;
   // The presented session token matched no player (server restarted, game
   // reset, or the player was removed): the client must forget the session
-  'player:rejoin-failed': null as unknown as () => void,
-  'game:phase-changed': null as unknown as (phase: GamePhase) => void,
-  'game:countdown': null as unknown as (
-    phase: CountdownPhase,
-    remainingMs: number
-  ) => void,
-  'game:phase-timed-out': null as unknown as (phase: GamePhase) => void,
+  'player:rejoin-failed': () => void;
+  'game:phase-changed': (phase: GamePhase) => void;
+  'game:countdown': (phase: CountdownPhase, remainingMs: number) => void;
+  'game:phase-timed-out': (phase: GamePhase) => void;
   // The server reset the game in place: every client must drop its local
   // game state and return to the join screen
-  'game:restarted': null as unknown as () => void,
-  'lobby:villagers-list': null as unknown as (
-    villagers: PlayerListItem[]
-  ) => void,
+  'game:restarted': () => void;
+  'lobby:villagers-list': (villagers: PlayerListItem[]) => void;
 
-  'player:role-assigned': null as unknown as (role: Role) => void,
-  'cupid:pick-required': null as unknown as () => void,
+  'player:role-assigned': (role: Role) => void;
+  'cupid:pick-required': () => void;
 
-  'alert:player-is-lover': null as unknown as (loverName: string) => void,
-  'alert:lovers-can-close-alert': null as unknown as () => void,
-  'alert:player-is-dead': null as unknown as () => void,
-  'alert:player-won': null as unknown as (result: GameEndResult) => void,
-  'alert:player-lost': null as unknown as (result: GameEndResult) => void,
-  'alert:action-error': null as unknown as (message: string) => void,
+  'alert:player-is-lover': (loverName: string) => void;
+  'alert:lovers-can-close-alert': () => void;
+  'alert:player-is-dead': () => void;
+  'alert:player-won': (result: GameEndResult) => void;
+  'alert:player-lost': (result: GameEndResult) => void;
+  'alert:action-error': (message: string) => void;
 
-  'seer:pick-required': null as unknown as () => void,
-  'seer:vision-result': null as unknown as (
-    playerName: string,
-    role: Role
-  ) => void,
+  'seer:pick-required': () => void;
+  'seer:vision-result': (playerName: string, role: Role) => void;
 
-  'werewolf:pick-required': null as unknown as () => void,
-  'werewolf:current-votes': null as unknown as (
-    currentvotes: WerewolvesVoteState
-  ) => void,
-  'werewolf:voting-complete': null as unknown as () => void,
-  'werewolf:player-update-vote': null as unknown as (
+  'werewolf:pick-required': () => void;
+  'werewolf:current-votes': (currentvotes: WerewolvesVoteState) => void;
+  'werewolf:voting-complete': () => void;
+  'werewolf:player-update-vote': (
     targetPlayer: string,
     oldVote: string
-  ) => void,
+  ) => void;
 
-  'witch:can-heal': null as unknown as (playerSid: string) => void,
-  'witch:pick-poison-player': null as unknown as () => void,
+  'witch:can-heal': (playerSid: string) => void;
+  'witch:pick-poison-player': () => void;
 
   // Night phase events
-  'night:deaths-announced': null as unknown as (deaths: DeathInfo[]) => void,
+  'night:deaths-announced': (deaths: DeathInfo[]) => void;
 
   // Day phase events
-  'day:voting-phase-start': null as unknown as () => void,
-  'day:vote-tie': null as unknown as (tiedPlayerNames: string[]) => void,
+  'day:voting-phase-start': () => void;
+  'day:vote-tie': (tiedPlayerNames: string[]) => void;
 
-  'hunter:pick-required': null as unknown as () => void,
+  'hunter:pick-required': () => void;
 
   // TODO: remove this, temporary for testing
-  'hunter:killed-player': null as unknown as (selectedPlayer: string) => void,
+  'hunter:killed-player': (selectedPlayer: string) => void;
 
   // Sent only to the registered narrator; it answers `narrator:done`
-  'narrator:play': null as unknown as (clipId: string, clip: string) => void,
-} satisfies Record<EventName, (...args: any[]) => void>;
+  'narrator:play': (clipId: string, clip: string) => void;
+}>;
 
-export type ServerToClientEvents = typeof serverEventSchemas;
-
-const clientEventSchemas = {
-  'lobby:get-players-list': null as unknown as () => void,
+export type ClientToServerEvents = EventMap<{
+  'lobby:get-players-list': () => void;
   /** Agent/CLI protocol: request the complete private snapshot for this player. */
-  'agent:get-state': null as unknown as (
-    callback: (snapshot: PlayerGameSnapshot) => void
-  ) => void,
+  'agent:get-state': (callback: (snapshot: PlayerGameSnapshot) => void) => void;
 
-  'player:join': null as unknown as (playerName: string) => void,
-  'player:rejoin': null as unknown as (sessionToken: string) => void,
+  'player:join': (playerName: string) => void;
+  'player:rejoin': (sessionToken: string) => void;
   // Play-again after a finished game; any player may trigger it
-  'game:restart': null as unknown as () => void,
+  'game:restart': () => void;
 
   // Admin/Dashboard events for testing
-  'admin:start-game': null as unknown as () => void,
-  'admin:next-segment': null as unknown as () => void,
-  'admin:simulate-werewolf-vote': null as unknown as (
-    targetPlayer: string
-  ) => void,
-  'admin:simulate-day-vote': null as unknown as (targetPlayer: string) => void,
-  'admin:mock-hunter-event': null as unknown as () => void,
-  'admin:mock-lover-event': null as unknown as () => void,
-  'admin:mock-lover-second-hunter-event': null as unknown as () => void,
-  'admin:mock-lover-is-hunter-event': null as unknown as () => void,
-  'admin:mock-day-vote-hunter-event': null as unknown as () => void,
-  'admin:mock-day-vote-lover-event': null as unknown as () => void,
-  'admin:mock-day-vote-lover-is-hunter-event': null as unknown as () => void,
-  'admin:mock-day-vote-lover-second-hunter-event':
-    null as unknown as () => void,
-  'admin:mock-hunter-revenge-kills-lover': null as unknown as () => void,
+  'admin:start-game': () => void;
+  'admin:next-segment': () => void;
+  'admin:simulate-werewolf-vote': (targetPlayer: string) => void;
+  'admin:simulate-day-vote': (targetPlayer: string) => void;
+  'admin:mock-hunter-event': () => void;
+  'admin:mock-lover-event': () => void;
+  'admin:mock-lover-second-hunter-event': () => void;
+  'admin:mock-lover-is-hunter-event': () => void;
+  'admin:mock-day-vote-hunter-event': () => void;
+  'admin:mock-day-vote-lover-event': () => void;
+  'admin:mock-day-vote-lover-is-hunter-event': () => void;
+  'admin:mock-day-vote-lover-second-hunter-event': () => void;
+  'admin:mock-hunter-revenge-kills-lover': () => void;
 
   // A dashboard takes over playing the narration clips
-  'narrator:register': null as unknown as () => void,
-  'narrator:done': null as unknown as (clipId: string) => void,
+  'narrator:register': () => void;
+  'narrator:done': (clipId: string) => void;
 
-  'cupid:lovers-pick': null as unknown as (selectedPlayers: string[]) => void,
-  'alert:lover-closed-alert': null as unknown as () => void,
+  'cupid:lovers-pick': (selectedPlayers: string[]) => void;
+  'alert:lover-closed-alert': () => void;
 
-  'seer:picked-player': null as unknown as (targetSid: string) => void,
+  'seer:picked-player': (targetSid: string) => void;
 
-  'werewolf:player-voted': null as unknown as (targetPlayer: string) => void,
+  'werewolf:player-voted': (targetPlayer: string) => void;
 
-  'witch:healed-player': null as unknown as () => void,
-  'witch:poisoned-player': null as unknown as (targetPlayer: string) => void,
-  'witch:skipped-heal': null as unknown as () => void,
-  'witch:skipped-poison': null as unknown as () => void,
+  'witch:healed-player': () => void;
+  'witch:poisoned-player': (targetPlayer: string) => void;
+  'witch:skipped-heal': () => void;
+  'witch:skipped-poison': () => void;
 
-  'day:player-voted': null as unknown as (targetPlayer: string) => void,
+  'day:player-voted': (targetPlayer: string) => void;
   // Any living player may end the day discussion and open the vote
-  'day:start-vote': null as unknown as () => void,
-  'alert:hunter-died': null as unknown as () => void,
-  'hunter:killed-player': null as unknown as (selectedPlayer: string) => void,
+  'day:start-vote': () => void;
+  'alert:hunter-died': () => void;
+  'hunter:killed-player': (selectedPlayer: string) => void;
 
   //TODO: REMOVE THIS ONLY FOR TESTING
-  'werewolf:current-votes': null as unknown as (
-    currentvotes: WerewolvesVoteState
-  ) => void,
-  'werewolf:player-update-vote': null as unknown as (
+  'werewolf:current-votes': (currentvotes: WerewolvesVoteState) => void;
+  'werewolf:player-update-vote': (
     targetPlayer: string,
     oldVote: string
-  ) => void,
-} satisfies Record<EventName, (...args: any[]) => void>;
+  ) => void;
+}>;
 
-export type ClientToServerEvents = typeof clientEventSchemas;
+/*
+ * The event names at runtime. Typed as a record over the event map's keys,
+ * so a name missing from (or extra to) its map fails typecheck.
+ */
+const serverEventNames: Record<keyof ServerToClientEvents, true> = {
+  'lobby:player-data': true,
+  'lobby:join-rejected': true,
+  'lobby:player-left': true,
+  'lobby:player-died': true,
+  'lobby:update-players-list': true,
+  'lobby:players-list': true,
+  'game:snapshot': true,
+  'player:rejoin-failed': true,
+  'game:phase-changed': true,
+  'game:countdown': true,
+  'game:phase-timed-out': true,
+  'game:restarted': true,
+  'lobby:villagers-list': true,
+  'player:role-assigned': true,
+  'cupid:pick-required': true,
+  'alert:player-is-lover': true,
+  'alert:lovers-can-close-alert': true,
+  'alert:player-is-dead': true,
+  'alert:player-won': true,
+  'alert:player-lost': true,
+  'alert:action-error': true,
+  'seer:pick-required': true,
+  'seer:vision-result': true,
+  'werewolf:pick-required': true,
+  'werewolf:current-votes': true,
+  'werewolf:voting-complete': true,
+  'werewolf:player-update-vote': true,
+  'witch:can-heal': true,
+  'witch:pick-poison-player': true,
+  'night:deaths-announced': true,
+  'day:voting-phase-start': true,
+  'day:vote-tie': true,
+  'hunter:pick-required': true,
+  'hunter:killed-player': true,
+  'narrator:play': true,
+};
 
-const clientEventNames = new Set<string>(Object.keys(clientEventSchemas));
-const serverEventNames = new Set<string>(Object.keys(serverEventSchemas));
+const clientEventNames: Record<keyof ClientToServerEvents, true> = {
+  'lobby:get-players-list': true,
+  'agent:get-state': true,
+  'player:join': true,
+  'player:rejoin': true,
+  'game:restart': true,
+  'admin:start-game': true,
+  'admin:next-segment': true,
+  'admin:simulate-werewolf-vote': true,
+  'admin:simulate-day-vote': true,
+  'admin:mock-hunter-event': true,
+  'admin:mock-lover-event': true,
+  'admin:mock-lover-second-hunter-event': true,
+  'admin:mock-lover-is-hunter-event': true,
+  'admin:mock-day-vote-hunter-event': true,
+  'admin:mock-day-vote-lover-event': true,
+  'admin:mock-day-vote-lover-is-hunter-event': true,
+  'admin:mock-day-vote-lover-second-hunter-event': true,
+  'admin:mock-hunter-revenge-kills-lover': true,
+  'narrator:register': true,
+  'narrator:done': true,
+  'cupid:lovers-pick': true,
+  'alert:lover-closed-alert': true,
+  'seer:picked-player': true,
+  'werewolf:player-voted': true,
+  'witch:healed-player': true,
+  'witch:poisoned-player': true,
+  'witch:skipped-heal': true,
+  'witch:skipped-poison': true,
+  'day:player-voted': true,
+  'day:start-vote': true,
+  'alert:hunter-died': true,
+  'hunter:killed-player': true,
+  'werewolf:current-votes': true,
+  'werewolf:player-update-vote': true,
+};
+
+const serverEventNameSet: ReadonlySet<unknown> = new Set(
+  Object.keys(serverEventNames)
+);
+
+const clientEventNameSet: ReadonlySet<unknown> = new Set(
+  Object.keys(clientEventNames)
+);
 
 /** Runtime guard for an event name a client may send. */
 export function isClientEvent(
-  name: string
+  name: unknown
 ): name is keyof ClientToServerEvents {
-  return clientEventNames.has(name);
+  return clientEventNameSet.has(name);
 }
 
 /** Runtime guard for an event name the server may send. */
 export function isServerEvent(
-  name: string
+  name: unknown
 ): name is keyof ServerToClientEvents {
-  return serverEventNames.has(name);
+  return serverEventNameSet.has(name);
 }

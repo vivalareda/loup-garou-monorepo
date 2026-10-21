@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { GameSimulator } from '@/simulation/game-simulator';
 import {
@@ -35,7 +35,9 @@ describe('random game audio invariants', () => {
   it.each(
     Array.from({ length: GAMES }, (_, i) => {
       const withHunter = i % 2 === 0;
-      const lovers = i % 3 === 0 ? 'random-with-hunter' : 'random';
+
+      const lovers =
+        i % 3 === 0 ? ('random-with-hunter' as const) : ('random' as const);
 
       return {
         seed: 1000 + i,
@@ -46,11 +48,14 @@ describe('random game audio invariants', () => {
   )(
     'game $seed (forceHunter=$forceHunter, lovers=$lovers) satisfies the audio invariants',
     async ({ seed, forceHunter, lovers }) => {
+      // The assert* helpers assert through expect
+      expect.hasAssertions();
+
       const sim = new GameSimulator({
         flush,
         rng: mulberry32(seed),
         forceHunterName: forceHunter,
-        lovers: lovers as 'random' | 'random-with-hunter',
+        lovers,
       });
 
       await sim.run();

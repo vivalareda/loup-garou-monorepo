@@ -20,7 +20,7 @@ const url = roomUrl(
 console.log('🔗 Connecting to:', url.split('?')[0]);
 
 // Reconnects on its own after a drop (locked phone, app in background,
-// network hop) and fires `connect` again: use-session-recovery rejoins
+// network hop) and fires `connect` again: session-recovery.ts rejoins
 // with the session token from there. Taps made while reconnecting are
 // dropped, not replayed: the rejoin snapshot reopens any pending prompt.
 // Before the very first connection only two emits are queued: a join

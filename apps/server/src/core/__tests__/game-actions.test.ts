@@ -1,17 +1,37 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import type { Game } from '@/core/game';
+import { DeathManager } from '@/core/death-manager';
+import { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
-import type { SegmentsManager } from '@/segments/segments-manager';
-import type { SocketType } from '@/server/sockets';
+import { SpecialScenarios } from '@/core/special-scenarios';
+import { AudioManager } from '@/segments/audio-manager';
+import { SegmentsManager } from '@/segments/segments-manager';
+import type { Broadcaster } from '@/server/broadcaster';
 
-const makeSegmentsManager = (gameOver: boolean) =>
-  ({
-    isCurrentSegment: vi.fn().mockReturnValue(true),
-    getRemainingDeadlineMs: vi.fn().mockReturnValue(null),
-    isGameOver: vi.fn().mockReturnValue(gameOver),
-    getGeneration: vi.fn().mockReturnValue(0),
-    isCurrentGeneration: vi.fn().mockReturnValue(true),
-  }) as unknown as SegmentsManager;
+/** Real game objects around a recording broadcaster; tests stub what they steer. */
+function buildGameActions() {
+  const io = {
+    to: vi.fn().mockReturnThis(),
+    emit: vi.fn(),
+  } satisfies Broadcaster;
+
+  const deathManager = new DeathManager();
+  const game = new Game(io, deathManager);
+  const audioManager = new AudioManager(deathManager);
+
+  const segmentsManager = new SegmentsManager(
+    game,
+    io,
+    audioManager,
+    new SpecialScenarios(game, audioManager)
+  );
+
+  return {
+    io,
+    game,
+    segmentsManager,
+    gameActions: new GameActions(game, io, segmentsManager),
+  };
+}
 
 describe('GameActions', () => {
   beforeEach(() => {
@@ -22,24 +42,19 @@ describe('GameActions', () => {
     vi.useRealTimers();
   });
   test('dayAction ends via the segments manager when a faction has won', async () => {
-    const mockGame = {
-      processPendingDeaths: vi.fn().mockReturnValue([]),
-    } as unknown as Game;
+    const { io, game, segmentsManager, gameActions } = buildGameActions();
+    vi.spyOn(game, 'processPendingDeaths').mockReturnValue([]);
 
-    const mockIo = {
-      to: vi.fn().mockReturnThis(),
-      emit: vi.fn(),
-    } as unknown as SocketType;
-
-    const segmentsManager = makeSegmentsManager(true);
-    const gameActions = new GameActions(mockGame, mockIo, segmentsManager);
+    const isGameOver = vi
+      .spyOn(segmentsManager, 'isGameOver')
+      .mockReturnValue(true);
 
     await gameActions.dayAction();
 
     // isGameOver is the only victory path: it records the FINISHED state
     // that game:restart checks. No discussion may start after a win.
-    expect(segmentsManager.isGameOver).toHaveBeenCalled();
-    expect(mockIo.emit).not.toHaveBeenCalledWith(
+    expect(isGameOver).toHaveBeenCalled();
+    expect(io.emit).not.toHaveBeenCalledWith(
       'game:countdown',
       'DAY-DISCUSSION',
       expect.anything()
@@ -47,7 +62,7 @@ describe('GameActions', () => {
   });
 
   test('dayAction announces night deaths before checking the winner', async () => {
-    const deaths = [
+    const deaths: ReturnType<Game['processPendingDeaths']> = [
       {
         playerId: 'victim-sid',
         playerName: 'Alice',
@@ -56,57 +71,27 @@ describe('GameActions', () => {
       },
     ];
 
-    const mockGame = {
-      processPendingDeaths: vi.fn().mockReturnValue(deaths),
-    } as unknown as Game;
-
-    const mockIo = {
-      emit: vi.fn(),
-    } as unknown as SocketType;
-
-    const gameActions = new GameActions(
-      mockGame,
-      mockIo,
-      makeSegmentsManager(false)
-    );
+    const { io, game, segmentsManager, gameActions } = buildGameActions();
+    vi.spyOn(game, 'processPendingDeaths').mockReturnValue(deaths);
+    vi.spyOn(segmentsManager, 'isGameOver').mockReturnValue(false);
 
     await gameActions.dayAction();
 
-    expect(mockIo.emit).toHaveBeenCalledWith('night:deaths-announced', deaths);
+    expect(io.emit).toHaveBeenCalledWith('night:deaths-announced', deaths);
   });
 
   test('loversAction sends each lover the other lover display name', () => {
-    const lover1 = {
-      getSocketId: () => 'lover-1-sid',
-      getName: () => 'Alice',
-    };
-
-    const lover2 = {
-      getSocketId: () => 'lover-2-sid',
-      getName: () => 'Bob',
-    };
-
-    const mockGame = {
-      getLovers: vi.fn().mockReturnValue([lover1, lover2]),
-    } as unknown as Game;
-
-    const mockIo = {
-      to: vi.fn().mockReturnThis(),
-      emit: vi.fn(),
-    } as unknown as SocketType;
-
-    const gameActions = new GameActions(
-      mockGame,
-      mockIo,
-      makeSegmentsManager(false)
-    );
+    const { io, game, gameActions } = buildGameActions();
+    game.addPlayer('Alice', 'lover-1-sid');
+    game.addPlayer('Bob', 'lover-2-sid');
+    game.setLovers(['lover-1-sid', 'lover-2-sid']);
 
     gameActions.loversAction();
     vi.advanceTimersByTime(4000);
 
-    expect(mockIo.to).toHaveBeenCalledWith('lover-1-sid');
-    expect(mockIo.emit).toHaveBeenCalledWith('alert:player-is-lover', 'Bob');
-    expect(mockIo.to).toHaveBeenCalledWith('lover-2-sid');
-    expect(mockIo.emit).toHaveBeenCalledWith('alert:player-is-lover', 'Alice');
+    expect(io.to).toHaveBeenCalledWith('lover-1-sid');
+    expect(io.emit).toHaveBeenCalledWith('alert:player-is-lover', 'Bob');
+    expect(io.to).toHaveBeenCalledWith('lover-2-sid');
+    expect(io.emit).toHaveBeenCalledWith('alert:player-is-lover', 'Alice');
   });
 });

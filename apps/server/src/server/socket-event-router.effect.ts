@@ -22,8 +22,8 @@ export const setupSocketEventHandlers = (
 
     // Helper to run effect in background with context
     const runHandler = (effect: Effect.Effect<void, never, GameState>) => {
-      Runtime.runPromise(runtime)(effect).catch((error: unknown) => {
-        console.error('Error in socket handler:', error);
+      Runtime.runPromise(runtime)(effect).catch((cause: unknown) => {
+        console.error('Error in socket handler:', cause);
       });
     };
 

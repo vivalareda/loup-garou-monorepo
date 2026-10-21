@@ -60,15 +60,13 @@ export function WitchPoisonModal({
         <div className="mb-4 space-y-2">
           {availableTargets.map((player) => (
             <button
-              className="w-full rounded border border-gray-200 bg-gray-50 p-3 text-left transition-colors hover:bg-purple-50 hover:border-purple-300"
+              className="flex w-full items-center justify-between rounded border border-gray-200 bg-gray-50 p-3 text-left transition-colors hover:bg-purple-50 hover:border-purple-300"
               key={player.socketId}
               onClick={() => onPoison(player.socketId)}
               type="button"
             >
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{player.name}</span>
-                <span className="text-purple-600">☠️</span>
-              </div>
+              <span className="font-medium">{player.name}</span>
+              <span className="text-purple-600">☠️</span>
             </button>
           ))}
         </div>

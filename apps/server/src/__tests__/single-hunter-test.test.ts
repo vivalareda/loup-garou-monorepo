@@ -5,7 +5,7 @@ import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -13,7 +13,7 @@ describe('Night dawn: hunter who is a lover dies during the night', () => {
   let game: Game;
   let segmentsManager: SegmentsManager;
   let eventsActions: EventsActions;
-  let mockIo: SocketType;
+  let mockIo: Broadcaster;
   let emitSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -21,7 +21,7 @@ describe('Night dawn: hunter who is a lover dies during the night', () => {
     mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: emitSpy,
-    } as unknown as SocketType;
+    } satisfies Broadcaster;
 
     const deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);

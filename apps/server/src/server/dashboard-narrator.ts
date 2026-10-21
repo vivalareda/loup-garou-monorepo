@@ -44,7 +44,7 @@ export class DashboardNarrator implements Narrator {
     }
 
     // Clips sent to this socket will never be acknowledged
-    for (const clip of [...this.inFlight.values()]) {
+    for (const clip of this.inFlight.values()) {
       if (clip.socketId === socketId) {
         clip.finish();
       }

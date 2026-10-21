@@ -1,5 +1,6 @@
 import { createInterface } from 'node:readline';
 import { createRealtimeClient } from '@repo/realtime';
+import { Schema } from 'effect';
 import {
   type ClientToServerEvents,
   isClientEvent,
@@ -38,14 +39,21 @@ socket.on('alert:action-error', (message) => {
   emitState();
 });
 
+/** One stdin line: an event name plus its (unvalidated) payload args. */
+const AgentCommand = Schema.parseJson(
+  Schema.Struct({
+    event: Schema.String,
+    args: Schema.optional(Schema.Array(Schema.Unknown)),
+  })
+);
+
+const decodeCommand = Schema.decodeUnknownSync(AgentCommand);
+
 const input = createInterface({ input: process.stdin });
 
 input.on('line', (line) => {
   try {
-    const command = JSON.parse(line) as {
-      event: string;
-      args?: unknown[];
-    };
+    const command = decodeCommand(line);
 
     if (command.event === 'agent:get-state') {
       emitState();
@@ -57,7 +65,8 @@ input.on('line', (line) => {
       throw new Error(`Unknown event "${command.event}"`);
     }
 
-    // Commands come from stdin: the server validates their payloads
+    // SAFETY: only the event name is checked here; the payload args are
+    // forwarded as-is because the server validates every payload it receives
     const emit = socket.emit.bind(socket) as (
       event: keyof ClientToServerEvents,
       ...args: unknown[]

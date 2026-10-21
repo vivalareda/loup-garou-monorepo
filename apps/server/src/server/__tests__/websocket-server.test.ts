@@ -24,6 +24,8 @@ describe('attachWebSocketServer', () => {
     await new Promise<void>((resolve) => {
       httpServer.listen(0, '127.0.0.1', () => resolve());
     });
+    // SAFETY: the server listens on a TCP host and port (not a pipe) and
+    // has bound by now, so address() is an AddressInfo, not a string or null
     const { port } = httpServer.address() as AddressInfo;
     base = `ws://127.0.0.1:${port}`;
   });

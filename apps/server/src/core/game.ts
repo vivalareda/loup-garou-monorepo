@@ -523,9 +523,11 @@ export class Game {
 
     return {
       requiredSids,
-      votes: requiredSids
-        .filter((sid) => this.werewolfVotes.has(sid))
-        .map((sid) => this.werewolfVotes.get(sid) as string),
+      votes: requiredSids.flatMap((sid) => {
+        const vote = this.werewolfVotes.get(sid);
+
+        return vote === undefined ? [] : [vote];
+      }),
     };
   }
 
@@ -648,8 +650,11 @@ export class Game {
         playerName: player.getName(),
         cause: pendingDeath.cause,
         timestamp: new Date(),
-        ...(pendingDeath.metadata ? { metadata: pendingDeath.metadata } : {}),
       };
+
+      if (pendingDeath.metadata) {
+        deathInfo.metadata = pendingDeath.metadata;
+      }
 
       deathInfos.push(deathInfo);
 

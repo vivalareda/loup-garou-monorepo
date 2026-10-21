@@ -8,6 +8,7 @@ import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
 import { SpecialScenarios } from '@/core/special-scenarios';
+import { enterSegment } from './helpers/segments';
 
 /**
  * Drive the real GameEvents socket-handler wiring by capturing the
@@ -88,7 +89,9 @@ describe('Server-side role validation', () => {
     gameEvents.setupSocketHandlers();
 
     // sanity: the connection handler was captured
-    expect(connectionHandler).toBeDefined();
+    if (!connectionHandler) {
+      throw new Error('GameEvents registered no connection handler');
+    }
   });
 
   // A connected socket, wired through the real handler registrations.
@@ -99,16 +102,7 @@ describe('Server-side role validation', () => {
     return mock;
   };
 
-  const setSegment = (type: string) => {
-    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
-    const index = segmentsManager.segments.findIndex(
-      (segment) => segment.type === type
-    );
-
-    if (index !== -1) {
-      segmentsManager.currentSegment = index;
-    }
-  };
+  const setSegment = (type: string) => enterSegment(segmentsManager, type);
 
   it('cupid:lovers-pick from a non-cupid socket does not set lovers', () => {
     addPlayer('Cupid', 'cupid-sid', 'CUPID');

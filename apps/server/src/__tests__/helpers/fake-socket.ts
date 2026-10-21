@@ -1,8 +1,9 @@
+import { type EventFrame, type FrameData, parseServerFrame } from '@repo/types';
 import { WebSocketHost, type WebSocketLike } from '@/server/websocket-host';
 
-export type Frame = { event?: string; args?: unknown[] };
+export type Frame = EventFrame;
 
-type Listener = (event: { data: unknown }) => void;
+type Listener = (event: { data: FrameData }) => void;
 
 function ignoreClose() {
   // The host closes sockets it drops; nothing to do for a fake
@@ -15,14 +16,22 @@ export function fakeSocket() {
 
   const socket: WebSocketLike = {
     readyState: 1,
-    send: (data) => frames.push(JSON.parse(data) as Frame),
+    // Keeps the event frames the host sends; these fakes never ping or ask
+    // for acks, so nothing else arrives
+    send: (data) => {
+      const frame = parseServerFrame(data);
+
+      if (frame && 'event' in frame) {
+        frames.push(frame);
+      }
+    },
     close: ignoreClose,
     addEventListener: (type: string, listener: Listener) => {
       listeners.set(type, [...(listeners.get(type) ?? []), listener]);
     },
   };
 
-  const fire = (type: string, data?: unknown) => {
+  const fire = (type: string, data: FrameData = '') => {
     for (const listener of listeners.get(type) ?? []) {
       listener({ data });
     }

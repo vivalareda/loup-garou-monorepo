@@ -61,11 +61,11 @@ const make = (config: SocketIOConfig = defaultConfig) =>
 
         return socketServer;
       }),
-      (io) =>
+      (socketServer) =>
         Effect.sync(() => {
           console.log('Closing Socket.IO server...');
-          io.removeAllListeners();
-          io.close();
+          socketServer.removeAllListeners();
+          socketServer.close();
           console.log('Socket.IO server closed');
         })
     );

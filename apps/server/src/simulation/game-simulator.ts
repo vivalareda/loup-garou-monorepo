@@ -1,4 +1,5 @@
 import type { Role } from '@repo/types';
+import { Schema } from 'effect';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import type { Player } from '@/core/player';
@@ -8,6 +9,9 @@ import type { Narrator } from '@/segments/narrator';
 import { SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
 import { RecordingIO } from '@/simulation/recording-io';
+
+/** `lobby:player-died` carries the dead player's socket id. */
+const isSocketId = Schema.is(Schema.String);
 
 export type SimWinner = 'villagers' | 'werewolves' | null;
 
@@ -82,7 +86,7 @@ export class GameSimulator {
   deathLog: string[] = [];
   winner: SimWinner = null;
   rounds = 0;
-  error: unknown = null;
+  error: Error | null = null;
 
   private readonly opts: Required<
     Omit<SimOptions, 'forceHunterName' | 'lovers'>
@@ -181,7 +185,7 @@ export class GameSimulator {
       await this.drive();
       this.winner = this.game.checkIfWinner();
     } catch (error) {
-      this.error = error;
+      this.error = error instanceof Error ? error : new Error(String(error));
       this.winner = this.game.checkIfWinner();
     } finally {
       this.dispose();
@@ -223,8 +227,8 @@ export class GameSimulator {
     // setPlayerTeams + setSpecialRolePlayer internally. HUNTER is now part
     // of the normal role list, so a hunter is assigned randomly. When
     // forceHunterName is set, DEV_FORCE_HUNTER controls WHICH player gets
-    // it (indexOf('HUNTER') finds the hunter slot in the shuffled pool and
-    // splices it, so exactly one hunter is dealt — the forced one).
+    // the hunter: `indexOf('HUNTER')` finds its slot in the shuffled pool and
+    // splices it, so exactly one hunter is dealt — the forced one.
     this.game.assignRoles();
     this.game.alertPlayersOfRoles();
 
@@ -440,19 +444,12 @@ export class GameSimulator {
       return;
     }
 
-    let lastVote: Promise<unknown> = Promise.resolve();
+    let lastVote = Promise.resolve();
 
+    // The last vote makes hasAllPlayersVoted() true and triggers the day-vote
+    // resolution (an async program); that's the promise to feed picks into.
     for (const voter of alive) {
-      const result = this.eventsActions.handleDayVote(
-        voter.getSocketId(),
-        target
-      );
-
-      // The vote that makes hasAllPlayersVoted() true triggers the day-vote
-      // resolution (an async program); that's the promise to feed picks into.
-      if (result && typeof (result as Promise<unknown>).then === 'function') {
-        lastVote = result as Promise<unknown>;
-      }
+      lastVote = this.eventsActions.handleDayVote(voter.getSocketId(), target);
     }
 
     await this.resolveWithHunterPick(lastVote);
@@ -487,6 +484,7 @@ export class GameSimulator {
     let iterations = 0;
     const maxIterations = 500;
 
+    // oxlint-disable-next-line no-unmodified-loop-condition -- `settled` is set by the promise callbacks above, which run during the loop's awaits
     while (!settled && iterations++ < maxIterations) {
       await this.flush();
       const pending = this.io.eventsOfSince('hunter:pick-required', scanned);
@@ -508,7 +506,7 @@ export class GameSimulator {
     for (const record of this.io.eventsOf('lobby:player-died')) {
       const sid = record.args[0];
 
-      if (typeof sid === 'string' && !this.deathLog.includes(sid)) {
+      if (isSocketId(sid) && !this.deathLog.includes(sid)) {
         this.deathLog.push(sid);
       }
     }

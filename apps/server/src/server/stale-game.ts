@@ -14,12 +14,12 @@ export function narration(
   const settled = () =>
     play().then(
       () => null,
-      (error: unknown) => {
-        if (error instanceof StaleGame) {
-          return error;
+      (cause: unknown) => {
+        if (cause instanceof StaleGame) {
+          return cause;
         }
 
-        throw error;
+        throw cause;
       }
     );
 

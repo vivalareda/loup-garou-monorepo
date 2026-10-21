@@ -13,12 +13,12 @@ import type { Player } from '@/core/player';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 describe('Night dawn death scenarios', () => {
-  let mockIo: SocketType;
+  let mockIo: Broadcaster;
   let emitSpy: ReturnType<typeof vi.fn>;
   let game: Game;
   let deathManager: DeathManager;
@@ -32,7 +32,7 @@ describe('Night dawn death scenarios', () => {
     mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: emitSpy,
-    } as unknown as SocketType;
+    } satisfies Broadcaster;
 
     deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);

@@ -30,10 +30,10 @@ export default function GameLayout() {
   const router = useRouter();
 
   useEffect(() => {
-    initializeSocketListeners();
+    initializeSocketListeners(socket);
     socket.emit('lobby:get-players-list');
 
-    return cleanupSocketListeners;
+    return () => cleanupSocketListeners(socket);
   }, [initializeSocketListeners, cleanupSocketListeners]);
 
   // A death that arrived while a modal was open redirects once it closes

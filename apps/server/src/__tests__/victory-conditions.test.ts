@@ -2,7 +2,7 @@ import type { Role } from '@repo/types';
 import { describe, expect, it, vi } from 'vitest';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 /**
  * Table-driven matrix for checkIfWinner (parity rule):
@@ -104,7 +104,7 @@ function buildGame(scenario: Scenario) {
   const mockIo = {
     to: vi.fn().mockReturnThis(),
     emit: vi.fn(),
-  } as unknown as SocketType;
+  } satisfies Broadcaster;
 
   const deathManager = new DeathManager();
   const game = new Game(mockIo, deathManager);
@@ -163,7 +163,7 @@ describe('checkIfWinner victory matrix (parity rule)', () => {
     const mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
-    } as unknown as SocketType;
+    } satisfies Broadcaster;
 
     const game = new Game(mockIo, new DeathManager());
     expect(game.checkIfWinner()).toBeNull();

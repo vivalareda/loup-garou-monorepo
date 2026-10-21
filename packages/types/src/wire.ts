@@ -17,9 +17,23 @@
  * `isServerEvent`); argument shapes are not, so handlers keep validating
  * their own payloads.
  */
-export type EventFrame = { event: string; args: unknown[] };
+import {
+  type ClientToServerEvents,
+  isClientEvent,
+  isServerEvent,
+  type ServerToClientEvents,
+} from './event';
 
-export type ClientEventFrame = EventFrame & { ack?: number };
+export type EventFrame = {
+  event: keyof ServerToClientEvents;
+  args: unknown[];
+};
+
+export type ClientEventFrame = {
+  event: keyof ClientToServerEvents;
+  args: unknown[];
+  ack?: number;
+};
 
 export type AckFrame = { ack: number; args: unknown[] };
 
@@ -35,8 +49,31 @@ export function encodeFrame(frame: ClientFrame | ServerFrame): string {
   return JSON.stringify(frame);
 }
 
-function parseObject(data: unknown): Record<string, unknown> | null {
-  if (typeof data !== 'string') {
+/**
+ * What a WebSocket `message` event carries: a text frame's string, or a
+ * binary frame's bytes (an `ArrayBuffer`, or Node's `Buffer`; a browser
+ * may also hand over a `Blob`, rejected like any binary frame). The
+ * protocol only uses text frames.
+ */
+export type FrameData = string | ArrayBuffer | ArrayBufferView;
+
+/** A decoded JSON object before validation: any field may be missing or wrong. */
+type RawFrame = {
+  event?: unknown;
+  args?: unknown;
+  ack?: unknown;
+  ping?: unknown;
+  pong?: unknown;
+};
+
+/** JSON.parse builds objects (and arrays) from this realm's `Object`. */
+function isRawFrame(value: unknown): value is RawFrame {
+  return value instanceof Object && !Array.isArray(value);
+}
+
+function decodeFrame(data: FrameData): RawFrame | null {
+  // A binary frame is not part of the text protocol
+  if (data instanceof Object) {
     return null;
   }
 
@@ -48,27 +85,26 @@ function parseObject(data: unknown): Record<string, unknown> | null {
     return null;
   }
 
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return null;
-  }
-
-  return value as Record<string, unknown>;
+  return isRawFrame(value) ? value : null;
 }
 
 /** Ack ids and ping sequence numbers: non-negative safe integers. */
 function isFrameId(value: unknown): value is number {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+  return Number.isSafeInteger(value) && Number(value) >= 0;
 }
 
-/** A frame a client sent, or null when it is malformed. */
-export function parseClientFrame(data: unknown): ClientFrame | null {
-  const frame = parseObject(data);
+/**
+ * A frame a client sent, or null when it is malformed or names an event
+ * that is not in `ClientToServerEvents`.
+ */
+export function parseClientFrame(data: FrameData): ClientFrame | null {
+  const frame = decodeFrame(data);
 
   if (frame && frame.event === undefined && isFrameId(frame.ping)) {
     return { ping: frame.ping };
   }
 
-  if (!frame || typeof frame.event !== 'string' || !Array.isArray(frame.args)) {
+  if (!(frame && isClientEvent(frame.event) && Array.isArray(frame.args))) {
     return null;
   }
 
@@ -81,9 +117,12 @@ export function parseClientFrame(data: unknown): ClientFrame | null {
     : null;
 }
 
-/** A frame the server sent, or null when it is malformed. */
-export function parseServerFrame(data: unknown): ServerFrame | null {
-  const frame = parseObject(data);
+/**
+ * A frame the server sent, or null when it is malformed or names an event
+ * that is not in `ServerToClientEvents` (say, from a newer server).
+ */
+export function parseServerFrame(data: FrameData): ServerFrame | null {
+  const frame = decodeFrame(data);
 
   if (frame && frame.event === undefined && isFrameId(frame.pong)) {
     return { pong: frame.pong };
@@ -93,11 +132,11 @@ export function parseServerFrame(data: unknown): ServerFrame | null {
     return null;
   }
 
-  if (typeof frame.event === 'string') {
+  if (isServerEvent(frame.event)) {
     return { event: frame.event, args: frame.args };
   }
 
-  if (isFrameId(frame.ack)) {
+  if (frame.event === undefined && isFrameId(frame.ack)) {
     return { ack: frame.ack, args: frame.args };
   }
 

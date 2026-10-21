@@ -13,13 +13,14 @@ import type { Player } from '@/core/player';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 describe('Post day-vote death scenarios (notes.md)', () => {
-  let mockIo: SocketType;
+  let mockIo: Broadcaster;
   let emitSpy: ReturnType<typeof vi.fn>;
+  let ioTo: ReturnType<typeof vi.fn>;
   let game: Game;
   let deathManager: DeathManager;
   let audioManager: AudioManager;
@@ -29,10 +30,11 @@ describe('Post day-vote death scenarios (notes.md)', () => {
 
   beforeEach(() => {
     emitSpy = vi.fn();
+    ioTo = vi.fn().mockReturnThis();
     mockIo = {
-      to: vi.fn().mockReturnThis(),
+      to: ioTo,
       emit: emitSpy,
-    } as unknown as SocketType;
+    } satisfies Broadcaster;
 
     deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);
@@ -64,10 +66,7 @@ describe('Post day-vote death scenarios (notes.md)', () => {
     return player;
   };
 
-  const targetedSockets = () =>
-    (mockIo.to as unknown as ReturnType<typeof vi.fn>).mock.calls.map(
-      (call) => call[0]
-    );
+  const targetedSockets = () => ioTo.mock.calls.map((call) => call[0]);
 
   const playedAudio = () => playAudioSpy.mock.calls.map((call) => call[0]);
 

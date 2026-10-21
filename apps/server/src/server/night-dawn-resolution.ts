@@ -1,4 +1,4 @@
-import { Deferred, Duration, Effect } from 'effect';
+import { Deferred, Duration, Effect, Option } from 'effect';
 import type { Game } from '@/core/game';
 import { StaleGame } from '@/segments/game-generation';
 import type { SegmentsManager } from '@/segments/segments-manager';
@@ -233,11 +233,7 @@ export class NightDawnResolution {
         this.pendingHunterPick = null;
       }
 
-      if (result._tag === 'None') {
-        return null;
-      }
-
-      return result.value;
+      return Option.getOrNull(result);
     });
   }
 }

@@ -8,6 +8,7 @@ import { SegmentsManager } from '@/segments/segments-manager';
 import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
+import { enterSegment } from './helpers/segments';
 
 type Handler = (...args: unknown[]) => void;
 
@@ -93,15 +94,7 @@ describe('Seer phase', () => {
     return player;
   };
 
-  const setSegment = (type: string) => {
-    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
-
-    const index = segmentsManager.segments.findIndex(
-      (segment) => segment.type === type
-    );
-
-    segmentsManager.currentSegment = index;
-  };
+  const setSegment = (type: string) => enterSegment(segmentsManager, type);
 
   it('prompts only the seer when the segment plays', () => {
     addPlayer('Seer', 'seer-sid', 'SEER');

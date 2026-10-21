@@ -3,11 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGameRuntime, type GameRuntime } from '@/game-runtime';
 import type { Narrator } from '@/segments/narrator';
 import { DashboardNarrator } from '@/server/dashboard-narrator';
-import type { EventsActions } from '@/server/events-actions';
 import { type FakeSocket, fakeSocket, newHost } from './helpers/fake-socket';
 
 /** Lets every promise continuation (and 0ms timer) run. */
 const flush = () => vi.advanceTimersByTimeAsync(0);
+
+/** Whether `promise` has settled yet, asked as often as needed. */
+function trackSettled<T>(promise: Promise<T>) {
+  let settled = false;
+  promise.then(() => {
+    settled = true;
+  });
+
+  return () => settled;
+}
 
 /** A narrator whose clips finish only when the test says so. */
 class ManualNarrator implements Narrator {
@@ -161,14 +170,13 @@ async function playToDawn(stopAtDawn: boolean) {
   const clips = () =>
     dashboard.frames.filter((frame) => frame.event === 'narrator:play');
 
+  const reachedStop = () =>
+    runtime.segmentsManager.hasFinished() || (stopAtDawn && phase() === 'DAY');
+
   const playUntilInput = async () => {
     await flush();
 
-    while (
-      acked < clips().length &&
-      !runtime.segmentsManager.hasFinished() &&
-      !(stopAtDawn && phase() === 'DAY')
-    ) {
+    while (acked < clips().length && !reachedStop()) {
       dashboard.send('narrator:done', clips()[acked]?.args?.[0]);
       acked++;
       await flush();
@@ -253,9 +261,9 @@ function manualGame() {
   const narrator = new ManualNarrator();
   const runtime = createGameRuntime({ host, narrator, adminEvents: false });
 
-  const { eventsActions } = runtime.events as unknown as {
-    eventsActions: EventsActions;
-  };
+  // The runtime keeps its EventsActions private to GameEvents; the hunter
+  // pick tests drive the resolutions through it directly
+  const eventsActions = runtime.events['eventsActions'];
 
   /** (Re)fills the room: a new game starts, its intro narrated. */
   const start = async () => {
@@ -327,17 +335,14 @@ describe('a hunter pick pending across a reset', () => {
       expect(eventsActions.hasPendingHunterPick()).toBe(true);
 
       expect(eventsActions.submitHunterPick(second.target)).toBe(true);
-      let settled = false;
-      current.run.then(() => {
-        settled = true;
-      });
+      const settled = trackSettled(current.run);
 
-      for (let step = 0; step < 50 && !settled; step++) {
+      for (let step = 0; step < 50 && !settled(); step++) {
         await narrator.finishAll();
         await vi.advanceTimersByTimeAsync(10);
       }
 
-      expect(settled).toBe(true);
+      expect(settled()).toBe(true);
       expect(runtime.game.getPlayerBySocketId(second.target)?.isAlive).toBe(
         false
       );

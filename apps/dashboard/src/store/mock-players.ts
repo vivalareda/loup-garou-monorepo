@@ -67,14 +67,13 @@ type MockPlayerStore = MockPlayerState & {
 function createPlayerSocket(
   id: string,
   name: string,
-  // biome-ignore lint/suspicious/noExplicitAny: <just for testing>
-  store: any
+  getState: () => MockPlayerStore
 ): RealtimeClient {
   const socket = createRealtimeClient(roomSocketUrl, { autoConnect: false });
 
   socket.on('connect', () => {
     console.log(`Player ${name} connected`);
-    store.getState().updatePlayerData(id, {
+    getState().updatePlayerData(id, {
       isConnected: true,
       status: 'waiting',
     });
@@ -82,7 +81,7 @@ function createPlayerSocket(
 
   socket.on('disconnect', () => {
     console.log(`Player ${name} disconnected`);
-    store.getState().updatePlayerData(id, {
+    getState().updatePlayerData(id, {
       isConnected: false,
       status: 'disconnected',
     });
@@ -90,12 +89,12 @@ function createPlayerSocket(
 
   socket.on('lobby:player-data', (playerData: Player) => {
     console.log(`Player ${name} received own player data:`, playerData);
-    store.getState().updatePlayerData(id, { player: playerData });
+    getState().updatePlayerData(id, { player: playerData });
   });
 
   socket.on('lobby:update-players-list', (newPlayer: PlayerListItem) => {
     console.log(`Player ${name} received new player:`, newPlayer);
-    const currentPlayer = store.getState().players.get(id);
+    const currentPlayer = getState().players.get(id);
     const currentList = currentPlayer?.playersList || [];
 
     if (
@@ -104,18 +103,18 @@ function createPlayerSocket(
       )
     ) {
       const updatedList = [...currentList, newPlayer];
-      store.getState().updatePlayerData(id, { playersList: updatedList });
+      getState().updatePlayerData(id, { playersList: updatedList });
     }
   });
 
   socket.on('lobby:players-list', (playersList: PlayerListItem[]) => {
     console.log(`Player ${name} received full players list:`, playersList);
-    store.getState().updatePlayerData(id, { playersList });
+    getState().updatePlayerData(id, { playersList });
   });
 
   socket.on('player:role-assigned', (role: Role) => {
     console.log(`Player ${name} assigned role:`, role);
-    const currentPlayer = store.getState().players.get(id);
+    const currentPlayer = getState().players.get(id);
 
     if (currentPlayer?.player && currentPlayer.player.type === 'waiting') {
       const gamePlayer: Player = {
@@ -126,7 +125,7 @@ function createPlayerSocket(
         role,
       };
 
-      store.getState().updatePlayerData(id, {
+      getState().updatePlayerData(id, {
         player: gamePlayer,
         status: 'in-game',
       });
@@ -135,7 +134,7 @@ function createPlayerSocket(
 
   socket.on('alert:player-is-lover', (loverName: string) => {
     console.log(`Player ${name} is a lover with:`, loverName);
-    store.getState().updatePlayerData(id, {
+    getState().updatePlayerData(id, {
       isLover: true,
       loverName,
     });
@@ -143,14 +142,14 @@ function createPlayerSocket(
 
   socket.on('alert:lovers-can-close-alert', () => {
     console.log(`Player ${name} can close lover alert`);
-    store.getState().updatePlayerData(id, {
+    getState().updatePlayerData(id, {
       canCloseLoverAlert: true,
     });
   });
 
   socket.on('cupid:pick-required', () => {
     console.log(`Player ${name} (Cupid) needs to pick lovers`);
-    store.getState().updatePlayerData(id, {
+    getState().updatePlayerData(id, {
       isCupid: true,
       canSelectLovers: true,
     });
@@ -162,14 +161,14 @@ function createPlayerSocket(
       `🧙‍♀️ [WITCH STORE] Player ${name} received witch:can-heal event`,
       { victimSid }
     );
-    const currentPlayer = store.getState().players.get(id);
+    const currentPlayer = getState().players.get(id);
 
     if (
       currentPlayer?.player &&
       isGamePlayer(currentPlayer.player) &&
       currentPlayer.player.isAlive
     ) {
-      store.getState().updatePlayerData(id, {
+      getState().updatePlayerData(id, {
         werewolfVictimId: victimSid,
         showHealModal: true,
       });
@@ -184,14 +183,14 @@ function createPlayerSocket(
     console.log(
       `🧙‍♀️ [WITCH STORE] Player ${name} received witch:pick-poison-player event`
     );
-    const currentPlayer = store.getState().players.get(id);
+    const currentPlayer = getState().players.get(id);
 
     if (
       currentPlayer?.player &&
       isGamePlayer(currentPlayer.player) &&
       currentPlayer.player.isAlive
     ) {
-      store.getState().updatePlayerData(id, {
+      getState().updatePlayerData(id, {
         showPoisonModal: true,
       });
     } else {
@@ -206,14 +205,14 @@ function createPlayerSocket(
     console.log(
       `☀️ [DAY VOTE] Player ${name} received day:voting-phase-start event`
     );
-    const currentPlayer = store.getState().players.get(id);
+    const currentPlayer = getState().players.get(id);
 
     if (
       currentPlayer?.player &&
       isGamePlayer(currentPlayer.player) &&
       currentPlayer.player.isAlive
     ) {
-      store.getState().updatePlayerData(id, {
+      getState().updatePlayerData(id, {
         showDayVoteModal: true,
         canVote: true,
       });
@@ -229,7 +228,7 @@ function createPlayerSocket(
       `💀 [DEATH] Player ${name} received alert:player-is-dead event`
     );
     // Handle player death notification - update player status
-    const currentPlayer = store.getState().players.get(id);
+    const currentPlayer = getState().players.get(id);
 
     if (currentPlayer?.player && isGamePlayer(currentPlayer.player)) {
       const deadPlayer = {
@@ -237,7 +236,7 @@ function createPlayerSocket(
         isAlive: false,
       };
 
-      store.getState().updatePlayerData(id, {
+      getState().updatePlayerData(id, {
         player: deadPlayer,
         showDayVoteModal: false, // Close voting if this player died
       });
@@ -249,14 +248,14 @@ function createPlayerSocket(
     console.log(
       `🎯 [HUNTER] Player ${name} received hunter:pick-required event`
     );
-    const currentPlayer = store.getState().players.get(id);
+    const currentPlayer = getState().players.get(id);
 
     if (
       currentPlayer?.player &&
       isGamePlayer(currentPlayer.player) &&
       currentPlayer.player.role === 'HUNTER'
     ) {
-      store.getState().updatePlayerData(id, {
+      getState().updatePlayerData(id, {
         showHunterModal: true,
       });
     } else {
@@ -275,8 +274,7 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
 
   addPlayer: (name: string) => {
     const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    const store = { getState: get };
-    const socket = createPlayerSocket(id, name, store);
+    const socket = createPlayerSocket(id, name, get);
 
     const newPlayer: MockPlayer = {
       id,
@@ -513,13 +511,8 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
       player.player &&
       isGamePlayer(player.player)
     ) {
-      const updatedPlayer = {
-        ...player.player,
-        role: 'WEREWOLF' as Role,
-      };
-
       get().updatePlayerData(playerId, {
-        player: updatedPlayer as Player,
+        player: { ...player.player, role: 'WEREWOLF' },
       });
     }
   },
@@ -533,13 +526,8 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
       player.player &&
       isGamePlayer(player.player)
     ) {
-      const updatedPlayer = {
-        ...player.player,
-        role: 'WITCH' as Role,
-      };
-
       get().updatePlayerData(playerId, {
-        player: updatedPlayer as Player,
+        player: { ...player.player, role: 'WITCH' },
       });
     }
   },

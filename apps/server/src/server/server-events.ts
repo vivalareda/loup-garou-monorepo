@@ -4,6 +4,7 @@ import type {
   PendingPrompt,
   PlayerGameSnapshot,
 } from '@repo/types';
+import { Schema } from 'effect';
 import { resolvePlayerCount } from '@/config';
 import type { Game } from '@/core/game';
 import type { Player } from '@/core/player';
@@ -11,6 +12,9 @@ import { MockScenario } from '@/segments/mock-scenario';
 import type { SegmentsManager } from '@/segments/segments-manager';
 import type { Connection, ConnectionHost } from '@/server/connection';
 import type { EventsActions } from '@/server/events-actions';
+
+/** Wire payloads are not validated, so a join name may not be text at all. */
+const isText = Schema.is(Schema.String);
 
 /**
  * How long a disconnected player keeps their seat before the game treats
@@ -192,7 +196,7 @@ export class GameEvents {
   }
 
   private handlePlayerJoin(socket: Connection, name: string) {
-    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    const trimmedName = isText(name) ? name.trim() : '';
 
     if (!trimmedName) {
       socket.emit('lobby:join-rejected', 'Invalid name');
@@ -915,51 +919,54 @@ export class GameEvents {
 
     const gameResult = this.game.getLastGameResult();
 
-    return {
+    const snapshot: PlayerGameSnapshot = {
       phase,
       players: this.game.getRosterForClient(),
       self,
-      ...(partner ? { loverName: partner.getName() } : {}),
-      ...(phase === 'FINISHED' && gameResult
-        ? {
-            gameResult,
-            didWin:
-              (gameResult.winningFaction === 'werewolves') ===
-              (player.role === 'WEREWOLF'),
-          }
-        : {}),
-      ...this.buildCountdown(phase),
-      ...this.buildPendingPrompt(player, phase),
     };
+
+    if (partner) {
+      snapshot.loverName = partner.getName();
+    }
+
+    if (phase === 'FINISHED' && gameResult) {
+      snapshot.gameResult = gameResult;
+      snapshot.didWin =
+        (gameResult.winningFaction === 'werewolves') ===
+        (player.role === 'WEREWOLF');
+    }
+
+    const countdown = this.buildCountdown(phase);
+
+    if (countdown) {
+      snapshot.countdown = countdown;
+    }
+
+    const pendingPrompt = this.resolvePendingPrompt(player, phase);
+
+    if (pendingPrompt) {
+      snapshot.pendingPrompt = pendingPrompt;
+    }
+
+    return snapshot;
   }
 
-  private buildCountdown(phase: GamePhase): { countdown?: Countdown } {
+  private buildCountdown(phase: GamePhase): Countdown | undefined {
     const discussionMs = this.segmentsManager
       .getGameActions()
       .getDiscussionRemainingMs();
 
     if (phase === 'DAY' && discussionMs !== null) {
-      return {
-        countdown: { phase: 'DAY-DISCUSSION', remainingMs: discussionMs },
-      };
+      return { phase: 'DAY-DISCUSSION', remainingMs: discussionMs };
     }
 
     const remainingMs = this.segmentsManager.getRemainingDeadlineMs();
 
     if (remainingMs === null || phase === 'LOBBY' || phase === 'FINISHED') {
-      return {};
+      return undefined;
     }
 
-    return { countdown: { phase, remainingMs } };
-  }
-
-  private buildPendingPrompt(
-    player: Player,
-    phase: GamePhase
-  ): { pendingPrompt?: PendingPrompt } {
-    const prompt = this.resolvePendingPrompt(player, phase);
-
-    return prompt ? { pendingPrompt: prompt } : {};
+    return { phase, remainingMs };
   }
 
   private resolvePendingPrompt(

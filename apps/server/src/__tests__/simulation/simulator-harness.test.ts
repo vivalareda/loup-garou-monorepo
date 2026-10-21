@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { GameSimulator } from '@/simulation/game-simulator';
 import {
-  HUNTER_CUES,
-  LOVER_CUES,
   assertCompleted,
   assertDeathAudioInvariants,
   assertOnlyKnownPlaceholders,
@@ -43,6 +41,9 @@ async function runGame(
 
 describe('GameSimulator harness', () => {
   it('completes a random 6-player game to a winner with winner audio', async () => {
+    // The assert* helpers assert through expect
+    expect.hasAssertions();
+
     const sim = await runGame(1);
     assertCompleted(sim);
     assertOnlyKnownPlaceholders(sim);
@@ -66,19 +67,12 @@ describe('GameSimulator harness', () => {
       assertDeathAudioInvariants(sim);
       assertOnlyKnownPlaceholders(sim);
 
-      if (sim.deathLog.some((sid) => sim.roleOf(sid) === 'HUNTER')) {
-        sawHunterDeath = true;
-        expect(sim.audioLog.some((f) => HUNTER_CUES.includes(f as never))).toBe(
-          true
-        );
-      }
-
-      if (sim.deathLog.some((sid) => sim.isLover(sid))) {
-        sawLoverDeath = true;
-        expect(sim.audioLog.some((f) => LOVER_CUES.includes(f as never))).toBe(
-          true
-        );
-      }
+      // assertDeathAudioInvariants checked each death's cue above; this
+      // only records that the batch reached both paths
+      sawHunterDeath ||= sim.deathLog.some(
+        (sid) => sim.roleOf(sid) === 'HUNTER'
+      );
+      sawLoverDeath ||= sim.deathLog.some((sid) => sim.isLover(sid));
     }
 
     expect(sawHunterDeath).toBe(true);

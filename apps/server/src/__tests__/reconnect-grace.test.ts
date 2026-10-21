@@ -9,6 +9,7 @@ import { SegmentsManager } from '@/segments/segments-manager';
 import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
+import { enterSegment, finishGame } from './helpers/segments';
 
 const GRACE_MS = 90_000;
 
@@ -97,17 +98,7 @@ describe('disconnect grace period and reconnection', () => {
     return player;
   };
 
-  const setSegment = (type: string) => {
-    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
-
-    const index = segmentsManager.segments.findIndex(
-      (segment) => segment.type === type
-    );
-
-    if (index !== -1) {
-      segmentsManager.currentSegment = index;
-    }
-  };
+  const setSegment = (type: string) => enterSegment(segmentsManager, type);
 
   it('does not kill a player when their socket drops mid-game', () => {
     vi.useFakeTimers();
@@ -340,22 +331,18 @@ describe('disconnect grace period and reconnection', () => {
       })
     );
 
-    const snapshot = (
-      newSocket.socket.emit as unknown as ReturnType<typeof vi.fn>
-    ).mock.calls.find((call) => call[0] === 'game:snapshot')?.[1] as
-      | { pendingPrompt?: unknown }
-      | undefined;
+    const snapshotCall = newSocket.socket.emit.mock.calls.find(
+      (call) => call[0] === 'game:snapshot'
+    );
 
-    expect(snapshot?.pendingPrompt).toBeUndefined();
+    expect(snapshotCall?.[1]?.pendingPrompt).toBeUndefined();
   });
 
   it('sends the final result to a player reconnecting after the game finished', () => {
     addPlayer('Wolf', 'wolf-sid', 'WEREWOLF');
     const villager = addPlayer('A', 'a-sid', 'VILLAGER');
-    game.alertWinnersAndLosers('villagers');
-    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
-    (segmentsManager as unknown as { gameFinished: boolean }).gameFinished =
-      true;
+    enterSegment(segmentsManager, 'DAY');
+    finishGame(segmentsManager, game, 'villagers');
 
     const newSocket = connect('a-new-sid');
     newSocket.fire('player:rejoin', villager.sessionToken);
@@ -528,8 +515,7 @@ describe('disconnect grace period and reconnection', () => {
   });
 
   it('removes a player who disconnects in the lobby instead of killing them', () => {
-    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted =
-      false;
+    expect(segmentsManager.hasStarted()).toBe(false);
     const socket = connect('a-sid');
     socket.fire('player:join', 'Alice');
     expect(game.getPlayerList().size).toBe(1);

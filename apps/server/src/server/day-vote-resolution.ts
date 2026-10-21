@@ -1,4 +1,4 @@
-import { Deferred, Duration, Effect } from 'effect';
+import { Deferred, Duration, Effect, Option } from 'effect';
 import type { Game } from '@/core/game';
 import type { Player } from '@/core/player';
 import { StaleGame } from '@/segments/game-generation';
@@ -155,13 +155,14 @@ export class DayVoteResolution {
         this.pendingHunterPick = null;
       }
 
-      if (result._tag === 'None') {
-        console.warn('Hunter pick timed out — skipping revenge kill');
+      return Option.match(result, {
+        onNone: () => {
+          console.warn('Hunter pick timed out — skipping revenge kill');
 
-        return null;
-      }
-
-      return result.value;
+          return null;
+        },
+        onSome: (target) => target,
+      });
     });
   }
 

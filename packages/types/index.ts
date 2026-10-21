@@ -37,6 +37,7 @@ export {
   DEFAULT_ROOM_CODE,
   type EventFrame,
   encodeFrame,
+  type FrameData,
   isRoomCode,
   type PingFrame,
   type PongFrame,

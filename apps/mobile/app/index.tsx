@@ -14,7 +14,8 @@ import {
 import { useConnectionStore } from '@/hooks/use-connection-store';
 import { registerJoinListeners, submitJoin } from '@/hooks/use-join-game';
 import { usePlayerStore } from '@/hooks/use-player-store';
-import { saveSessionToken } from '@/utils/session';
+import { sessionTokens } from '@/utils/session';
+import { socket } from '@/utils/sockets';
 
 export default function Home() {
   const router = useRouter();
@@ -30,12 +31,12 @@ export default function Home() {
 
   useEffect(
     () =>
-      registerJoinListeners({
+      registerJoinListeners(socket, {
         onJoined: async (playerData) => {
           console.log('server response', playerData);
 
           if (playerData.sessionToken) {
-            await saveSessionToken(playerData.sessionToken);
+            await sessionTokens.save(playerData.sessionToken);
           }
 
           setIsJoining(false);
@@ -52,11 +53,15 @@ export default function Home() {
 
   // A join in flight when the connection drops gets no answer: let the
   // player tap again once reconnected
-  useEffect(() => {
-    if (status === 'reconnecting') {
-      setIsJoining(false);
-    }
-  }, [status]);
+  useEffect(
+    () =>
+      useConnectionStore.subscribe((state) => {
+        if (state.status === 'reconnecting') {
+          setIsJoining(false);
+        }
+      }),
+    []
+  );
 
   const handleJoinGame = () => {
     if (isJoining) {
@@ -74,7 +79,7 @@ export default function Home() {
       return;
     }
 
-    if (!submitJoin(name)) {
+    if (!submitJoin(socket, name)) {
       setJoinError('Entrez un nom valide.');
 
       return;

@@ -5,7 +5,7 @@ import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -21,7 +21,7 @@ describe('Night dawn scenarios', () => {
     const mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: emitSpy,
-    } as unknown as SocketType;
+    } satisfies Broadcaster;
 
     const deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);
@@ -35,7 +35,7 @@ describe('Night dawn scenarios', () => {
     eventsActions = new EventsActions(game, segmentsManager, mockIo);
   });
 
-  it('it should kill partner if lover dies', async () => {
+  it('should kill partner if lover dies', async () => {
     const player1 = game.addPlayer('Player1', 'mock-id-1');
     const player2 = game.addPlayer('Player2', 'mock-id-2');
     const player3 = game.addPlayer('Player3', 'mock-id-3');

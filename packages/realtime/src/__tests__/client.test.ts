@@ -1,3 +1,4 @@
+import type { FrameData, ServerFrame } from '@repo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   type ClientWebSocket,
@@ -9,7 +10,7 @@ const CONNECTING = 0;
 const OPEN = 1;
 const CLOSED = 3;
 
-type FakeListener = (event: { data: unknown; code: number }) => void;
+type FakeListener = (event: { data: FrameData; code: number }) => void;
 
 /** A WebSocket the test opens, feeds and drops by hand. */
 class FakeWebSocket implements ClientWebSocket {
@@ -73,19 +74,20 @@ class FakeWebSocket implements ClientWebSocket {
     this.fire('close', undefined, code);
   }
 
-  serverSends(frame: unknown) {
+  serverSends(frame: ServerFrame) {
     this.fire('message', JSON.stringify(frame));
   }
 
-  serverSendsRaw(data: unknown) {
+  serverSendsRaw(data: FrameData) {
     this.fire('message', data);
   }
 
-  frames() {
-    return this.sent.map((frame) => JSON.parse(frame) as unknown);
+  frames(): unknown[] {
+    return this.sent.map((frame) => JSON.parse(frame));
   }
 
-  private fire(type: string, data?: unknown, code = 1000) {
+  /** `data` only matters for `message`; the other events ignore it. */
+  private fire(type: string, data: FrameData = '', code = 1000) {
     for (const listener of this.listeners.get(type) ?? []) {
       listener({ data, code });
     }

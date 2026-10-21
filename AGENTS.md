@@ -4,7 +4,7 @@ This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
 - `apps/server` — Node.js game server over raw WebSockets (`ws`) (plain classes + an in-progress Effect-TS migration)
 - `apps/mobile` — React Native + Expo player client (SDK 57)
 - `apps/dashboard` — Vite + React testing dashboard with mock players
-- `apps/worker` — the game on Cloudflare Workers: one `GameRoom` Durable Object per room code, plus the built dashboard as static assets (see `apps/worker/README.md`)
+- `apps/worker` — the game on Cloudflare Workers: one `GameRoom` Durable Object per room code, plus the built dashboard as static assets, declared with Alchemy in `alchemy.run.ts` (see `apps/worker/README.md`)
 - `packages/types` — Shared TypeScript types for socket events, players, roles, segments, deaths, plus the WebSocket wire protocol (`src/wire.ts`)
 - `packages/realtime` — `@repo/realtime`, the typed WebSocket client every app uses (mobile, dashboard, agent CLI, integration test)
 
@@ -15,7 +15,7 @@ This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
 | Install    | `pnpm install`                   |
 | Dev (all)  | `pnpm dev`                       |
 | Dev server | `pnpm dev:server`                |
-| Dev worker | `pnpm dev:worker` (builds the dashboard, `wrangler dev` on :8787) |
+| Dev worker | `pnpm dev:worker` (builds the dashboard, `alchemy dev` on :8787) |
 | Dev mobile | `pnpm dev:mobile`                |
 | Dev dashboard | `pnpm --filter dashboard dev`¹ |
 | Typecheck  | `pnpm check-types` (turbo fans out to all packages) |
@@ -25,7 +25,6 @@ This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
 | Server tests | `pnpm --filter server test:run` |
 | Client tests | `pnpm --filter @repo/realtime test:run` |
 | Worker tests | `pnpm --filter worker test:run` |
-| Worker bundle check | `pnpm turbo run build --filter=worker` (dashboard, then `wrangler deploy --dry-run`) |
 
 > ¹ The root `pnpm dev:web` script (`turbo -F web dev`) filters for a package
 > named `web`, which does not exist in this workspace — the dashboard package
@@ -102,8 +101,18 @@ Socket.io is gone from every live path. The pieces:
   crash the Worker at load (`server/local-narrator.ts`, `sockets.ts`,
   `http-server.ts`, `websocket-server.ts`, `index.ts`).
   `node:crypto` is fine under `nodejs_compat`.
-- Config is the same env vars, from `vars` in `wrangler.jsonc` (read
-  through `process.env`); override per run with `--var` or `.dev.vars`.
+- Infrastructure is declared with Alchemy (`alchemy@2.0.0-beta.83`, an
+  Effect program) in `apps/worker/alchemy.run.ts`: the Worker, its
+  `GameRoom` namespace, assets, vars and the `ACCESS_TOKEN` secret. There
+  is no wrangler config. `settings.ts` holds the compatibility date and
+  the vars, shared with `vitest.config.ts` (which configures the pool
+  with miniflare options); `Env` is inferred from `alchemy.run.ts`
+  (`env.d.ts`). The worker has its own `effect` (4.0.5, what Alchemy
+  needs); the server's stays on its own pin.
+- Config is the same env vars, from `vars` in `settings.ts` (read
+  through `process.env`); `alchemy dev` lets the shell or
+  `apps/worker/.env` override them, a deploy always binds the committed
+  values.
 - Rooms: `POST /rooms` draws a random 8-character code
   (`room-code.ts`, no look-alike characters) and claims it with the
   `GameRoom.create()` RPC, which stores the only persisted key. Sockets
@@ -133,16 +142,15 @@ Socket.io is gone from every live path. The pieces:
   keep the object awake anyway and hibernating would lose the in-memory
   game. Only the room's existence is persisted, so a deploy (or
   eviction) resets every live game but its code keeps working.
-- `worker#build` depends on `dashboard#build:worker` in turbo.json, so
-  `pnpm turbo run build --filter=worker` rebuilds and caches `dist-worker`.
 - The narrator is the dashboard tab that clicked "Play narration here";
   the Worker serves the dashboard (`apps/dashboard/dist-worker`, built by
   `pnpm --filter dashboard build:worker`) and its `/audio/*.mp3` clips
   from the same origin, so the dashboard's backend URL is left unset.
 - Tests run inside workerd with `@cloudflare/vitest-plugin` and the
   worker's own vitest 4 (the rest of the repo is on vitest 3).
-- Never `wrangler deploy` / `wrangler login` from an agent session; the
-  user deploys (`pnpm --filter worker deploy`).
+- Never `alchemy deploy` / `destroy` / `profile` from an agent session
+  (nor `wrangler deploy` / `login`); the user deploys
+  (`pnpm --filter worker deploy`). `alchemy dev` is local-only.
 
 ## Server: Effect migration
 
@@ -180,4 +188,4 @@ While the migration is in progress:
 - `apps/server`: `effect-tsgo patch` runs on `prepare` — patches the installed TypeScript LSP for Effect's IDE support. Don't disable. Keep `@effect/tsgo` on a release that supports both the installed `typescript` and Effect 4.
 - `apps/mobile`: Expo SDK 57 pins TypeScript ~6.0.3 — out of step with the server's `^7.0.2`. Plans to align are in `plans/`.
 - `apps/dashboard`: React 18 + Vite; no test runner (planned via `plans/018`). `VITE_PUBLIC_BACKEND_SERVER_URL` is optional: unset, it uses the page's origin (how the Worker serves it; `build:worker` uses `.env.worker` to force that).
-- `apps/worker`: `worker-configuration.d.ts` is generated by `pnpm --filter worker cf-typegen` (rerun after editing `wrangler.jsonc`); `compatibility_date` can't be newer than the installed workerd supports.
+- `apps/worker`: `compatibilityDate` in `settings.ts` can't be newer than the workerd that Alchemy and the vitest pool ship; from 2026-08-04 `nodejs_compat` is on by default and must not be listed. Alchemy's state lives in the git-ignored `apps/worker/.alchemy/`.

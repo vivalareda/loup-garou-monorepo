@@ -9,9 +9,6 @@ import {
 
 export { GameRoom } from './game-room';
 
-/** `ACCESS_TOKEN` is a secret (or `--var`), so it is not in `Env`. */
-type WorkerEnv = Env & { ACCESS_TOKEN?: string };
-
 /** A fresh code colliding with a live room is all but impossible. */
 const CREATE_ATTEMPTS = 5;
 
@@ -96,4 +93,4 @@ export default {
         return roomStub(env, route.code).fetch(request);
     }
   },
-} satisfies ExportedHandler<WorkerEnv>;
+} satisfies ExportedHandler<Env>;

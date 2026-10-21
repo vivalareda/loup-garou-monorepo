@@ -12,11 +12,6 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist-worker/**"]
     },
-    "worker#build": {
-      "dependsOn": ["^build", "dashboard#build:worker"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**"]
-    },
     "check-types": {
       "dependsOn": ["^check-types"]
     },

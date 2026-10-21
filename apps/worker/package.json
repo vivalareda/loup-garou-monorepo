@@ -4,10 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter dashboard build:worker && wrangler dev",
-    "build": "wrangler deploy --dry-run --outdir dist",
-    "deploy": "pnpm --filter dashboard build:worker && wrangler deploy",
-    "cf-typegen": "wrangler types --strict-vars=false",
+    "dev": "pnpm --filter dashboard build:worker && alchemy dev",
+    "deploy": "pnpm --filter dashboard build:worker && alchemy deploy --stage prod",
+    "destroy": "alchemy destroy --stage prod",
     "check-types": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run"
@@ -17,10 +16,13 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.4.4",
+    "@cloudflare/workers-types": "^5.20261021.1",
+    "@effect/platform-node": "4.0.5",
     "@types/node": "^22.19.1",
+    "alchemy": "2.0.0-beta.83",
+    "effect": "4.0.5",
     "server": "workspace:*",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.12",
-    "wrangler": "4.151.1"
+    "vitest": "^4.1.12"
   }
 }

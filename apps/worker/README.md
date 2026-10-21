@@ -53,6 +53,11 @@ A room exists once `POST /rooms` created it; there is no default room.
   action: the lobby, the agents and mock players all already wait for a
   full room, and one event covers both "wait for N" and "start now".
 
+The infrastructure is declared in TypeScript with
+[Alchemy](https://alchemy.run) in `alchemy.run.ts`: the Worker, its
+`GameRoom` Durable Object namespace, the dashboard assets, the vars and
+the `ACCESS_TOKEN` secret. There is no wrangler config.
+
 The Durable Object builds one game with `createGameRuntime`
 (`apps/server/src/game-runtime.ts`, the same wiring as the Node entry) on
 a `WebSocketHost` and a `DashboardNarrator`. The game code is bundled
@@ -61,7 +66,7 @@ straight from `apps/server/src` through the `@/*` path in `tsconfig.json`.
 ## Local development
 
 ```sh
-pnpm dev:worker                # builds the dashboard, then wrangler dev on :8787
+pnpm dev:worker                # builds the dashboard, then alchemy dev on :8787
 pnpm --filter worker test:run  # Workers-runtime tests, offline
 pnpm --filter worker check-types
 ```
@@ -83,14 +88,25 @@ SERVER_URL=http://localhost:8787 ROOM_CODE=K7MQ3XPD pnpm --filter server agent A
 The dashboard's game controls (Start Game, Next Segment, mock scenarios) are
 `admin:*` events, ignored unless `ENABLE_ADMIN_EVENTS` is `"true"`.
 
-Game config comes from `vars` in `wrangler.jsonc` (read through
+`alchemy dev` runs the Worker in a local workerd, with no Cloudflare
+account and no cloud calls. Its state (and the local Durable Object
+storage) goes to the git-ignored `.alchemy/`. Source edits hot reload
+(dropping the open sockets: clients reconnect into a fresh game). To
+reach it from a phone on the LAN, bind it to every interface:
+`DEV_HOST=0.0.0.0 pnpm --filter worker dev`.
+
+Game config comes from `vars` in `settings.ts` (read through
 `process.env`, with the Node defaults). For a short test game, override
-them per run or in a git-ignored `.dev.vars`:
+them for `alchemy dev` from the shell or a git-ignored `.env` (see
+`.env.example`). A deploy ignores these overrides and always binds the
+values in `settings.ts`:
 
 ```sh
-pnpm --filter worker dev --var PLAYER_COUNT:4 --var SEGMENT_TIMEOUT_MS:5000 \
-  --var ENABLE_ADMIN_EVENTS:true
+PLAYER_COUNT=4 SEGMENT_TIMEOUT_MS=5000 ENABLE_ADMIN_EVENTS=true \
+  pnpm --filter worker dev
 ```
+
+To make another server env var overridable, add it to `vars`.
 
 Worker-only vars:
 
@@ -98,7 +114,7 @@ Worker-only vars:
 |-----|---------|--------|
 | `ENABLE_ADMIN_EVENTS` | `"false"` | `"true"` registers the dashboard's `admin:*` / `admin:mock-*` testing tools. They let any client advance phases, inject players or change deaths, so keep them off outside local testing; off, those events are ignored. |
 | `MAX_CONNECTIONS_PER_ROOM` | `"32"` | Upgrades beyond this many open sockets in one room get a 503 (players, dashboard tabs and mock players all count). |
-| `ACCESS_TOKEN` | unset | When set (`wrangler secret put ACCESS_TOKEN`, or `--var` locally), `/room/<code>` and `/rooms` need `?token=<value>` and answer 401 otherwise, before any Durable Object is reached. Unset, they are open. |
+| `ACCESS_TOKEN` | unset | When set in the shell or `.env` of whoever runs `alchemy deploy` (or `alchemy dev`), it is bound as a secret and `/room/<code>` and `/rooms` need `?token=<value>`, answering 401 otherwise, before any Durable Object is reached. Unset, they are open. Every deploy rebinds it, so set it on every deploy. |
 
 Clients append the token from `EXPO_PUBLIC_ACCESS_TOKEN` (mobile),
 `VITE_PUBLIC_ACCESS_TOKEN` (dashboard, at build time) or `ACCESS_TOKEN`
@@ -106,24 +122,60 @@ Clients append the token from `EXPO_PUBLIC_ACCESS_TOKEN` (mobile),
 speed bump against random scanners, not authentication: anyone with a
 client build has it.
 
-Run `pnpm --filter worker cf-typegen` after changing `wrangler.jsonc`; it
-regenerates `worker-configuration.d.ts`. Hot reload drops the open sockets
-(clients reconnect into a fresh game).
+`Env` is inferred from the Worker's `env` in `alchemy.run.ts` (see
+`env.d.ts`), so there is no type generation step. The tests don't go
+through Alchemy: `vitest.config.ts` gives the pool the same compatibility
+date and vars (from `settings.ts`) and the `GameRoom` namespace as
+miniflare options.
+
+### Why Alchemy 2 (beta)
+
+`alchemy@2.0.0-beta.83` is pinned exactly. It is npm's `latest` and what
+alchemy.run documents, and rat-stack pins the same release. The 0.x line
+(v1, async/await) is legacy now, and its state doesn't carry over to v2,
+so starting there would mean a migration later. v2 is an Effect program,
+so the worker has its own `effect` (4.0.5, the minimum Alchemy's
+dependencies accept) and `@effect/platform-node`; the server keeps its
+own `effect`. The Worker code itself stays a plain `fetch` handler and
+Durable Object class (Alchemy's "async Worker"). Being a beta, bump it
+deliberately and read the release notes.
 
 ## Deploying (later)
 
-Nothing has been deployed yet. With a Cloudflare account:
+Nothing has been deployed yet. What you need:
+
+- **Cloudflare credentials.** Locally, `pnpm --filter worker exec alchemy
+  profile edit --add Cloudflare` once (OAuth or a pasted API token, saved
+  in `~/.alchemy/profiles.json`; no `wrangler login`). In CI, set
+  `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` instead.
+- **`ACCESS_TOKEN`** (optional), in the shell or `apps/worker/.env`.
+- **Nothing else.** Alchemy 2 has no `ALCHEMY_PASSWORD`. Secrets are
+  bound as Worker secrets, but the local state keeps their values in
+  plain JSON, so treat `.alchemy/` as a secret (it is git-ignored;
+  `Cloudflare.state()` encrypts state at rest).
 
 ```sh
-pnpm --filter worker exec wrangler login
-pnpm --filter worker deploy    # builds the dashboard, then wrangler deploy
+pnpm --filter worker deploy    # builds the dashboard, then alchemy deploy --stage prod
+pnpm --filter worker destroy   # deletes the Worker and its Durable Objects
 ```
 
-It prints the `https://loup-garou.<account>.workers.dev` URL to put in the
-mobile app's `EXPO_PUBLIC_BACKEND_SERVER_URL`. To check the bundle without
-an account, `pnpm turbo run build --filter=worker` builds the dashboard
-(`dashboard#build:worker`) and then does a `wrangler deploy --dry-run`
-into `dist/`.
+It prints the `https://loup-garou.<account>.workers.dev` URL (the Worker's
+name is pinned to `loup-garou`) to put in the mobile app's
+`EXPO_PUBLIC_BACKEND_SERVER_URL`.
+
+**State.** Alchemy records what it deployed in `apps/worker/.alchemy/`
+(local state, git-ignored), so deploy from one machine. If it is lost,
+`alchemy deploy --stage prod --adopt` takes the existing `loup-garou`
+Worker back over by name, rooms and all. To deploy from CI or several
+machines, switch the stack's `state` to `Cloudflare.state()` (a state
+store Worker Alchemy creates on the account the first time), see
+https://alchemy.run/state-store.
+
+**Durable Objects.** Alchemy declares the `GameRoom` namespace through
+Cloudflare's `exports` map, not wrangler's `migrations` list, and creates
+new classes SQLite-backed (what the wrangler config's `v1` migration
+did). A Worker deployed with `exports` can't go back to `migrations`, and
+keeping the class name `GameRoom` keeps its namespace and data.
 
 ### Before a public deploy
 

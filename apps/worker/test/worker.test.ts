@@ -403,7 +403,7 @@ describe('rooms', () => {
 /** Calls the Worker directly, so a test can pick its env (ACCESS_TOKEN). */
 const fetchWith = (
   url: string,
-  workerEnv: Env & { ACCESS_TOKEN?: string },
+  workerEnv: Env,
   init: { method?: string; headers?: Record<string, string> } = upgrade
 ) => worker.fetch(new Request(url, init), workerEnv);
 

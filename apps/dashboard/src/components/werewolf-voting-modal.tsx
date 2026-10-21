@@ -226,7 +226,8 @@ export function WerewolfVotingModal({
                 </h4>
                 <div className="space-y-1 text-sm">
                   {Object.entries(votes)
-                    .toSorted(([, a], [, b]) => b - a)
+                    // oxlint-disable-next-line unicorn/no-array-sort -- sorts the fresh array Object.entries() just built; toSorted() is missing from Safari 15, which the dashboard still targets
+                    .sort(([, a], [, b]) => b - a)
                     .map(([playerName, count]) => (
                       <div className="flex justify-between" key={playerName}>
                         <span>{playerName}</span>

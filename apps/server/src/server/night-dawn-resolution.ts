@@ -1,4 +1,4 @@
-import { Deferred, Duration, Effect } from 'effect';
+import { Deferred, Duration, Effect, Option } from 'effect';
 import type { Game } from '@/core/game';
 import { StaleGame } from '@/segments/game-generation';
 import type { SegmentsManager } from '@/segments/segments-manager';
@@ -51,7 +51,8 @@ export class NightDawnResolution {
     }
 
     this.pendingHunterPick = null;
-    Deferred.unsafeDone(pick, Effect.succeed(targetSid));
+    Deferred.doneUnsafe(pick, Effect.succeed(targetSid));
+
     return true;
   }
 
@@ -61,20 +62,22 @@ export class NightDawnResolution {
 
   private cancelPendingPick() {
     const pick = this.pendingHunterPick;
+
     if (pick) {
       this.pendingHunterPick = null;
-      Deferred.unsafeDone(pick, Effect.fail(new StaleGame()));
+      Deferred.doneUnsafe(pick, Effect.fail(new StaleGame()));
     }
   }
 
   private resolveDawn(generation: number): Effect.Effect<void, StaleGame> {
-    return Effect.gen(this, function* () {
+    return Effect.gen({ self: this }, function* () {
       const audioManager = this.segmentsManager.audioManager;
       const specialScenarios = this.segmentsManager.specialScenarios;
 
       // Branch A — hunter is in the death queue
       if (this.game.hunterIsInDeathQueue()) {
         const hunter = this.game.getSpecialRolePlayer('HUNTER');
+
         if (!hunter) {
           throw new Error(
             'tried to play hunter segment but hunter player not found'
@@ -83,9 +86,11 @@ export class NightDawnResolution {
 
         if (this.game.isPlayerLover(hunter)) {
           const partner = this.game.getPartner(hunter);
+
           if (!partner) {
             throw new Error('lover could not be found');
           }
+
           this.game.addPartnerSuicide(
             hunter.getSocketId(),
             partner.getSocketId()
@@ -93,6 +98,7 @@ export class NightDawnResolution {
           yield* this.narrate(() => specialScenarios.hunterIsLover());
         } else {
           yield* this.narrate(() => audioManager.playHunterAudio());
+
           if (this.game.isOneOfLoversInDeathQueue()) {
             yield* this.narrate(() => audioManager.playLoverAudio());
           }
@@ -100,6 +106,7 @@ export class NightDawnResolution {
 
         this.game.updateHunterPlayerList();
         yield* this.hunterPickAndContinue(generation);
+
         return;
       }
 
@@ -110,16 +117,19 @@ export class NightDawnResolution {
           yield* this.narrate(() => specialScenarios.partnerIsHunter());
           this.game.updateHunterPlayerList();
           yield* this.hunterPickAndContinue(generation);
+
           return;
         }
 
         // Branch C — lover died, partner is not the hunter
         yield* this.narrate(() => audioManager.playLoverAudio());
+
         if (!this.segmentsManager.isGameOver()) {
           yield* Effect.promise(() =>
             this.segmentsManager.getGameActions().dayAction()
           );
         }
+
         return;
       }
 
@@ -138,7 +148,7 @@ export class NightDawnResolution {
   private hunterPickAndContinue(
     generation: number
   ): Effect.Effect<void, StaleGame> {
-    return Effect.gen(this, function* () {
+    return Effect.gen({ self: this }, function* () {
       const audioManager = this.segmentsManager.audioManager;
 
       // Pause until the socket handler feeds in the pick
@@ -149,7 +159,10 @@ export class NightDawnResolution {
       );
 
       if (targetSid === null) {
-        console.warn('Night-dawn hunter pick timed out — skipping revenge kill');
+        console.warn(
+          'Night-dawn hunter pick timed out — skipping revenge kill'
+        );
+
         if (this.segmentsManager.isGameOver()) {
           return;
         }
@@ -158,6 +171,7 @@ export class NightDawnResolution {
         yield* Effect.promise(() =>
           this.segmentsManager.getGameActions().dayAction()
         );
+
         return;
       }
 
@@ -166,11 +180,13 @@ export class NightDawnResolution {
 
       if (this.game.isHunterVictimInLove(targetSid)) {
         const lover = this.game.getPlayerBySocketId(targetSid);
+
         if (!lover) {
           throw new Error(`Target ${targetSid} not found`);
         }
 
         const partner = this.game.getPartner(lover);
+
         if (!partner) {
           throw new Error(`Partner not found for ${targetSid}`);
         }
@@ -198,10 +214,11 @@ export class NightDawnResolution {
   }
 
   private awaitHunterPick(): Effect.Effect<string | null, StaleGame> {
-    return Effect.gen(this, function* () {
+    return Effect.gen({ self: this }, function* () {
       const pick = yield* Deferred.make<string, StaleGame>();
       this.pendingHunterPick = pick;
       const hunter = this.game.getSpecialRolePlayer('HUNTER');
+
       if (hunter) {
         this.io.to(hunter.getSocketId()).emit('hunter:pick-required');
       }
@@ -210,16 +227,13 @@ export class NightDawnResolution {
         Deferred.await(pick),
         Duration.seconds(60)
       );
+
       // A newer pick may be pending by now: only clear our own
       if (this.pendingHunterPick === pick) {
         this.pendingHunterPick = null;
       }
 
-      if (result._tag === 'None') {
-        return null;
-      }
-
-      return result.value;
+      return Option.getOrNull(result);
     });
   }
 }

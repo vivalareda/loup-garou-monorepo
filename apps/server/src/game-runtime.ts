@@ -56,12 +56,14 @@ export function createGameRuntime({
   const game = new Game(host, deathManager);
   const audioManager = new AudioManager(deathManager, narrator);
   const specialScenarios = new SpecialScenarios(game, audioManager);
+
   const segmentsManager = new SegmentsManager(
     game,
     host,
     audioManager,
     specialScenarios
   );
+
   const eventsActions = new EventsActions(game, segmentsManager, host);
   const events = new GameEvents(game, segmentsManager, host, eventsActions);
   events.setupSocketHandlers({ adminEvents });

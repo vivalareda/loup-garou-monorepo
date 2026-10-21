@@ -7,20 +7,24 @@ import { SegmentsManager } from '@/segments/segments-manager';
 import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
+import { finishGame } from './helpers/segments';
 
 type Handler = (...args: unknown[]) => void;
 
 function makeMockSocket(id: string) {
   const handlers = new Map<string, Handler>();
+
   const socket = {
     id,
     on: vi.fn((event: string, cb: Handler) => {
       handlers.set(event, cb);
+
       return socket;
     }),
     emit: vi.fn(),
     broadcast: { emit: vi.fn() },
   };
+
   return {
     socket: socket satisfies Connection,
     fire: (event: string, ...args: unknown[]) => handlers.get(event)?.(...args),
@@ -62,22 +66,23 @@ describe('in-place game restart', () => {
   const connect = (sid: string) => {
     const mock = makeMockSocket(sid);
     connectionHandler?.(mock.socket);
+
     return mock;
   };
 
-  const markFinished = () => {
-    (segmentsManager as unknown as { gameFinished: boolean }).gameFinished =
-      true;
-  };
+  const markFinished = () => finishGame(segmentsManager, game, 'villagers');
 
   it('rejects game:restart while a game is still running', () => {
     vi.spyOn(segmentsManager, 'playSegment').mockResolvedValue(undefined);
+
     const sockets = Array.from({ length: 6 }, (_, index) =>
       connect(`p${index + 1}-sid`)
     );
+
     for (const [index, mock] of sockets.entries()) {
       mock.fire('player:join', `P${index + 1}`);
     }
+
     expect(segmentsManager.hasStarted()).toBe(true);
 
     sockets[0].fire('game:restart');
@@ -98,16 +103,20 @@ describe('in-place game restart', () => {
     const sockets = Array.from({ length: 6 }, (_, index) =>
       connect(`p${index + 1}-sid`)
     );
+
     for (const [index, mock] of sockets.entries()) {
       mock.fire('player:join', `P${index + 1}`);
     }
+
     expect(start).toHaveBeenCalledTimes(1);
 
     const victim = game.getPlayerBySocketId('p1-sid');
     expect(victim).toBeDefined();
+
     if (victim) {
       game.handlePlayerDeath(victim);
     }
+
     markFinished();
 
     // --- Any player may trigger the restart, including a dead one
@@ -130,6 +139,7 @@ describe('in-place game restart', () => {
     expect(start).toHaveBeenCalledTimes(2);
     expect(game.getPlayerList().size).toBe(6);
     expect(segmentsManager.hasStarted()).toBe(true);
+
     for (const player of game.getPlayerList().values()) {
       expect(player.role).not.toBeNull();
       expect(player.isAlive).toBe(true);
@@ -138,12 +148,15 @@ describe('in-place game restart', () => {
 
   it('gameplay events after restart target the new game state, not the old', () => {
     vi.spyOn(segmentsManager, 'playSegment').mockResolvedValue(undefined);
+
     const sockets = Array.from({ length: 6 }, (_, index) =>
       connect(`p${index + 1}-sid`)
     );
+
     for (const [index, mock] of sockets.entries()) {
       mock.fire('player:join', `P${index + 1}`);
     }
+
     markFinished();
     sockets[0].fire('game:restart');
 

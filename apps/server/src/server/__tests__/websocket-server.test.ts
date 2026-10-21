@@ -24,6 +24,8 @@ describe('attachWebSocketServer', () => {
     await new Promise<void>((resolve) => {
       httpServer.listen(0, '127.0.0.1', () => resolve());
     });
+    // SAFETY: the server listens on a TCP host and port (not a pipe) and
+    // has bound by now, so address() is an AddressInfo, not a string or null
     const { port } = httpServer.address() as AddressInfo;
     base = `ws://127.0.0.1:${port}`;
   });
@@ -32,9 +34,11 @@ describe('attachWebSocketServer', () => {
     for (const client of clients.splice(0)) {
       client.close();
     }
+
     for (const ws of wss.clients) {
       ws.terminate();
     }
+
     wss.close();
     await new Promise((resolve) => httpServer.close(resolve));
   });
@@ -47,6 +51,7 @@ describe('attachWebSocketServer', () => {
   const open = (path: string) => {
     const ws = new WebSocket(`${base}${path}`);
     clients.push(ws);
+
     return ws;
   };
 
@@ -71,6 +76,7 @@ describe('attachWebSocketServer', () => {
         );
         ws.once('error', () => resolve(undefined));
       });
+
       expect(status).toBe(404);
       expect(host.size).toBe(0);
     }
@@ -79,9 +85,11 @@ describe('attachWebSocketServer', () => {
   it('drops a client that sends no heartbeat', async () => {
     const accepted = nextConnection();
     const ws = open('/room/default');
+
     const closed = new Promise<number>((resolve) =>
       ws.once('close', (code) => resolve(code))
     );
+
     const connection = await accepted;
     const disconnected = vi.fn();
     connection.on('disconnect', disconnected);
@@ -96,6 +104,7 @@ describe('attachWebSocketServer', () => {
       reconnect: false,
       pingIntervalMs: IDLE_MS / 4,
     });
+
     clients.push({ close: () => client.disconnect() });
     const onDisconnect = vi.fn();
     client.on('disconnect', onDisconnect);
@@ -111,6 +120,7 @@ describe('attachWebSocketServer', () => {
     expect(wss.options.maxPayload).toBe(host.maxFrameBytes);
     const ws = open('/room/default');
     await new Promise((resolve) => ws.once('open', resolve));
+
     const closed = new Promise<number>((resolve) =>
       ws.once('close', (code) => resolve(code))
     );
@@ -130,15 +140,19 @@ describe('attachWebSocketServer', () => {
         })
       );
     });
+
     const client = createRealtimeClient(`${base}/room/default`, {
       reconnect: false,
     });
+
     clients.push({ close: () => client.disconnect() });
 
     await new Promise<void>((resolve) => client.once('connect', resolve));
+
     const snapshot = await new Promise<PlayerGameSnapshot>((resolve) => {
       client.emit('agent:get-state', resolve);
     });
+
     expect(snapshot.phase).toBe('LOBBY');
     expect(snapshot.self.socketId).toBeTruthy();
   });

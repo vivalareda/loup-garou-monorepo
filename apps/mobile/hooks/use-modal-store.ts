@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: <using genercis> */
 import type React from 'react';
 import { create } from 'zustand';
 
@@ -16,7 +15,7 @@ export type ModalState =
 
 type ModalType = 'confirm' | 'selection' | 'yes-no';
 
-type ModalData = {
+export type ModalData = {
   type: ModalType;
   title: string;
   data: string[] | React.ReactNode;

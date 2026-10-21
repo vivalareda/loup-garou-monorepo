@@ -65,21 +65,28 @@ export class EventsActions {
 
     this.game.handleAllWerewolvesAgree();
     this.segmentsManager.finishSegment();
+
     return true;
   }
 
   async handleDayVote(voterSid: string, targetPlayer: string) {
     const voter = this.game.getPlayerBySocketId(voterSid);
+
     if (!voter || !voter.isAlive) {
-      console.warn(`day:player-voted rejected from ${voterSid} (voter not alive)`);
+      console.warn(
+        `day:player-voted rejected from ${voterSid} (voter not alive)`
+      );
+
       return;
     }
 
     const target = this.game.getPlayerBySocketId(targetPlayer);
+
     if (!target || !target.isAlive) {
       console.warn(
         `day:player-voted rejected: target ${targetPlayer} not alive or not found`
       );
+
       return;
     }
 
@@ -106,6 +113,7 @@ export class EventsActions {
       this.game.clearDayVotes();
       this.io.emit('day:vote-tie', result.tiedPlayerNames);
       await this.segmentsManager.advanceSegment({ playEndAudio: false });
+
       return;
     }
 

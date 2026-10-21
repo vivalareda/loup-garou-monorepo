@@ -8,6 +8,7 @@ import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
 import { SpecialScenarios } from '@/core/special-scenarios';
+import { enterSegment } from './helpers/segments';
 
 /**
  * Drive the real GameEvents socket-handler wiring by capturing the
@@ -18,15 +19,18 @@ type Handler = (...args: unknown[]) => void;
 
 function makeMockSocket(id: string) {
   const handlers = new Map<string, Handler>();
+
   const socket = {
     id,
     on: vi.fn((event: string, cb: Handler) => {
       handlers.set(event, cb);
+
       return socket;
     }),
     emit: vi.fn(),
     broadcast: { emit: vi.fn() },
   };
+
   return {
     socket: socket satisfies Connection,
     fire: (event: string, ...args: unknown[]) => handlers.get(event)?.(...args),
@@ -50,9 +54,11 @@ describe('Server-side role validation', () => {
     const player = game.addPlayer(name, sid);
     player.setRole(role);
     game.setPlayerTeams(player);
+
     if (role === 'HUNTER' || role === 'WITCH' || role === 'CUPID') {
       game.setSpecialRolePlayer(player);
     }
+
     return player;
   };
 
@@ -62,6 +68,7 @@ describe('Server-side role validation', () => {
         connectionHandler = cb;
       }
     });
+
     mockIo = {
       on: ioOn,
       to: vi.fn().mockReturnThis(),
@@ -82,25 +89,20 @@ describe('Server-side role validation', () => {
     gameEvents.setupSocketHandlers();
 
     // sanity: the connection handler was captured
-    expect(connectionHandler).toBeDefined();
+    if (!connectionHandler) {
+      throw new Error('GameEvents registered no connection handler');
+    }
   });
 
   // A connected socket, wired through the real handler registrations.
   const connect = (sid: string) => {
     const mock = makeMockSocket(sid);
     connectionHandler?.(mock.socket);
+
     return mock;
   };
 
-  const setSegment = (type: string) => {
-    (
-      segmentsManager as unknown as { gameStarted: boolean }
-    ).gameStarted = true;
-    const index = segmentsManager.segments.findIndex((segment) => segment.type === type);
-    if (index !== -1) {
-      segmentsManager.currentSegment = index;
-    }
-  };
+  const setSegment = (type: string) => enterSegment(segmentsManager, type);
 
   it('cupid:lovers-pick from a non-cupid socket does not set lovers', () => {
     addPlayer('Cupid', 'cupid-sid', 'CUPID');
@@ -170,6 +172,7 @@ describe('Server-side role validation', () => {
     const lover1 = connect('p2-sid');
     const lover2 = connect('p3-sid');
     const attacker = connect('attacker-sid');
+
     const finish = vi
       .spyOn(segmentsManager, 'finishSegment')
       .mockResolvedValue(undefined);
@@ -346,11 +349,13 @@ describe('Server-side role validation', () => {
     const sockets = Array.from({ length: 7 }, (_, index) =>
       connect(`p${index + 1}-sid`)
     );
+
     const start = vi.spyOn(segmentsManager, 'startGame');
 
     for (let index = 0; index < 6; index++) {
       sockets[index].fire('player:join', `P${index + 1}`);
     }
+
     sockets[6].fire('player:join', 'P7');
 
     expect(start).toHaveBeenCalledTimes(1);

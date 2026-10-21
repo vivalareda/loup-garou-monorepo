@@ -1,4 +1,4 @@
-import type { GamePhase, Segment } from '@repo/types';
+import type { GamePhase, Segment, SegmentType } from '@repo/types';
 import type { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
 import type { SpecialScenarios } from '@/core/special-scenarios';
@@ -15,27 +15,25 @@ import { NightDawnResolution } from '@/server/night-dawn-resolution';
  * SEGMENT_TIMEOUT_MS overrides all of them at once (used by tests and
  * headless simulations). A resolved value <= 0 disables the deadline.
  */
-const SEGMENT_TIMEOUTS: Record<string, { defaultMs: number; envVar: string }> =
-  {
-    CUPID: { defaultMs: 120_000, envVar: 'CUPID_TIMEOUT_MS' },
-    LOVERS: { defaultMs: 60_000, envVar: 'LOVERS_TIMEOUT_MS' },
-    SEER: { defaultMs: 60_000, envVar: 'SEER_TIMEOUT_MS' },
-    WEREWOLF: { defaultMs: 120_000, envVar: 'WEREWOLF_TIMEOUT_MS' },
-    'WITCH-HEAL': { defaultMs: 60_000, envVar: 'WITCH_HEAL_TIMEOUT_MS' },
-    'WITCH-POISON': { defaultMs: 60_000, envVar: 'WITCH_POISON_TIMEOUT_MS' },
-    // A family argues for a while before voting — leave them room
-    DAY: { defaultMs: 600_000, envVar: 'DAY_VOTE_TIMEOUT_MS' },
-    HUNTER: { defaultMs: 60_000, envVar: 'HUNTER_TIMEOUT_MS' },
-  };
+const SEGMENT_TIMEOUTS = {
+  CUPID: { defaultMs: 120_000, envVar: 'CUPID_TIMEOUT_MS' },
+  LOVERS: { defaultMs: 60_000, envVar: 'LOVERS_TIMEOUT_MS' },
+  SEER: { defaultMs: 60_000, envVar: 'SEER_TIMEOUT_MS' },
+  WEREWOLF: { defaultMs: 120_000, envVar: 'WEREWOLF_TIMEOUT_MS' },
+  'WITCH-HEAL': { defaultMs: 60_000, envVar: 'WITCH_HEAL_TIMEOUT_MS' },
+  'WITCH-POISON': { defaultMs: 60_000, envVar: 'WITCH_POISON_TIMEOUT_MS' },
+  // A family argues for a while before voting — leave them room
+  DAY: { defaultMs: 600_000, envVar: 'DAY_VOTE_TIMEOUT_MS' },
+  HUNTER: { defaultMs: 60_000, envVar: 'HUNTER_TIMEOUT_MS' },
+} satisfies Record<SegmentType, { defaultMs: number; envVar: string }>;
 
-export function resolveSegmentTimeoutMs(segmentType: string): number {
+export function resolveSegmentTimeoutMs(segmentType: SegmentType): number {
   const config = SEGMENT_TIMEOUTS[segmentType];
-  const rawValue =
-    (config ? process.env[config.envVar] : undefined) ??
-    process.env.SEGMENT_TIMEOUT_MS;
+
+  const rawValue = process.env[config.envVar] ?? process.env.SEGMENT_TIMEOUT_MS;
 
   if (rawValue === undefined || rawValue === '') {
-    return config?.defaultMs ?? 60_000;
+    return config.defaultMs;
   }
 
   return Number(rawValue);
@@ -205,6 +203,7 @@ export class SegmentsManager {
     if (!this.isFirstNightSegment(segment.type)) {
       return;
     }
+
     segment.skip = true;
   }
 
@@ -275,9 +274,11 @@ export class SegmentsManager {
   private async narrate(narration: Promise<void>) {
     try {
       await narration;
+
       return true;
     } catch (error) {
       ignoreStaleGame(error);
+
       return false;
     }
   }
@@ -290,6 +291,7 @@ export class SegmentsManager {
 
     if (this.shouldAutoSkipSegment(segment.type)) {
       await this.advanceSegment({ playEndAudio: false });
+
       return;
     }
 
@@ -300,29 +302,34 @@ export class SegmentsManager {
       this.nightDawnResolution.run().catch((error) => {
         console.error('night dawn resolution failed:', error);
       });
+
       return;
     }
 
     const narrated = await this.narrate(
       this.audioManager.playSegmentAudio(segment.type, true)
     );
+
     // Reset, finished, or already moved past (admin:next-segment) while
     // the intro played
     if (!narrated || run !== this.segmentRun) {
       return;
     }
+
     segment.action();
     this.scheduleDeadline(segment.type);
   }
 
-  private shouldAutoSkipSegment(segmentType: string) {
+  private shouldAutoSkipSegment(segmentType: SegmentType) {
     if (segmentType === 'SEER') {
       const seer = this.game.getSpecialRolePlayer('SEER');
+
       return !seer || !seer.isAlive;
     }
 
     if (segmentType === 'WITCH-HEAL') {
       const witch = this.game.getSpecialRolePlayer('WITCH');
+
       return (
         !witch ||
         !witch.isAlive ||
@@ -333,25 +340,29 @@ export class SegmentsManager {
 
     if (segmentType === 'WITCH-POISON') {
       const witch = this.game.getSpecialRolePlayer('WITCH');
+
       return !witch || !witch.isAlive || !this.game.canWitchPoison();
     }
 
     return false;
   }
 
-  private scheduleDeadline(segmentType: string) {
+  private scheduleDeadline(segmentType: SegmentType) {
     const timeoutMs = resolveSegmentTimeoutMs(segmentType);
+
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
       return;
     }
 
     this.clearDeadline();
     this.deadlineEndsAt = Date.now() + timeoutMs;
+
     if (segmentType !== 'DAY') {
       // DAY announces its own countdowns: first the discussion window,
       // then the vote's remaining time
-      this.io.emit('game:countdown', segmentType as GamePhase, timeoutMs);
+      this.io.emit('game:countdown', segmentType, timeoutMs);
     }
+
     this.segmentDeadline = setTimeout(() => {
       if (this.getCurrentSegmentType() !== segmentType) {
         return;
@@ -368,6 +379,7 @@ export class SegmentsManager {
       clearTimeout(this.segmentDeadline);
       this.segmentDeadline = null;
     }
+
     this.deadlineEndsAt = null;
   }
 
@@ -375,11 +387,12 @@ export class SegmentsManager {
     if (this.deadlineEndsAt === null) {
       return null;
     }
+
     return Math.max(0, this.deadlineEndsAt - Date.now());
   }
 
-  private async handleSegmentTimeout(segmentType: string) {
-    this.io.emit('game:phase-timed-out', segmentType as GamePhase);
+  private async handleSegmentTimeout(segmentType: SegmentType) {
+    this.io.emit('game:phase-timed-out', segmentType);
 
     if (segmentType === 'DAY') {
       // Whatever partial votes exist are dropped: nobody dies, the night
@@ -389,6 +402,7 @@ export class SegmentsManager {
 
     if (segmentType === 'CUPID' && this.game.getLovers().length === 0) {
       const cupidSid = this.game.getSpecialRolePlayer('CUPID')?.getSocketId();
+
       const lovers = this.game
         .getAlivePlayers()
         .filter((player) => player.getSocketId() !== cupidSid)
@@ -410,6 +424,7 @@ export class SegmentsManager {
       this.audioManager.playVillagersWonAudio().catch(ignoreStaleGame);
       this.game.alertWinnersAndLosers(winner);
       this.markFinished();
+
       return true;
     }
 
@@ -417,6 +432,7 @@ export class SegmentsManager {
       this.audioManager.playWerewolvesWonAudio().catch(ignoreStaleGame);
       this.game.alertWinnersAndLosers(winner);
       this.markFinished();
+
       return true;
     }
 
@@ -445,10 +461,13 @@ export class SegmentsManager {
   // One transition per segment: a second call while this segment is
   // already ending (a wolf's repeated agreeing vote, a deadline racing the
   // last action) is a no-op
-  async advanceSegment({ playEndAudio = true }: { playEndAudio?: boolean } = {}) {
+  async advanceSegment({
+    playEndAudio = true,
+  }: { playEndAudio?: boolean } = {}) {
     if (this.endingRun === this.segmentRun) {
       return;
     }
+
     this.endingRun = this.segmentRun;
     this.clearDeadline();
     const segment = this.segments[this.currentSegment];

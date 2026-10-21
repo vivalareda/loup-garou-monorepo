@@ -3,13 +3,21 @@
  * the socket singleton (which throws on import when the backend URL env
  * var is missing — see `utils/sockets.ts`).
  *
- * The component bridges these to its typed socket via a loose `WitchEmit`
- * adapter; tests pass a `vi.fn()` directly and assert exactly one event is
- * emitted with the right name and payload.
+ * The component passes its typed socket's `emit` as `WitchEmit`; tests pass
+ * a `vi.fn()` directly and assert exactly one event is emitted with the
+ * right name and payload.
  */
 
-/** Loose emit signature — the component bridges it to its typed socket. */
-export type WitchEmit = (event: string, ...args: unknown[]) => void;
+import type { ClientToServerEvents } from '@repo/types';
+
+type WitchEvent = Extract<keyof ClientToServerEvents, `witch:${string}`>;
+
+/** The socket's `emit`, narrowed to the witch's own events. */
+export type WitchEmit = <E extends WitchEvent>(
+  event: E,
+  ...args: Parameters<ClientToServerEvents[E]>
+) => void;
+
 export type CloseModal = () => void;
 
 /**

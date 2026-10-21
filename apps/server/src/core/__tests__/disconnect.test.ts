@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 describe('Game.handleDisconnect', () => {
   let game: Game;
   let deathManager: DeathManager;
-  let mockIo: SocketType;
+  let mockIo: Broadcaster;
   // Per-socket emit spies so we can prove which sid received what.
   let socketEmit: Map<string, ReturnType<typeof vi.fn>>;
   let ioEmitSpy: ReturnType<typeof vi.fn>;
@@ -17,14 +17,16 @@ describe('Game.handleDisconnect', () => {
     mockIo = {
       to: vi.fn((sid: string) => {
         let emit = socketEmit.get(sid);
+
         if (!emit) {
           emit = vi.fn();
           socketEmit.set(sid, emit);
         }
+
         return { emit };
       }),
       emit: ioEmitSpy,
-    } as unknown as SocketType;
+    } satisfies Broadcaster;
     deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);
   });
@@ -37,6 +39,7 @@ describe('Game.handleDisconnect', () => {
     const player = game.addPlayer(name, sid);
     player.setRole(role);
     game.setPlayerTeams(player);
+
     return player;
   };
 
@@ -47,7 +50,9 @@ describe('Game.handleDisconnect', () => {
 
     expect(p.isAlive).toBe(false);
     // alert:player-is-dead is sent to the disconnected socket
-    expect(socketEmit.get('a-sid')).toHaveBeenCalledWith('alert:player-is-dead');
+    expect(socketEmit.get('a-sid')).toHaveBeenCalledWith(
+      'alert:player-is-dead'
+    );
     // lobby:player-died is broadcast to everyone
     expect(ioEmitSpy).toHaveBeenCalledWith('lobby:player-died', 'a-sid');
   });
@@ -113,12 +118,14 @@ describe('Game.handleDisconnect', () => {
 
     // Kill once
     game.handleDisconnect('a-sid');
+
     const firstDeathEmits = ioEmitSpy.mock.calls.filter(
       (c) => c[0] === 'lobby:player-died'
     ).length;
-    const firstSocketEmits = socketEmit.get('a-sid')?.mock.calls.filter(
-      (c) => c[0] === 'alert:player-is-dead'
-    ).length;
+
+    const firstSocketEmits = socketEmit
+      .get('a-sid')
+      ?.mock.calls.filter((c) => c[0] === 'alert:player-is-dead').length;
 
     // Second disconnect (adapter double-fire)
     game.handleDisconnect('a-sid');
@@ -126,9 +133,10 @@ describe('Game.handleDisconnect', () => {
     const secondDeathEmits = ioEmitSpy.mock.calls.filter(
       (c) => c[0] === 'lobby:player-died'
     ).length;
-    const secondSocketEmits = socketEmit.get('a-sid')?.mock.calls.filter(
-      (c) => c[0] === 'alert:player-is-dead'
-    ).length;
+
+    const secondSocketEmits = socketEmit
+      .get('a-sid')
+      ?.mock.calls.filter((c) => c[0] === 'alert:player-is-dead').length;
 
     expect(p.isAlive).toBe(false);
     expect(firstDeathEmits).toBe(1);

@@ -17,71 +17,129 @@
  * `isServerEvent`); argument shapes are not, so handlers keep validating
  * their own payloads.
  */
-export type EventFrame = { event: string; args: unknown[] };
-export type ClientEventFrame = EventFrame & { ack?: number };
+import {
+  type ClientToServerEvents,
+  isClientEvent,
+  isServerEvent,
+  type ServerToClientEvents,
+} from './event';
+
+export type EventFrame = {
+  event: keyof ServerToClientEvents;
+  args: unknown[];
+};
+
+export type ClientEventFrame = {
+  event: keyof ClientToServerEvents;
+  args: unknown[];
+  ack?: number;
+};
+
 export type AckFrame = { ack: number; args: unknown[] };
+
 export type PingFrame = { ping: number };
+
 export type PongFrame = { pong: number };
+
 export type ClientFrame = ClientEventFrame | PingFrame;
+
 export type ServerFrame = EventFrame | AckFrame | PongFrame;
 
 export function encodeFrame(frame: ClientFrame | ServerFrame): string {
   return JSON.stringify(frame);
 }
 
-function parseObject(data: unknown): Record<string, unknown> | null {
-  if (typeof data !== 'string') {
+/**
+ * What a WebSocket `message` event carries: a text frame's string, or a
+ * binary frame's bytes (an `ArrayBuffer`, or Node's `Buffer`; a browser
+ * may also hand over a `Blob`, rejected like any binary frame). The
+ * protocol only uses text frames.
+ */
+export type FrameData = string | ArrayBuffer | ArrayBufferView;
+
+/** A decoded JSON object before validation: any field may be missing or wrong. */
+type RawFrame = {
+  event?: unknown;
+  args?: unknown;
+  ack?: unknown;
+  ping?: unknown;
+  pong?: unknown;
+};
+
+/** JSON.parse builds objects (and arrays) from this realm's `Object`. */
+function isRawFrame(value: unknown): value is RawFrame {
+  return value instanceof Object && !Array.isArray(value);
+}
+
+function decodeFrame(data: FrameData): RawFrame | null {
+  // A binary frame is not part of the text protocol
+  if (data instanceof Object) {
     return null;
   }
+
   let value: unknown;
+
   try {
     value = JSON.parse(data);
   } catch {
     return null;
   }
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return null;
-  }
-  return value as Record<string, unknown>;
+
+  return isRawFrame(value) ? value : null;
 }
 
 /** Ack ids and ping sequence numbers: non-negative safe integers. */
 function isFrameId(value: unknown): value is number {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+  return Number.isSafeInteger(value) && Number(value) >= 0;
 }
 
-/** A frame a client sent, or null when it is malformed. */
-export function parseClientFrame(data: unknown): ClientFrame | null {
-  const frame = parseObject(data);
+/**
+ * A frame a client sent, or null when it is malformed or names an event
+ * that is not in `ClientToServerEvents`.
+ */
+export function parseClientFrame(data: FrameData): ClientFrame | null {
+  const frame = decodeFrame(data);
+
   if (frame && frame.event === undefined && isFrameId(frame.ping)) {
     return { ping: frame.ping };
   }
-  if (!frame || typeof frame.event !== 'string' || !Array.isArray(frame.args)) {
+
+  if (!(frame && isClientEvent(frame.event) && Array.isArray(frame.args))) {
     return null;
   }
+
   if (frame.ack === undefined) {
     return { event: frame.event, args: frame.args };
   }
+
   return isFrameId(frame.ack)
     ? { event: frame.event, args: frame.args, ack: frame.ack }
     : null;
 }
 
-/** A frame the server sent, or null when it is malformed. */
-export function parseServerFrame(data: unknown): ServerFrame | null {
-  const frame = parseObject(data);
+/**
+ * A frame the server sent, or null when it is malformed or names an event
+ * that is not in `ServerToClientEvents` (say, from a newer server).
+ */
+export function parseServerFrame(data: FrameData): ServerFrame | null {
+  const frame = decodeFrame(data);
+
   if (frame && frame.event === undefined && isFrameId(frame.pong)) {
     return { pong: frame.pong };
   }
+
   if (!(frame && Array.isArray(frame.args))) {
     return null;
   }
-  if (typeof frame.event === 'string') {
+
+  if (isServerEvent(frame.event)) {
     return { event: frame.event, args: frame.args };
   }
-  if (isFrameId(frame.ack)) {
+
+  if (frame.event === undefined && isFrameId(frame.ack)) {
     return { ack: frame.ack, args: frame.args };
   }
+
   return null;
 }
 
@@ -97,10 +155,31 @@ export function isRoomCode(code: string): boolean {
   return ROOM_CODE.test(code);
 }
 
+const CODE_SEPARATORS = /[\s-]+/g;
+
+/**
+ * A room code as a person typed or read it out: separators (spaces,
+ * dashes) dropped and upper-cased, so "abcd efgh" and "ABCD-EFGH" both
+ * give "ABCDEFGH". Room codes are case-insensitive on the server too.
+ */
+export function normalizeRoomCode(input: string): string {
+  return input.replace(CODE_SEPARATORS, '').toUpperCase();
+}
+
 /** The room code in a `/room/<code>` path, or null for any other path. */
 export function parseRoomPath(pathname: string): string | null {
   const code = ROOM_PATH.exec(pathname)?.[1];
+
   return code !== undefined && isRoomCode(code) ? code : null;
+}
+
+/** `?token=<accessToken>`, or nothing without a token. */
+function tokenQuery(accessToken: string | undefined) {
+  return accessToken ? `?token=${encodeURIComponent(accessToken)}` : '';
+}
+
+function trimBaseUrl(baseUrl: string) {
+  return baseUrl.trim().replace(TRAILING_SLASHES, '');
 }
 
 /**
@@ -119,10 +198,66 @@ export function roomUrl(
       `Invalid room code "${roomCode}": use 1-64 letters, digits, - or _`
     );
   }
-  const base = baseUrl
-    .trim()
-    .replace(HTTP_SCHEME, 'ws$1://')
-    .replace(TRAILING_SLASHES, '');
-  const query = accessToken ? `?token=${encodeURIComponent(accessToken)}` : '';
-  return `${base}/room/${roomCode}${query}`;
+
+  const base = trimBaseUrl(baseUrl).replace(HTTP_SCHEME, 'ws$1://');
+
+  return `${base}/room/${roomCode}${tokenQuery(accessToken)}`;
+}
+
+/*
+ * The HTTP room API, next to the WebSocket endpoint and behind the same
+ * `?token=`:
+ * - `POST /rooms` creates a private room: 201 with a `RoomInfo`
+ * - `GET /rooms/<code>` checks that a room exists: 200 with its
+ *   `RoomInfo`, 404 when there is no such room
+ * A room must be created before `/room/<code>` accepts sockets. The Node
+ * server hosts a single game, so it "creates" DEFAULT_ROOM_CODE and finds
+ * every code.
+ */
+
+export type RoomInfo = { code: string };
+
+export type RoomsRequest =
+  | { kind: 'create' }
+  | { kind: 'find'; code: string }
+  | { kind: 'bad-code' };
+
+const ROOMS_PATH = /^\/rooms(?:\/([^/]+))?\/?$/;
+
+/** The room API call a request makes, or null when it is not one. */
+export function parseRoomsRequest(
+  method: string,
+  pathname: string
+): RoomsRequest | null {
+  const match = ROOMS_PATH.exec(pathname);
+
+  if (!match) {
+    return null;
+  }
+
+  const code = match[1];
+
+  if (code === undefined) {
+    return method === 'POST' ? { kind: 'create' } : null;
+  }
+
+  if (method !== 'GET') {
+    return null;
+  }
+
+  return isRoomCode(code) ? { kind: 'find', code } : { kind: 'bad-code' };
+}
+
+/**
+ * The room API URL (http(s), unlike `roomUrl`): `/rooms` to create a room,
+ * `/rooms/<code>` to look one up.
+ */
+export function roomsApiUrl(
+  baseUrl: string,
+  roomCode?: string,
+  accessToken?: string
+): string {
+  const path = roomCode === undefined ? '/rooms' : `/rooms/${roomCode}`;
+
+  return `${trimBaseUrl(baseUrl)}${path}${tokenQuery(accessToken)}`;
 }

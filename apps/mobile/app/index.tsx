@@ -1,7 +1,6 @@
-import { Link, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
-  Button,
   ImageBackground,
   Keyboard,
   SafeAreaView,
@@ -11,70 +10,39 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import type { RoomEntry } from '@/hooks/room';
 import { useConnectionStore } from '@/hooks/use-connection-store';
-import { registerJoinListeners, submitJoin } from '@/hooks/use-join-game';
-import { usePlayerStore } from '@/hooks/use-player-store';
-import { saveSessionToken } from '@/utils/session';
+import { rooms } from '@/utils/rooms';
 
-export default function Home() {
+/**
+ * The first screen: create a private room, or join one with the code its
+ * creator shared. Either way the app connects to that room and moves on
+ * to its name form (join.tsx).
+ */
+export default function RoomScreen() {
   const router = useRouter();
-  const [name, setName] = useState('');
-  const [joinError, setJoinError] = useState<string | null>(null);
-  const [isJoining, setIsJoining] = useState(false);
-  const { setPlayer } = usePlayerStore();
-  const { recoveryFailed, setRecoveryFailed, status } = useConnectionStore();
-  const isDev = process.env.NODE_ENV === 'development';
+  const [code, setCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const { recoveryFailed, setRecoveryFailed } = useConnectionStore();
 
-  // Session restore on app start and after reconnects is handled globally
-  // by useSessionRecovery in the root layout.
-
-  useEffect(
-    () =>
-      registerJoinListeners({
-        onJoined: async (playerData) => {
-          console.log('server response', playerData);
-          if (playerData.sessionToken) {
-            await saveSessionToken(playerData.sessionToken);
-          }
-          setIsJoining(false);
-          setPlayer(playerData);
-          router.push('/waiting-room');
-        },
-        onRejected: (message) => {
-          setIsJoining(false);
-          setJoinError(message);
-        },
-      }),
-    [router, setPlayer]
-  );
-
-  // A join in flight when the connection drops gets no answer: let the
-  // player tap again once reconnected
-  useEffect(() => {
-    if (status === 'reconnecting') {
-      setIsJoining(false);
-    }
-  }, [status]);
-
-  const handleJoinGame = () => {
-    if (isJoining) {
+  const enter = async (attempt: () => Promise<RoomEntry>) => {
+    if (busy) {
       return;
     }
+
+    Keyboard.dismiss();
     setRecoveryFailed(false);
-    setJoinError(null);
+    setError(null);
+    setBusy(true);
+    const entry = await attempt();
+    setBusy(false);
 
-    // While the socket is reconnecting the join would be dropped (emits
-    // are not replayed after an outage) and the button would spin forever
-    if (status === 'reconnecting') {
-      setJoinError('Connexion au serveur perdue — réessayez dans un instant.');
-      return;
+    if (entry.ok) {
+      router.push('/join');
+    } else {
+      setError(entry.error);
     }
-
-    if (!submitJoin(name)) {
-      setJoinError('Entrez un nom valide.');
-      return;
-    }
-    setIsJoining(true);
   };
 
   return (
@@ -85,53 +53,57 @@ export default function Home() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView className="flex-1 items-center justify-center pb-24">
-          <View className="items-center justify-between gap-20">
-            <View className="mt-32 pb-12">
-              <Text className="text-7xl font-bold text-white"> </Text>
-            </View>
-            <View className="mt-56 items-center self-stretch">
-              {recoveryFailed && (
-                <View className="mb-4 rounded-xl bg-amber-500/90 px-4 py-3">
-                  <Text className="text-center font-semibold text-slate-900">
-                    Session précédente expirée — rejoignez la partie.
-                  </Text>
-                </View>
-              )}
-              {joinError && (
-                <View className="mb-4 rounded-xl bg-red-500/90 px-4 py-3">
-                  <Text className="text-center font-semibold text-white">
-                    {joinError}
-                  </Text>
-                </View>
-              )}
-              <Text className="text-center text-4xl font-bold text-white">
-                Entrez votre nom
-              </Text>
-              <TextInput
-                className="mt-4 h-16 w-full rounded-lg border-2 border-gray-100/50 bg-slate-600 pb-2 text-center text-2xl font-bold text-white"
-                onChangeText={setName}
-                value={name}
-              />
-              <View className="mt-8 w-52 items-center justify-center">
-                <TouchableOpacity
-                  className={`rounded-lg px-8 py-4 ${
-                    isJoining ? 'bg-slate-400/40' : 'bg-slate-200/50'
-                  }`}
-                  disabled={isJoining}
-                  onPress={handleJoinGame}
-                >
-                  <Text>{isJoining ? 'Connexion…' : 'Join game'}</Text>
-                </TouchableOpacity>
+          <View className="mt-80 w-72 items-center">
+            {recoveryFailed && (
+              <View className="mb-4 rounded-xl bg-amber-500/90 px-4 py-3">
+                <Text className="text-center font-semibold text-slate-900">
+                  Cette partie n'existe plus — créez-en une autre.
+                </Text>
               </View>
-            </View>
+            )}
+            {error && (
+              <View className="mb-4 rounded-xl bg-red-500/90 px-4 py-3">
+                <Text className="text-center font-semibold text-white">
+                  {error}
+                </Text>
+              </View>
+            )}
+            <TouchableOpacity
+              className={`w-full rounded-lg px-8 py-4 ${
+                busy ? 'bg-slate-400/40' : 'bg-slate-200/50'
+              }`}
+              disabled={busy}
+              onPress={() => enter(() => rooms.createAndEnter())}
+            >
+              <Text className="text-center text-lg font-bold">
+                Créer une partie
+              </Text>
+            </TouchableOpacity>
 
-            <View>
-              {isDev && (
-                <Link asChild href="/modal-test">
-                  <Button title="🧪 Test Modal" />
-                </Link>
-              )}
-            </View>
+            <Text className="mt-10 text-center text-2xl font-bold text-white">
+              Code de la partie
+            </Text>
+            <TextInput
+              autoCapitalize="characters"
+              autoCorrect={false}
+              className="mt-4 h-16 w-full rounded-lg border-2 border-gray-100/50 bg-slate-600 pb-2 text-center text-2xl font-bold text-white"
+              onChangeText={setCode}
+              onSubmitEditing={() => enter(() => rooms.joinByCode(code))}
+              placeholder="ABCD-2345"
+              placeholderTextColor="#94a3b8"
+              value={code}
+            />
+            <TouchableOpacity
+              className={`mt-4 w-full rounded-lg px-8 py-4 ${
+                busy ? 'bg-slate-400/40' : 'bg-slate-200/50'
+              }`}
+              disabled={busy}
+              onPress={() => enter(() => rooms.joinByCode(code))}
+            >
+              <Text className="text-center text-lg font-bold">
+                {busy ? 'Connexion…' : 'Rejoindre'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </TouchableWithoutFeedback>

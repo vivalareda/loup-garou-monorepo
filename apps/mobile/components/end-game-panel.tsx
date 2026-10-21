@@ -1,8 +1,8 @@
-import type { GameEndResult } from '@repo/types';
+import type { GameEndResult, Role } from '@repo/types';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { socket } from '@/utils/sockets';
 
-export const ROLE_LABELS: Record<string, string> = {
+export const ROLE_LABELS: Record<Role, string> = {
   WEREWOLF: 'Loup-Garou',
   VILLAGER: 'Villageois',
   WITCH: 'Sorcière',
@@ -37,9 +37,7 @@ export function EndGamePanel({ result }: { result: GameEndResult | null }) {
                   {revealed.isAlive ? '🙂' : '💀'} {revealed.name}
                 </Text>
                 <Text className="text-base font-semibold text-slate-300">
-                  {revealed.role
-                    ? (ROLE_LABELS[revealed.role] ?? revealed.role)
-                    : '?'}
+                  {revealed.role ? ROLE_LABELS[revealed.role] : '?'}
                 </Text>
               </View>
             ))}

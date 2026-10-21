@@ -2,7 +2,7 @@ import type { Role } from '@repo/types';
 import { describe, expect, it, vi } from 'vitest';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 /**
  * Table-driven matrix for checkIfWinner (parity rule):
@@ -104,7 +104,8 @@ function buildGame(scenario: Scenario) {
   const mockIo = {
     to: vi.fn().mockReturnThis(),
     emit: vi.fn(),
-  } as unknown as SocketType;
+  } satisfies Broadcaster;
+
   const deathManager = new DeathManager();
   const game = new Game(mockIo, deathManager);
   let sidCounter = 0;
@@ -114,9 +115,11 @@ function buildGame(scenario: Scenario) {
     sidCounter++;
     player.setRole(role);
     game.setPlayerTeams(player);
+
     if (team === 'V' && role !== 'VILLAGER') {
       game.setSpecialRolePlayer(player);
     }
+
     if (!alive) {
       player.setIsAlive(false);
     }
@@ -125,12 +128,15 @@ function buildGame(scenario: Scenario) {
   for (const role of scenario.villagers) {
     add(role, true, 'V');
   }
+
   for (const role of scenario.deadVillagers ?? []) {
     add(role, false, 'V');
   }
+
   for (let i = 0; i < scenario.werewolves; i++) {
     add('WEREWOLF', true, 'W');
   }
+
   for (let i = 0; i < (scenario.deadWerewolves ?? 0); i++) {
     add('WEREWOLF', false, 'W');
   }
@@ -138,6 +144,7 @@ function buildGame(scenario: Scenario) {
   if (scenario.healPotion === false) {
     game.healWerewolfVictim();
   }
+
   if (scenario.poisonPotion === false) {
     game.witchKill('sid-0');
     deathManager.removePendingDeath('sid-0');
@@ -156,7 +163,8 @@ describe('checkIfWinner victory matrix (parity rule)', () => {
     const mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: vi.fn(),
-    } as unknown as SocketType;
+    } satisfies Broadcaster;
+
     const game = new Game(mockIo, new DeathManager());
     expect(game.checkIfWinner()).toBeNull();
   });

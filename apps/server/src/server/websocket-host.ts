@@ -1,7 +1,7 @@
 import {
   type ClientToServerEvents,
   encodeFrame,
-  isClientEvent,
+  type FrameData,
   parseClientFrame,
   type ServerToClientEvents,
 } from '@repo/types';
@@ -18,13 +18,14 @@ export type WebSocketLike = {
   close(code?: number, reason?: string): void;
   addEventListener(
     type: 'message',
-    listener: (event: { data: unknown }) => void
+    listener: (event: { data: FrameData }) => void
   ): void;
   addEventListener(type: 'close' | 'error', listener: () => void): void;
 };
 
 /** `WebSocket.OPEN`, without depending on a global `WebSocket`. */
 const OPEN = 1;
+
 /** Close codes: frame too large (RFC 6455), and silent client (private). */
 const MESSAGE_TOO_BIG = 1009;
 const IDLE_TIMEOUT = 4000;
@@ -35,19 +36,24 @@ const IDLE_TIMEOUT = 4000;
  * broken network) or it missed one ping.
  */
 export const DEFAULT_IDLE_TIMEOUT_MS = 45_000;
+
 /** The biggest game frame (a full snapshot) is a few KiB. */
 export const DEFAULT_MAX_FRAME_BYTES = 64 * 1024;
 
-/** The timers the host uses; injectable for tests. */
+/**
+ * The timers the host uses; injectable for tests. Handles are numeric ids,
+ * which both runtimes accept back in `clearTimeout`.
+ */
 export type HostTimers = {
-  setTimeout(callback: () => void, ms: number): unknown;
-  clearTimeout(handle: unknown): void;
+  setTimeout(callback: () => void, ms: number): number;
+  clearTimeout(handle: number | undefined): void;
 };
 
 const globalTimers: HostTimers = {
-  setTimeout: (callback, ms) => setTimeout(callback, ms),
-  clearTimeout: (handle) =>
-    clearTimeout(handle as ReturnType<typeof setTimeout>),
+  // Node returns a `Timeout` object whose numeric conversion is its id;
+  // workerd already returns a number
+  setTimeout: (callback, ms) => Number(setTimeout(callback, ms)),
+  clearTimeout: (handle) => clearTimeout(handle),
 };
 
 const utf8 = new TextEncoder();
@@ -57,10 +63,12 @@ function exceedsBytes(text: string, maxBytes: number) {
   if (text.length > maxBytes) {
     return true;
   }
+
   return text.length * 3 > maxBytes && utf8.encode(text).length > maxBytes;
 }
 
 type ServerEvent = keyof ServerToClientEvents;
+
 type Listener = (...args: unknown[]) => void;
 
 export type WebSocketHostOptions = {
@@ -89,7 +97,8 @@ export type WebSocketHostOptions = {
  */
 export class WebSocketHost implements ConnectionHost {
   private readonly connections = new Map<string, WebSocketConnection>();
-  private readonly connectionListeners: ((connection: Connection) => void)[] =
+  /** Replaced, never mutated, so a dispatch in progress keeps its list. */
+  private connectionListeners: readonly ((connection: Connection) => void)[] =
     [];
   private readonly createId: () => string;
   readonly idleTimeoutMs: number;
@@ -106,8 +115,9 @@ export class WebSocketHost implements ConnectionHost {
 
   on(event: 'connection', listener: (connection: Connection) => void) {
     if (event === 'connection') {
-      this.connectionListeners.push(listener);
+      this.connectionListeners = [...this.connectionListeners, listener];
     }
+
     return this;
   }
 
@@ -115,9 +125,11 @@ export class WebSocketHost implements ConnectionHost {
   accept(socket: WebSocketLike): Connection {
     const connection = new WebSocketConnection(this.createId(), socket, this);
     this.connections.set(connection.id, connection);
-    for (const listener of [...this.connectionListeners]) {
+
+    for (const listener of this.connectionListeners) {
       runListener('connection', () => listener(connection));
     }
+
     return connection;
   }
 
@@ -131,6 +143,7 @@ export class WebSocketHost implements ConnectionHost {
     ...args: Parameters<ServerToClientEvents[E]>
   ) {
     this.sendToAll(encodeFrame({ event, args }));
+
     return true;
   }
 
@@ -141,6 +154,7 @@ export class WebSocketHost implements ConnectionHost {
         ...args: Parameters<ServerToClientEvents[E]>
       ) => {
         this.connections.get(socketId)?.emit(event, ...args);
+
         return true;
       },
     };
@@ -166,9 +180,10 @@ class WebSocketConnection implements Connection {
   readonly broadcast: Connection['broadcast'];
   private readonly socket: WebSocketLike;
   private readonly host: WebSocketHost;
-  private readonly listeners = new Map<string, Listener[]>();
+  /** Lists are replaced, never mutated, so a dispatch keeps its own. */
+  private readonly listeners = new Map<string, readonly Listener[]>();
   private closed = false;
-  private idleTimer: unknown;
+  private idleTimer: number | undefined;
 
   constructor(id: string, socket: WebSocketLike, host: WebSocketHost) {
     this.id = id;
@@ -177,6 +192,7 @@ class WebSocketConnection implements Connection {
     this.broadcast = {
       emit: (event, ...args) => {
         host.sendToAll(encodeFrame({ event, args }), id);
+
         return true;
       },
     };
@@ -193,9 +209,8 @@ class WebSocketConnection implements Connection {
   ): this;
   on(event: 'disconnect', listener: () => void): this;
   on(event: string, listener: Listener) {
-    const listeners = this.listeners.get(event) ?? [];
-    listeners.push(listener);
-    this.listeners.set(event, listeners);
+    this.listeners.set(event, [...(this.listeners.get(event) ?? []), listener]);
+
     return this;
   }
 
@@ -204,6 +219,7 @@ class WebSocketConnection implements Connection {
     ...args: Parameters<ServerToClientEvents[E]>
   ) {
     this.send(encodeFrame({ event, args }));
+
     return true;
   }
 
@@ -212,6 +228,7 @@ class WebSocketConnection implements Connection {
     if (this.closed || this.socket.readyState !== OPEN) {
       return;
     }
+
     try {
       this.socket.send(frame);
     } catch (error) {
@@ -219,46 +236,56 @@ class WebSocketConnection implements Connection {
     }
   }
 
-  private receive(data: unknown) {
+  private receive(data: FrameData) {
     if (this.closed) {
       return;
     }
+
+    // Only text frames are measured: a string is the one non-object
+    // FrameData, and parseClientFrame rejects binary frames anyway
     if (
-      typeof data === 'string' &&
+      !(data instanceof Object) &&
       exceedsBytes(data, this.host.maxFrameBytes)
     ) {
       console.warn(
         `Closing ${this.id}: frame over ${this.host.maxFrameBytes} bytes`
       );
       this.close(MESSAGE_TOO_BIG, 'Frame too large');
+
       return;
     }
+
     // Any frame, valid or not, proves the client is alive
     this.resetIdleTimer();
     const frame = parseClientFrame(data);
+
     if (!frame) {
-      console.warn(`Ignored a malformed frame from ${this.id}`);
+      console.warn(
+        `Ignored a malformed frame or unknown event from ${this.id}`
+      );
+
       return;
     }
+
     if ('ping' in frame) {
       this.send(encodeFrame({ pong: frame.ping }));
-      return;
-    }
-    if (!isClientEvent(frame.event)) {
-      console.warn(`Ignored unknown event "${frame.event}" from ${this.id}`);
+
       return;
     }
 
     const args = [...frame.args];
+
     if (frame.ack !== undefined) {
       args.push(this.replier(frame.ack));
     }
+
     this.dispatch(frame.event, args);
   }
 
   /** The ack callback handed to a handler: answers the sender, once. */
   private replier(ackId: number) {
     let pending: number | undefined = ackId;
+
     return (...replyArgs: unknown[]) => {
       if (pending !== undefined) {
         this.send(encodeFrame({ ack: pending, args: replyArgs }));
@@ -269,9 +296,11 @@ class WebSocketConnection implements Connection {
 
   private resetIdleTimer() {
     const { idleTimeoutMs, timers } = this.host;
+
     if (idleTimeoutMs <= 0) {
       return;
     }
+
     timers.clearTimeout(this.idleTimer);
     this.idleTimer = timers.setTimeout(() => {
       console.warn(`Closing ${this.id}: silent for ${idleTimeoutMs}ms`);
@@ -283,20 +312,23 @@ class WebSocketConnection implements Connection {
     if (this.closed) {
       return;
     }
+
     this.closed = true;
     this.host.timers.clearTimeout(this.idleTimer);
     this.host.forget(this.id);
+
     try {
       this.socket.close(code, reason);
     } catch {
       // Already closing or closed
     }
+
     this.dispatch('disconnect', []);
     this.listeners.clear();
   }
 
   private dispatch(event: string, args: unknown[]) {
-    for (const listener of [...(this.listeners.get(event) ?? [])]) {
+    for (const listener of this.listeners.get(event) ?? []) {
       runListener(event, () => listener(...args));
     }
   }

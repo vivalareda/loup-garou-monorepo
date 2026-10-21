@@ -1,28 +1,45 @@
-import { isRoomCode } from '@repo/types';
+import { isRoomCode, parseRoomsRequest } from '@repo/types';
 
 const ROOM_PREFIX = '/room/';
 const TRAILING_SLASH = /\/$/;
 
-export type RoomRoute =
-  | { kind: 'room'; code: string }
+export type Route =
+  /** `/room/<code>`: a WebSocket into that room's game. */
+  | { kind: 'socket'; code: string }
+  /** `POST /rooms`: create a room. */
+  | { kind: 'create' }
+  /** `GET /rooms/<code>`: does that room exist? */
+  | { kind: 'find'; code: string }
   | { kind: 'bad-code' }
+  /** Anything else: the dashboard's static files. */
   | { kind: 'other' };
 
 /**
- * Classifies a request path. `/room/<code>` is a game room, keyed by the
- * upper-cased code so `abcd` and `ABCD` are the same room. The code rules
- * are the clients' own (`isRoomCode`, what `roomUrl` accepts), so every
- * URL a client builds reaches a room.
+ * Classifies a request. Rooms are keyed by the upper-cased code, so
+ * `abcd` and `ABCD` are the same room. The code rules are the clients'
+ * own (`isRoomCode`, what `roomUrl` accepts), so every URL a client
+ * builds reaches a room.
  */
-export function routeRoom(pathname: string): RoomRoute {
+export function routeRequest(method: string, pathname: string): Route {
+  const call = parseRoomsRequest(method, pathname);
+
+  if (call) {
+    return call.kind === 'find'
+      ? { kind: 'find', code: call.code.toUpperCase() }
+      : call;
+  }
+
   if (!pathname.startsWith(ROOM_PREFIX)) {
     return { kind: 'other' };
   }
+
   const code = pathname.slice(ROOM_PREFIX.length).replace(TRAILING_SLASH, '');
+
   if (!isRoomCode(code)) {
     return { kind: 'bad-code' };
   }
-  return { kind: 'room', code: code.toUpperCase() };
+
+  return { kind: 'socket', code: code.toUpperCase() };
 }
 
 /** True for a WebSocket upgrade request. */

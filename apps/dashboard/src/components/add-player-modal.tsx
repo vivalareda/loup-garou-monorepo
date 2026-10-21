@@ -15,6 +15,7 @@ export function AddPlayerModal({ isOpen, onClose }: AddPlayerModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
     if (playerName.trim()) {
       addPlayer(playerName.trim());
       setPlayerName('');
@@ -33,6 +34,7 @@ export function AddPlayerModal({ isOpen, onClose }: AddPlayerModalProps) {
             Player Name
           </label>
           <Input
+            // oxlint-disable-next-line jsx-a11y/no-autofocus -- the input is this dialog's only field: moving focus into a dialog when it opens is the WAI-ARIA dialog pattern, not a surprise jump on page load
             autoFocus
             id="playerName"
             onChange={(e) => setPlayerName(e.target.value)}

@@ -8,20 +8,24 @@ import { SegmentsManager } from '@/segments/segments-manager';
 import type { Connection, ConnectionHost } from '@/server/connection';
 import { EventsActions } from '@/server/events-actions';
 import { GameEvents } from '@/server/server-events';
+import { enterSegment } from './helpers/segments';
 
 type Handler = (...args: unknown[]) => void;
 
 function makeMockSocket(id: string) {
   const handlers = new Map<string, Handler>();
+
   const socket = {
     id,
     on: vi.fn((event: string, cb: Handler) => {
       handlers.set(event, cb);
+
       return socket;
     }),
     emit: vi.fn(),
     broadcast: { emit: vi.fn() },
   };
+
   return {
     socket: socket satisfies Connection,
     fire: (event: string, ...args: unknown[]) => handlers.get(event)?.(...args),
@@ -76,6 +80,7 @@ describe('day discussion and countdowns', () => {
   const connect = (sid: string) => {
     const mock = makeMockSocket(sid);
     connectionHandler?.(mock.socket);
+
     return mock;
   };
 
@@ -87,15 +92,11 @@ describe('day discussion and countdowns', () => {
     const player = game.addPlayer(name, sid);
     player.setRole(role);
     game.setPlayerTeams(player);
+
     return player;
   };
 
-  const setSegment = (type: string) => {
-    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
-    segmentsManager.currentSegment = segmentsManager.segments.findIndex(
-      (segment) => segment.type === type
-    );
-  };
+  const setSegment = (type: string) => enterSegment(segmentsManager, type);
 
   const emittedEvents = () => ioEmit.mock.calls.map((call) => call[0]);
 
@@ -107,7 +108,11 @@ describe('day discussion and countdowns', () => {
 
     await segmentsManager.getGameActions().dayAction();
 
-    expect(ioEmit).toHaveBeenCalledWith('game:countdown', 'DAY-DISCUSSION', 5000);
+    expect(ioEmit).toHaveBeenCalledWith(
+      'game:countdown',
+      'DAY-DISCUSSION',
+      5000
+    );
     expect(emittedEvents()).not.toContain('day:voting-phase-start');
     expect(segmentsManager.getGameActions().isDayVotingOpen()).toBe(false);
 
@@ -230,7 +235,9 @@ describe('day discussion and countdowns', () => {
       mockIo,
       new EventsActions(game, segmentsManager, mockIo)
     );
+
     const player = game.getPlayerBySocketId('a-sid');
+
     if (!player) {
       throw new Error('player not found');
     }

@@ -34,6 +34,7 @@ export class Player implements PlayerGetters, PlayerSetters {
       name: this.name,
       socketId: this.socketId,
     };
+
     return playerListItem;
   }
 
@@ -44,6 +45,7 @@ export class Player implements PlayerGetters, PlayerSetters {
       socketId: this.socketId,
       sessionToken: this.sessionToken,
     };
+
     return waitingRoomPlayer;
   }
 
@@ -55,6 +57,7 @@ export class Player implements PlayerGetters, PlayerSetters {
     if (!this.role) {
       throw new Error('Role is not assigned to the player');
     }
+
     return this.role;
   }
 

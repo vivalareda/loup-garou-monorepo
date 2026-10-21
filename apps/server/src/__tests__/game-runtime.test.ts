@@ -14,9 +14,11 @@ describe('createGameRuntime', () => {
 
     dashboard.send('narrator:register');
     let finished = false;
+
     const playing = narrator.play('Werewolves/Werewolves-1').then(() => {
       finished = true;
     });
+
     expect(dashboard.frames).toContainEqual({
       event: 'narrator:play',
       args: ['0', 'Werewolves/Werewolves-1'],
@@ -48,11 +50,13 @@ describe('createGameRuntime', () => {
 
   it('serves the lobby and resets the game in place', () => {
     const host = newHost();
+
     const runtime = createGameRuntime({
       host,
       narrator: silentNarrator,
       adminEvents: false,
     });
+
     const player = fakeSocket();
     host.accept(player.socket);
 
@@ -75,16 +79,19 @@ describe('createGameRuntime', () => {
     'with adminEvents %s, admin:start-game starts %i game',
     (adminEvents, started) => {
       const host = newHost();
+
       const runtime = createGameRuntime({
         host,
         narrator: silentNarrator,
         adminEvents,
       });
+
       for (const name of ['A', 'B', 'C', 'D']) {
         const player = fakeSocket();
         host.accept(player.socket);
         player.send('player:join', name);
       }
+
       const dashboard = fakeSocket();
       host.accept(dashboard.socket);
 
@@ -102,16 +109,19 @@ describe('a finished game', () => {
   it('leaves no deadline or discussion timer running', async () => {
     vi.useFakeTimers();
     const host = newHost();
+
     const runtime = createGameRuntime({
       host,
       narrator: silentNarrator,
       adminEvents: false,
     });
+
     for (const name of ['A', 'B', 'C', 'D', 'E', 'F']) {
       const player = fakeSocket();
       host.accept(player.socket);
       player.send('player:join', name);
     }
+
     expect(runtime.segmentsManager.hasStarted()).toBe(true);
     await vi.advanceTimersByTimeAsync(0);
     expect(runtime.segmentsManager.getRemainingDeadlineMs()).not.toBeNull();
@@ -121,6 +131,7 @@ describe('a finished game', () => {
         player.kill();
       }
     }
+
     expect(runtime.segmentsManager.isGameOver()).toBe(true);
     expect(runtime.segmentsManager.getRemainingDeadlineMs()).toBeNull();
     expect(vi.getTimerCount()).toBe(0);

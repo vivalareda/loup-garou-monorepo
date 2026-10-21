@@ -5,33 +5,70 @@ import { GlobalModal } from '@/components/global-modal';
 import { useGameStore } from '@/hooks/use-game-store';
 import { useModalStore } from '@/hooks/use-modal-store';
 
+// Mock players data - self contained for testing with opaque socket IDs
+const MOCK_PLAYERS = [
+  { name: 'Alice', socketId: 'ZjQxMjRmN2UtNmY2Ni00' },
+  { name: 'Bob', socketId: 'OGI3YWJkYzEtNzIyOC00' },
+  { name: 'Charlie', socketId: 'NWU4ZGZhNzItMzk5MS00' },
+  { name: 'Diana', socketId: 'MjA3YjQ5YjQtZGY5Mi00' },
+  { name: 'Eve', socketId: 'YTFiY2RlZjAtMjM4OS00' },
+];
+
+function getWitchModalData() {
+  const werewolvesVictim = 'Alice';
+
+  return (
+    <View className="items-center justify-center py-6">
+      {/* Victim Information Card */}
+      <View className="mb-8 w-full rounded-2xl border-2 border-red-400 bg-gradient-to-b from-red-900/20 to-slate-800/50 p-6 shadow-lg">
+        <View className="items-center">
+          <Text className="mb-3 text-sm font-medium uppercase tracking-wide text-red-300">
+            Victime des Loups-Garous
+          </Text>
+          <View className="mb-4 h-px w-20 bg-red-400" />
+          <Text className="mb-4 text-3xl font-bold text-black">
+            {werewolvesVictim}
+          </Text>
+        </View>
+      </View>
+
+      {/* Healing Potion Visual */}
+      <View className="items-center">
+        <View className="mb-3 h-16 w-10 rounded-full bg-gradient-to-b from-green-400 to-green-600 shadow-lg">
+          <View className="mx-auto mt-2 h-3 w-8 rounded-full bg-green-300" />
+          <View className="mx-auto mt-1 h-2 w-6 rounded-full bg-green-200/80" />
+        </View>
+        <Text className="text-sm font-semibold text-green-600">
+          Potion de Guérison
+        </Text>
+        <Text className="mt-1 text-xs text-gray-500">
+          Voulez-vous sauver cette personne ?
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 export default function ModalTestScreen() {
   const { openModal } = useModalStore();
   const { setPlayersList, getPlayerNameFromSid } = useGameStore();
   const [lastSelection, setLastSelection] = useState<string>('');
+
   const [selectionHistory, setSelectionHistory] = useState<
     Array<{ timestamp: string; selection: string; playerName: string }>
   >([]);
 
-  // Mock players data - self contained for testing with opaque socket IDs
-  const mockPlayers = [
-    { name: 'Alice', socketId: 'ZjQxMjRmN2UtNmY2Ni00' },
-    { name: 'Bob', socketId: 'OGI3YWJkYzEtNzIyOC00' },
-    { name: 'Charlie', socketId: 'NWU4ZGZhNzItMzk5MS00' },
-    { name: 'Diana', socketId: 'MjA3YjQ5YjQtZGY5Mi00' },
-    { name: 'Eve', socketId: 'YTFiY2RlZjAtMjM4OS00' },
-  ];
-
   // Populate game store with mock data so GlobalModal can resolve socket IDs
   useEffect(() => {
-    setPlayersList(mockPlayers);
-  }, [setPlayersList]); // setPlayersList is stable from Zustand
+    setPlayersList(MOCK_PLAYERS);
+  }, [setPlayersList]);
 
   // Helper function to log selection with socket ID verification
   const logSelectionWithVerification = useCallback(
     (selection: string, action: string) => {
       try {
         const playerName = getPlayerNameFromSid(selection);
+
         const logEntry = {
           timestamp: new Date().toLocaleTimeString(),
           selection,
@@ -57,7 +94,7 @@ export default function ModalTestScreen() {
   );
 
   // Get mock socket IDs for modal data
-  const getMockSocketIds = () => mockPlayers.map((p) => p.socketId);
+  const getMockSocketIds = () => MOCK_PLAYERS.map((p) => p.socketId);
 
   const testWerewolfModal = () => {
     const availableTargets = getMockSocketIds();
@@ -92,41 +129,6 @@ export default function ModalTestScreen() {
         logSelectionWithVerification(selection, 'Witch Poison');
       },
     });
-  };
-
-  const getWitchModalData = () => {
-    const werewolvesVictim = 'Alice';
-
-    return (
-      <View className="items-center justify-center py-6">
-        {/* Victim Information Card */}
-        <View className="mb-8 w-full rounded-2xl border-2 border-red-400 bg-gradient-to-b from-red-900/20 to-slate-800/50 p-6 shadow-lg">
-          <View className="items-center">
-            <Text className="mb-3 text-sm font-medium uppercase tracking-wide text-red-300">
-              Victime des Loups-Garous
-            </Text>
-            <View className="mb-4 h-px w-20 bg-red-400" />
-            <Text className="mb-4 text-3xl font-bold text-black">
-              {werewolvesVictim}
-            </Text>
-          </View>
-        </View>
-
-        {/* Healing Potion Visual */}
-        <View className="items-center">
-          <View className="mb-3 h-16 w-10 rounded-full bg-gradient-to-b from-green-400 to-green-600 shadow-lg">
-            <View className="mx-auto mt-2 h-3 w-8 rounded-full bg-green-300" />
-            <View className="mx-auto mt-1 h-2 w-6 rounded-full bg-green-200/80" />
-          </View>
-          <Text className="text-sm font-semibold text-green-600">
-            Potion de Guérison
-          </Text>
-          <Text className="mt-1 text-xs text-gray-500">
-            Voulez-vous sauver cette personne ?
-          </Text>
-        </View>
-      </View>
-    );
   };
 
   const getLoverModalData = useCallback(() => {
@@ -165,11 +167,13 @@ export default function ModalTestScreen() {
       data: getWitchModalData(),
       onConfirm: (result) => {
         console.log(`Witch chose: ${result}`);
+
         if (result === 'yes') {
           console.log('🧙 Witch healed the victim!');
         } else {
           console.log('🧙 Witch chose not to heal.');
         }
+
         setLastSelection(`Witch Heal Decision: ${result}`);
       },
     });
@@ -188,6 +192,7 @@ export default function ModalTestScreen() {
       onConfirm: (selections) => {
         try {
           const lovers = Array.isArray(selections) ? selections : [selections];
+
           const loverNames = lovers.map((socketId) => {
             try {
               return getPlayerNameFromSid(socketId);
@@ -225,9 +230,9 @@ export default function ModalTestScreen() {
         <View className="mb-6 w-full max-w-sm">
           <View className="mb-4 rounded-lg bg-blue-100 p-4">
             <Text className="mb-2 text-sm font-semibold text-blue-800">
-              Mock Players ({mockPlayers.length})
+              Mock Players ({MOCK_PLAYERS.length})
             </Text>
-            {mockPlayers.map((player) => (
+            {MOCK_PLAYERS.map((player) => (
               <Text className="text-xs text-blue-600" key={player.socketId}>
                 {player.name}: {player.socketId}
               </Text>

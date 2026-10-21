@@ -7,25 +7,29 @@
   ],
   "scripts": {
     "dev": "turbo dev",
-    "lint": "turbo run lint",
+    "lint": "oxlint --deny-warnings",
     "build": "turbo build",
     "check-types": "turbo check-types",
     "dev:mobile": "turbo -F mobile dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
-    "dev:worker": "turbo -F worker dev"
+    "dev:worker": "turbo -F worker dev",
+    "lint:fix": "oxlint --fix && oxfmt",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.2.0",
+    "@oxlint/plugins": "1.89.0",
     "lint-staged": "^16.1.5",
+    "oxfmt": "0.74.0",
+    "oxlint": "1.89.0",
     "turbo": "^2.5.4",
-    "typescript": "5.8.3",
-    "ultracite": "5.1.8"
+    "typescript": "5.8.3"
   },
-  "packageManager": "pnpm@10.14.0",
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
-      "npx ultracite format"
+    "*.{js,jsx,ts,tsx,mjs,cjs,json,jsonc}": [
+      "oxfmt --no-error-on-unmatched-pattern"
     ]
-  }
+  },
+  "packageManager": "pnpm@10.14.0"
 }

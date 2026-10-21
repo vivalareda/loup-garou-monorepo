@@ -3,10 +3,11 @@ import { isGamePlayer } from '@repo/types';
 import { useGameStore } from '@/hooks/use-game-store';
 import { useModalStore } from '@/hooks/use-modal-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
-import { saveSessionToken } from '@/utils/session';
+import type { SessionTokens } from '@/utils/session';
 
 export type SnapshotRoute =
   | '/'
+  | '/join'
   | '/waiting-room'
   | '/(game)/game-interface'
   | '/death-screen'
@@ -60,7 +61,8 @@ function applyPendingPrompt(prompt: PendingPrompt) {
  */
 export function applyGameSnapshot(
   snapshot: PlayerGameSnapshot,
-  router: SnapshotRouter
+  router: SnapshotRouter,
+  sessions: SessionTokens
 ) {
   const playerStore = usePlayerStore.getState();
   const gameStore = useGameStore.getState();
@@ -68,14 +70,16 @@ export function applyGameSnapshot(
   // The seat may have been recovered by name (lost token, new phone):
   // persist the token from the snapshot so the NEXT reconnect is automatic
   if (snapshot.self.sessionToken) {
-    saveSessionToken(snapshot.self.sessionToken).catch((error) => {
+    sessions.save(snapshot.self.sessionToken).catch((error) => {
       console.error('Failed to save session token', error);
     });
   }
 
   playerStore.setPlayer(snapshot.self);
+
   if (isGamePlayer(snapshot.self)) {
     gameStore.setRoleAssigned(snapshot.self.role);
+
     if (!snapshot.self.isAlive) {
       playerStore.playerIsDead();
     }
@@ -97,6 +101,7 @@ export function applyGameSnapshot(
         }
       : null
   );
+
   if (snapshot.gameResult) {
     gameStore.setGameResult(snapshot.gameResult);
   }
@@ -104,6 +109,7 @@ export function applyGameSnapshot(
   // A modal left open from before the disconnect may belong to a phase that
   // completed while we were gone — the snapshot's prompt is the truth
   useModalStore.getState().closeModal();
+
   if (snapshot.pendingPrompt) {
     applyPendingPrompt(snapshot.pendingPrompt);
     gameStore.setWaitingForPlayers(false);
@@ -111,16 +117,19 @@ export function applyGameSnapshot(
 
   if (snapshot.phase === 'FINISHED' && snapshot.gameResult) {
     router.replace(snapshot.didWin ? '/winner-screen' : '/loser-screen');
+
     return;
   }
 
   if (isGamePlayer(snapshot.self) && !snapshot.self.isAlive) {
     router.replace('/death-screen');
+
     return;
   }
 
   if (snapshot.phase === 'LOBBY') {
     router.replace('/waiting-room');
+
     return;
   }
 

@@ -3,7 +3,7 @@ import type { ServerToClientEvents } from '@repo/types';
 type Emit = <E extends keyof ServerToClientEvents>(
   event: E,
   ...args: Parameters<ServerToClientEvents[E]>
-) => unknown;
+) => void;
 
 /**
  * The slice of the transport the game logic needs: broadcast to everyone,

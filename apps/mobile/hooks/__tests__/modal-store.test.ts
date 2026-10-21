@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useModalStore } from '@/hooks/use-modal-store';
 
@@ -53,9 +53,9 @@ describe('useModalStore', () => {
   });
 
   it('openModal stores onSkip/skipLabel so the poison modal can skip', () => {
-    const onSkip = () => {
-      // identity only — the test asserts the same reference is stored
-    };
+    // Identity only: the test asserts the same reference is stored
+    const onSkip = vi.fn();
+
     useModalStore.getState().openModal({
       type: 'selection',
       title: 'poison?',

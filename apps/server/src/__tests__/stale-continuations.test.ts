@@ -3,11 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGameRuntime, type GameRuntime } from '@/game-runtime';
 import type { Narrator } from '@/segments/narrator';
 import { DashboardNarrator } from '@/server/dashboard-narrator';
-import type { EventsActions } from '@/server/events-actions';
 import { type FakeSocket, fakeSocket, newHost } from './helpers/fake-socket';
 
 /** Lets every promise continuation (and 0ms timer) run. */
 const flush = () => vi.advanceTimersByTimeAsync(0);
+
+/** Whether `promise` has settled yet, asked as often as needed. */
+function trackSettled<T>(promise: Promise<T>) {
+  let settled = false;
+  promise.then(() => {
+    settled = true;
+  });
+
+  return () => settled;
+}
 
 /** A narrator whose clips finish only when the test says so. */
 class ManualNarrator implements Narrator {
@@ -17,6 +26,7 @@ class ManualNarrator implements Narrator {
 
   play(clip: string) {
     this.requested.push(clip);
+
     return new Promise<void>((finish) => this.clips.push({ clip, finish }));
   }
 
@@ -25,6 +35,7 @@ class ManualNarrator implements Narrator {
     for (const pending of this.clips.splice(0)) {
       pending.finish();
     }
+
     await flush();
   }
 
@@ -33,6 +44,7 @@ class ManualNarrator implements Narrator {
       for (const pending of this.clips.splice(0)) {
         pending.finish();
       }
+
       await flush();
     }
   }
@@ -41,11 +53,13 @@ class ManualNarrator implements Narrator {
 /** Four players (PLAYER_COUNT=4) join `runtime`'s host, starting the game. */
 function joinFour(host: ReturnType<typeof newHost>) {
   const players = new Map<string, FakeSocket>();
+
   for (const name of ['A', 'B', 'C', 'D']) {
     const player = fakeSocket();
     players.set(host.accept(player.socket).id, player);
     player.send('player:join', name);
   }
+
   return players;
 }
 
@@ -57,11 +71,14 @@ function bySocket(
   const player = [...runtime.game.getPlayerList().values()].find(
     (candidate) => candidate.getRole() === role
   );
+
   const sid = player?.getSocketId() ?? '';
   const socket = players.get(sid);
+
   if (!socket) {
     throw new Error(`No ${role} socket`);
   }
+
   return { sid, socket };
 }
 
@@ -104,9 +121,11 @@ describe('segment transitions', () => {
     const players = joinFour(host);
     await narrator.finishAll();
     const cupid = bySocket(runtime, players, 'CUPID');
+
     const [first, second] = [...players.keys()].filter(
       (sid) => sid !== cupid.sid
     );
+
     cupid.socket.send('cupid:lovers-pick', [first, second]);
     // CUPID's end clip is playing
     expect(narrator.clips).toHaveLength(1);
@@ -137,6 +156,7 @@ async function playToDawn(stopAtDawn: boolean) {
   dashboard.send('narrator:register');
   const players = joinFour(host);
   const phase = () => runtime.segmentsManager.getCurrentSegmentType();
+
   const reached = (expected: string) => {
     if (phase() !== expected) {
       throw new Error(`Expected ${expected}, the game is at ${phase()}`);
@@ -146,15 +166,17 @@ async function playToDawn(stopAtDawn: boolean) {
   // Acks the dashboard's clips until the game waits on a player, is over
   // (its victory clip stays pending) or, with stopAtDawn, reaches DAY
   let acked = 0;
+
   const clips = () =>
     dashboard.frames.filter((frame) => frame.event === 'narrator:play');
+
+  const reachedStop = () =>
+    runtime.segmentsManager.hasFinished() || (stopAtDawn && phase() === 'DAY');
+
   const playUntilInput = async () => {
     await flush();
-    while (
-      acked < clips().length &&
-      !runtime.segmentsManager.hasFinished() &&
-      !(stopAtDawn && phase() === 'DAY')
-    ) {
+
+    while (acked < clips().length && !reachedStop()) {
       dashboard.send('narrator:done', clips()[acked]?.args?.[0]);
       acked++;
       await flush();
@@ -189,9 +211,11 @@ async function playToDawn(stopAtDawn: boolean) {
     for (const player of players.values()) {
       player.drop();
     }
+
     dashboard.drop();
     runtime.reset();
   };
+
   return { runtime, dashboard, phase, abandon };
 }
 
@@ -214,6 +238,7 @@ describe('a game reset while its narration is pending', () => {
   it('mid-dawn: the dawn resolution stops at its pending clip', async () => {
     const { runtime, phase, abandon } = await playToDawn(true);
     expect(phase()).toBe('DAY');
+
     const dayAction = vi.spyOn(
       runtime.segmentsManager.getGameActions(),
       'dayAction'
@@ -235,19 +260,24 @@ function manualGame() {
   const host = newHost();
   const narrator = new ManualNarrator();
   const runtime = createGameRuntime({ host, narrator, adminEvents: false });
-  const { eventsActions } = runtime.events as unknown as {
-    eventsActions: EventsActions;
-  };
+
+  // The runtime keeps its EventsActions private to GameEvents; the hunter
+  // pick tests drive the resolutions through it directly
+  const eventsActions = runtime.events['eventsActions'];
+
   /** (Re)fills the room: a new game starts, its intro narrated. */
   const start = async () => {
     const players = joinFour(host);
     await narrator.finishAll();
     const hunter = bySocket(runtime, players, 'HUNTER');
+
     const target = [...players.keys()].find(
       (sid) => sid !== hunter.sid && runtime.game.getPlayerBySocketId(sid)
     );
+
     return { hunter, target: target ?? '' };
   };
+
   return { runtime, narrator, eventsActions, start };
 }
 
@@ -262,21 +292,27 @@ describe('a hunter pick pending across a reset', () => {
       // The day vote ends by advancing out of DAY; these games are still
       // in CUPID (no lovers picked), so keep them there
       vi.spyOn(runtime.segmentsManager, 'advanceSegment').mockResolvedValue();
+
       // Kills the hunter and runs the resolution up to the pick; returns
       // the running resolution (wrapped: awaiting it would wait for a pick)
       const waitForPick = async (hunterSid: string) => {
         const hunter = runtime.game.getPlayerBySocketId(hunterSid);
+
         if (!hunter) {
           throw new Error('No hunter');
         }
+
         if (path === 'night') {
           runtime.game.addPendingDeath(hunterSid, 'WEREWOLVES');
         }
+
         const run =
           path === 'night'
             ? runtime.segmentsManager.nightDawnResolution.run()
             : eventsActions.resolveDayVote(hunter);
+
         await narrator.finishAll();
+
         return { run };
       };
 
@@ -299,15 +335,14 @@ describe('a hunter pick pending across a reset', () => {
       expect(eventsActions.hasPendingHunterPick()).toBe(true);
 
       expect(eventsActions.submitHunterPick(second.target)).toBe(true);
-      let settled = false;
-      current.run.then(() => {
-        settled = true;
-      });
-      for (let step = 0; step < 50 && !settled; step++) {
+      const settled = trackSettled(current.run);
+
+      for (let step = 0; step < 50 && !settled(); step++) {
         await narrator.finishAll();
         await vi.advanceTimersByTimeAsync(10);
       }
-      expect(settled).toBe(true);
+
+      expect(settled()).toBe(true);
       expect(runtime.game.getPlayerBySocketId(second.target)?.isAlive).toBe(
         false
       );
@@ -322,9 +357,11 @@ describe('a composite narration reset after its first clip', () => {
   ])('%s requests no further clip', async (_, hunterDies) => {
     const { runtime, narrator, eventsActions, start } = manualGame();
     const { hunter } = await start();
+
     if (hunterDies) {
       runtime.game.addPendingDeath(hunter.sid, 'WEREWOLVES');
     }
+
     const before = narrator.requested.length;
     const run = runtime.segmentsManager.nightDawnResolution.run();
     await flush();

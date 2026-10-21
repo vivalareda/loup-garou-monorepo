@@ -4,7 +4,7 @@ const { FileStore } = require("metro-cache");
 const { withNativeWind } = require("nativewind/metro");
 const path = require("node:path");
 
-const config = withTurborepoManagedCache(
+const metroConfig = withTurborepoManagedCache(
   withMonorepoPaths(
     withNativeWind(getDefaultConfig(__dirname), {
       input: "./global.css",
@@ -13,11 +13,11 @@ const config = withTurborepoManagedCache(
   ),
 );
 
-config.resolver.unstable_enablePackageExports = true;
+metroConfig.resolver.unstable_enablePackageExports = true;
 
-config.resolver.disableHierarchicalLookup = true;
+metroConfig.resolver.disableHierarchicalLookup = true;
 
-module.exports = config;
+module.exports = metroConfig;
 
 /**
  * Add the monorepo paths to the Metro config.
@@ -55,5 +55,6 @@ function withTurborepoManagedCache(config) {
   config.cacheStores = [
     new FileStore({ root: path.join(__dirname, ".cache/metro") }),
   ];
+
   return config;
 }

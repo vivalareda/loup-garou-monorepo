@@ -1,4 +1,11 @@
-import { beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from 'vitest';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
@@ -6,12 +13,12 @@ import type { Player } from '@/core/player';
 import { AudioManager } from '@/segments/audio-manager';
 import { SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 describe('Night dawn death scenarios', () => {
-  let mockIo: SocketType;
+  let mockIo: Broadcaster;
   let emitSpy: ReturnType<typeof vi.fn>;
   let game: Game;
   let deathManager: DeathManager;
@@ -25,7 +32,7 @@ describe('Night dawn death scenarios', () => {
     mockIo = {
       to: vi.fn().mockReturnThis(),
       emit: emitSpy,
-    } as unknown as SocketType;
+    } satisfies Broadcaster;
 
     deathManager = new DeathManager();
     game = new Game(mockIo, deathManager);
@@ -49,9 +56,11 @@ describe('Night dawn death scenarios', () => {
     const player = game.addPlayer(name, sid);
     player.setRole(role);
     game.setPlayerTeams(player);
+
     if (role === 'HUNTER' || role === 'WITCH' || role === 'CUPID') {
       game.setSpecialRolePlayer(player);
     }
+
     return player;
   };
 
@@ -59,6 +68,7 @@ describe('Night dawn death scenarios', () => {
     const daySegmentIndex = segmentsManager.segments.findIndex(
       (s) => s.type === 'DAY'
     );
+
     segmentsManager.currentSegment = daySegmentIndex;
   };
 

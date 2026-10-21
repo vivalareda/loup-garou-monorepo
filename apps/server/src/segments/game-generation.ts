@@ -4,9 +4,9 @@ import { Data } from 'effect';
 export class StaleGame extends Data.TaggedError('StaleGame') {}
 
 /** Drops a `StaleGame` rejection; anything else is rethrown. */
-export function ignoreStaleGame(error: unknown) {
-  if (!(error instanceof StaleGame)) {
-    throw error;
+export function ignoreStaleGame(cause: unknown) {
+  if (!(cause instanceof StaleGame)) {
+    throw cause;
   }
 }
 
@@ -30,6 +30,7 @@ export class GameGeneration {
 
   bump() {
     this.value++;
+
     for (const listener of this.listeners) {
       listener();
     }

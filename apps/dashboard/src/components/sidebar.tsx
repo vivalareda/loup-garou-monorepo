@@ -1,3 +1,4 @@
+import { RoomPanel } from '@/components/room-panel';
 import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
 import { useNarratorStore } from '@/store/narrator';
@@ -8,6 +9,74 @@ type SidebarProps = {
   onAddPlayer: () => void;
   onBatchAddPlayers: () => void;
 };
+
+function getStatusClassName(status: string) {
+  if (status === 'in-game') {
+    return 'bg-green-100 text-green-800';
+  }
+
+  if (status === 'waiting') {
+    return 'bg-yellow-100 text-yellow-800';
+  }
+
+  return 'bg-gray-100 text-gray-600';
+}
+
+// Admin controls for testing
+function handleStartGame() {
+  console.log('🎮 Starting game...');
+  socket.emit('admin:start-game');
+}
+
+function handleNextSegment() {
+  console.log('⏭️ Advancing to next segment...');
+  socket.emit('admin:next-segment');
+}
+
+function handleMockHunterEvent() {
+  console.log('🎯 Testing Hunter death audio...');
+  socket.emit('admin:mock-hunter-event');
+}
+
+function handleMockLoverEvent() {
+  console.log('💕 Testing Lover death audio...');
+  socket.emit('admin:mock-lover-event');
+}
+
+function handleMockLoverSecondHunterEvent() {
+  console.log('💕🎯 Testing Lover dies, second is Hunter...');
+  socket.emit('admin:mock-lover-second-hunter-event');
+}
+
+function handleMockLoverIsHunterEvent() {
+  console.log('💕🎯 Testing Lover who IS Hunter dies...');
+  socket.emit('admin:mock-lover-is-hunter-event');
+}
+
+function handleMockDayVoteHunterEvent() {
+  console.log('🗳️🎯 Testing Village kills Hunter...');
+  socket.emit('admin:mock-day-vote-hunter-event');
+}
+
+function handleMockDayVoteLoverEvent() {
+  console.log('🗳️💕 Testing Village kills Lover...');
+  socket.emit('admin:mock-day-vote-lover-event');
+}
+
+function handleMockDayVoteLoverIsHunterEvent() {
+  console.log('🗳️💕🎯 Testing Village kills Lover who IS Hunter...');
+  socket.emit('admin:mock-day-vote-lover-is-hunter-event');
+}
+
+function handleMockDayVoteLoverSecondHunterEvent() {
+  console.log('🗳️💕🎯 Testing Village kills Lover, second is Hunter...');
+  socket.emit('admin:mock-day-vote-lover-second-hunter-event');
+}
+
+function handleMockHunterRevengeKillsLover() {
+  console.log('🎯💕 Testing Hunter revenge kills Lover...');
+  socket.emit('admin:mock-hunter-revenge-kills-lover');
+}
 
 export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
   const {
@@ -23,79 +92,14 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
 
   const playersArray = Array.from(players.values());
 
-  const getStatusClassName = (status: string) => {
-    if (status === 'in-game') {
-      return 'bg-green-100 text-green-800';
-    }
-    if (status === 'waiting') {
-      return 'bg-yellow-100 text-yellow-800';
-    }
-    return 'bg-gray-100 text-gray-600';
-  };
-
-  // Admin controls for testing
-  const handleStartGame = () => {
-    console.log('🎮 Starting game...');
-    socket.emit('admin:start-game');
-  };
-
-  const handleNextSegment = () => {
-    console.log('⏭️ Advancing to next segment...');
-    socket.emit('admin:next-segment');
-  };
-
   const handleSimulateWerewolfVote = () => {
     const alivePlayers = playersArray.filter((p) => p.isConnected);
+
     if (alivePlayers.length > 0) {
       const target = alivePlayers[0].name; // Just pick first player
       console.log(`🐺 Simulating werewolf vote for ${target}`);
       socket.emit('admin:simulate-werewolf-vote', target);
     }
-  };
-
-  const handleMockHunterEvent = () => {
-    console.log('🎯 Testing Hunter death audio...');
-    socket.emit('admin:mock-hunter-event');
-  };
-
-  const handleMockLoverEvent = () => {
-    console.log('💕 Testing Lover death audio...');
-    socket.emit('admin:mock-lover-event');
-  };
-
-  const handleMockLoverSecondHunterEvent = () => {
-    console.log('💕🎯 Testing Lover dies, second is Hunter...');
-    socket.emit('admin:mock-lover-second-hunter-event');
-  };
-
-  const handleMockLoverIsHunterEvent = () => {
-    console.log('💕🎯 Testing Lover who IS Hunter dies...');
-    socket.emit('admin:mock-lover-is-hunter-event');
-  };
-
-  const handleMockDayVoteHunterEvent = () => {
-    console.log('🗳️🎯 Testing Village kills Hunter...');
-    socket.emit('admin:mock-day-vote-hunter-event');
-  };
-
-  const handleMockDayVoteLoverEvent = () => {
-    console.log('🗳️💕 Testing Village kills Lover...');
-    socket.emit('admin:mock-day-vote-lover-event');
-  };
-
-  const handleMockDayVoteLoverIsHunterEvent = () => {
-    console.log('🗳️💕🎯 Testing Village kills Lover who IS Hunter...');
-    socket.emit('admin:mock-day-vote-lover-is-hunter-event');
-  };
-
-  const handleMockDayVoteLoverSecondHunterEvent = () => {
-    console.log('🗳️💕🎯 Testing Village kills Lover, second is Hunter...');
-    socket.emit('admin:mock-day-vote-lover-second-hunter-event');
-  };
-
-  const handleMockHunterRevengeKillsLover = () => {
-    console.log('🎯💕 Testing Hunter revenge kills Lover...');
-    socket.emit('admin:mock-hunter-revenge-kills-lover');
   };
 
   return (
@@ -113,6 +117,8 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
           </Button>
         </div>
       </div>
+
+      <RoomPanel />
 
       <div className="border-b border-gray-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-gray-700">
@@ -261,39 +267,36 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
         ) : (
           <div className="space-y-2 p-3">
             {playersArray.map((player) => (
-              // biome-ignore lint/a11y/useSemanticElements: <>
               <div
-                className={`cursor-pointer rounded-lg border p-3 transition-all${
+                className={`relative rounded-lg border p-3 transition-all${
                   activePlayerId === player.id
                     ? 'bg-blue-50 border-blue-300 shadow-sm'
                     : 'bg-white border-gray-200 hover:bg-gray-50 hover:shadow-sm'
                 }`}
                 key={player.id}
-                onClick={() => setActivePlayer(player.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    setActivePlayer(player.id);
-                  }
-                }}
-                role="button"
-                tabIndex={0}
               >
                 <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  {/* Selects the player; its ::after stretches over the
+                      whole card so a click anywhere on it selects */}
+                  <button
+                    className="flex items-center gap-2 after:absolute after:inset-0 after:rounded-lg"
+                    onClick={() => setActivePlayer(player.id)}
+                    type="button"
+                  >
                     <span className="text-lg">👤</span>
                     <span className="font-medium text-gray-800 text-sm">
                       {player.name}
                     </span>
-                  </div>
-                  <div className="flex gap-1">
+                  </button>
+                  {/* Raised above the stretched select button */}
+                  <div className="relative z-10 flex gap-1">
                     <button
                       className={`rounded p-1.5 text-sm transition-colors${
                         player.isConnected
                           ? 'text-green-600 hover:bg-green-50'
                           : 'text-gray-400 hover:bg-gray-50'
                       }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
+                      onClick={() => {
                         if (player.isConnected) {
                           disconnectPlayer(player.id);
                         } else {
@@ -307,10 +310,7 @@ export function Sidebar({ onAddPlayer, onBatchAddPlayers }: SidebarProps) {
                     </button>
                     <button
                       className="rounded p-1.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removePlayer(player.id);
-                      }}
+                      onClick={() => removePlayer(player.id)}
                       title="Remove player"
                       type="button"
                     >

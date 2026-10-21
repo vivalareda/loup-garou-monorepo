@@ -1,4 +1,4 @@
-import { isGamePlayer } from '@repo/types';
+import { isGamePlayer, type Role } from '@repo/types';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useMockPlayerStore } from '@/store/mock-players';
@@ -9,20 +9,32 @@ import { WerewolfVotingModal } from './werewolf-voting-modal';
 import { WitchHealModal } from './witch-heal-modal';
 import { WitchPoisonModal } from './witch-poison-modal';
 
+const ROLE_BADGE_CLASSES: Record<Role, string> = {
+  WEREWOLF: 'bg-red-100 text-red-800',
+  WITCH: 'bg-purple-100 text-purple-800',
+  SEER: 'bg-blue-100 text-blue-800',
+  HUNTER: 'bg-orange-100 text-orange-800',
+  CUPID: 'bg-pink-100 text-pink-800',
+  VILLAGER: 'bg-green-100 text-green-800',
+};
+
 function getStatusClassName(
   status: 'waiting' | 'in-game' | 'disconnected'
 ): string {
   if (status === 'in-game') {
     return 'bg-green-100 text-green-800';
   }
+
   if (status === 'waiting') {
     return 'bg-yellow-100 text-yellow-800';
   }
+
   return 'bg-gray-100 text-gray-600';
 }
 
 export function PlayerView() {
   const [isWerewolfVotingOpen, setIsWerewolfVotingOpen] = useState(false);
+
   const [isWerewolfSimulationOpen, setIsWerewolfSimulationOpen] =
     useState(false);
 
@@ -243,8 +255,8 @@ export function PlayerView() {
                     {activePlayer.playersList
                       .filter((player) => player.name !== activePlayer.name)
                       .map((player) => (
-                        <div
-                          className={`flex cursor-pointer items-center gap-2 rounded p-2 transition-colors text-sm ${
+                        <button
+                          className={`flex w-full items-center gap-2 rounded p-2 text-left transition-colors text-sm ${
                             activePlayer.selectedLovers.includes(player.name)
                               ? 'bg-pink-100 border-2 border-pink-300'
                               : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
@@ -253,6 +265,7 @@ export function PlayerView() {
                           onClick={() =>
                             toggleLoverSelection(activePlayer.id, player.name)
                           }
+                          type="button"
                         >
                           <span className="text-gray-600">
                             {activePlayer.selectedLovers.includes(player.name)
@@ -267,7 +280,7 @@ export function PlayerView() {
                               Selected
                             </span>
                           )}
-                        </div>
+                        </button>
                       ))}
                   </div>
                   <div className="mt-3 space-y-2">
@@ -406,11 +419,13 @@ export function PlayerView() {
                   const mockPlayerWithRole = Array.from(players.values()).find(
                     (mockPlayer) => mockPlayer.name === player.name
                   );
+
                   const playerRole =
                     mockPlayerWithRole?.player &&
                     isGamePlayer(mockPlayerWithRole.player)
                       ? mockPlayerWithRole.player.role
                       : null;
+
                   const isPlayerAlive =
                     mockPlayerWithRole?.player &&
                     isGamePlayer(mockPlayerWithRole.player)
@@ -437,19 +452,7 @@ export function PlayerView() {
                         {/* Role badge */}
                         {activePlayer.status === 'in-game' && playerRole && (
                           <span
-                            className={`rounded px-1.5 py-0.5 text-xs font-medium ${
-                              playerRole === 'WEREWOLF'
-                                ? 'bg-red-100 text-red-800'
-                                : playerRole === 'WITCH'
-                                  ? 'bg-purple-100 text-purple-800'
-                                  : playerRole === 'SEER'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : playerRole === 'HUNTER'
-                                      ? 'bg-orange-100 text-orange-800'
-                                      : playerRole === 'CUPID'
-                                        ? 'bg-pink-100 text-pink-800'
-                                        : 'bg-green-100 text-green-800'
-                            }`}
+                            className={`rounded px-1.5 py-0.5 text-xs font-medium ${ROLE_BADGE_CLASSES[playerRole]}`}
                           >
                             {playerRole}
                           </span>
@@ -569,9 +572,9 @@ export function PlayerView() {
       <WitchHealModal
         isOpen={Boolean(
           activePlayer.showHealModal &&
-            activePlayer.player &&
-            isGamePlayer(activePlayer.player) &&
-            activePlayer.player.isAlive
+          activePlayer.player &&
+          isGamePlayer(activePlayer.player) &&
+          activePlayer.player.isAlive
         )}
         onClose={() => closeHealModal(activePlayer.id)}
         onHeal={() => healPlayer(activePlayer.id)}
@@ -585,9 +588,9 @@ export function PlayerView() {
         currentPlayerName={activePlayer.name}
         isOpen={Boolean(
           activePlayer.showPoisonModal &&
-            activePlayer.player &&
-            isGamePlayer(activePlayer.player) &&
-            activePlayer.player.isAlive
+          activePlayer.player &&
+          isGamePlayer(activePlayer.player) &&
+          activePlayer.player.isAlive
         )}
         onClose={() => closePoisonModal(activePlayer.id)}
         onPoison={(targetPlayerId: string) =>

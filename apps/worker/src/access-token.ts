@@ -20,13 +20,17 @@ export async function hasAccess(url: URL, accessToken: string | undefined) {
   if (!accessToken) {
     return true;
   }
+
   const given = url.searchParams.get('token');
+
   if (given === null) {
     return false;
   }
+
   const [expected, actual] = await Promise.all([
     sha256(accessToken),
     sha256(given),
   ]);
+
   return crypto.subtle.timingSafeEqual(expected, actual);
 }

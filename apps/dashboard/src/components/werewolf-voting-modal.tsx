@@ -67,6 +67,7 @@ export function WerewolfVotingModal({
 
       if (playerVote) {
         updateVote(targetPlayerSocketId);
+
         return;
       }
 
@@ -115,8 +116,10 @@ export function WerewolfVotingModal({
   const handleVote = (playerName: string) => {
     // Find the target player's socket ID
     const targetPlayer = playersList.find((p) => p.name === playerName);
+
     if (!targetPlayer) {
       console.error(`Player ${playerName} not found in players list`);
+
       return;
     }
 
@@ -191,7 +194,7 @@ export function WerewolfVotingModal({
 
                 return (
                   <button
-                    className={`w-full rounded border p-3 text-left transition-colors${
+                    className={`flex w-full items-center justify-between rounded border p-3 text-left transition-colors${
                       isSelected
                         ? 'bg-red-100 border-red-300 border-2'
                         : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
@@ -200,18 +203,16 @@ export function WerewolfVotingModal({
                     onClick={() => handleVote(player.name)}
                     type="button"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{player.name}</span>
-                      <div className="flex items-center gap-2">
-                        {voteCount > 0 && (
-                          <span className="rounded-full bg-red-500 px-2 py-1 text-xs text-white">
-                            {voteCount} vote{voteCount !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {isSelected && (
-                          <span className="font-bold text-red-600">✓</span>
-                        )}
-                      </div>
+                    <span className="font-medium">{player.name}</span>
+                    <div className="flex items-center gap-2">
+                      {voteCount > 0 && (
+                        <span className="rounded-full bg-red-500 px-2 py-1 text-xs text-white">
+                          {voteCount} vote{voteCount !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {isSelected && (
+                        <span className="font-bold text-red-600">✓</span>
+                      )}
                     </div>
                   </button>
                 );
@@ -225,6 +226,7 @@ export function WerewolfVotingModal({
                 </h4>
                 <div className="space-y-1 text-sm">
                   {Object.entries(votes)
+                    // oxlint-disable-next-line unicorn/no-array-sort -- sorts the fresh array Object.entries() just built; toSorted() is missing from Safari 15, which the dashboard still targets
                     .sort(([, a], [, b]) => b - a)
                     .map(([playerName, count]) => (
                       <div className="flex justify-between" key={playerName}>

@@ -10,18 +10,38 @@ export type GamePlayer = {
 };
 
 export type PlayerGetters = {
-  [K in keyof GamePlayer as K extends 'type' | 'isAlive' | 'sessionToken'
-    ? never
-    : `get${Capitalize<K>}`]: () => GamePlayer[K];
+  [
+    K in keyof GamePlayer as K extends 'type' | 'isAlive' | 'sessionToken'
+      ? never
+      : `get${Capitalize<K>}`
+  ]: () => GamePlayer[K];
 };
 
 export type PlayerSetters = {
-  [K in keyof GamePlayer as K extends 'isAlive' | 'role'
-    ? `set${Capitalize<K>}`
-    : never]: (value: GamePlayer[K]) => void;
+  [
+    K in keyof GamePlayer as K extends 'isAlive' | 'role'
+      ? `set${Capitalize<K>}`
+      : never
+  ]: (value: GamePlayer[K]) => void;
 };
 
 export type Player = GamePlayer | WaitingRoomPlayer;
+
+/**
+ * How many players a game may have. Below 4 there are not enough players
+ * for the special roles (`Game.initRolesList`); 16 keeps a room well under
+ * the Worker's default 32 sockets (players, dashboards, reconnects).
+ */
+export const MIN_PLAYER_COUNT = 4;
+export const MAX_PLAYER_COUNT = 16;
+
+export function isValidPlayerCount(count: unknown): count is number {
+  return (
+    Number.isInteger(count) &&
+    Number(count) >= MIN_PLAYER_COUNT &&
+    Number(count) <= MAX_PLAYER_COUNT
+  );
+}
 
 export type PlayerListItem = Pick<Player, 'name' | 'socketId'>;
 

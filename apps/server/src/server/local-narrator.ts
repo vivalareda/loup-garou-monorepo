@@ -23,6 +23,7 @@ export class LocalNarrator implements Narrator {
       console.log(
         `[AUDIO] Would play: ${clip}${exists ? '' : ' (missing asset!)'}`
       );
+
       return;
     }
 
@@ -30,6 +31,7 @@ export class LocalNarrator implements Narrator {
       if (!exists) {
         return;
       }
+
       await sound.play(file);
     } catch (error) {
       console.error('Error playing audio:', error);

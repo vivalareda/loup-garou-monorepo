@@ -24,14 +24,16 @@ export default function GameLayout() {
     pendingRedirect,
     setPendingRedirect,
   } = useGameStore();
+
   const { modalState } = useModalStore();
   const connectionStatus = useConnectionStore((state) => state.status);
   const router = useRouter();
 
   useEffect(() => {
-    initializeSocketListeners();
+    initializeSocketListeners(socket);
     socket.emit('lobby:get-players-list');
-    return cleanupSocketListeners;
+
+    return () => cleanupSocketListeners(socket);
   }, [initializeSocketListeners, cleanupSocketListeners]);
 
   // A death that arrived while a modal was open redirects once it closes

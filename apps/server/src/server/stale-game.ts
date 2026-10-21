@@ -14,13 +14,15 @@ export function narration(
   const settled = () =>
     play().then(
       () => null,
-      (error: unknown) => {
-        if (error instanceof StaleGame) {
-          return error;
+      (cause: unknown) => {
+        if (cause instanceof StaleGame) {
+          return cause;
         }
-        throw error;
+
+        throw cause;
       }
     );
+
   return Effect.flatMap(Effect.promise(settled), (stale) =>
     stale ? Effect.fail(stale) : Effect.void
   );
@@ -36,10 +38,10 @@ export function awaitInGame<A>(
   generation: number,
   run: Effect.Effect<A, StaleGame>
 ): Effect.Effect<A, StaleGame> {
-  return Effect.flatMap(run, (value) =>
-    segmentsManager.isCurrentGeneration(generation)
-      ? Effect.succeed(value)
-      : Effect.fail(new StaleGame())
+  return Effect.filterOrFail(
+    run,
+    () => segmentsManager.isCurrentGeneration(generation),
+    () => new StaleGame()
   );
 }
 

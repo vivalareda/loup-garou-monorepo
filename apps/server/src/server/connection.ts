@@ -23,11 +23,8 @@ type ClientEvent = keyof ClientToServerEvents;
  */
 export type Connection = {
   readonly id: string;
-  on<E extends ClientEvent>(
-    event: E,
-    listener: ClientToServerEvents[E]
-  ): unknown;
-  on(event: 'disconnect', listener: () => void): unknown;
+  on<E extends ClientEvent>(event: E, listener: ClientToServerEvents[E]): void;
+  on(event: 'disconnect', listener: () => void): void;
   emit: Broadcaster['emit'];
   broadcast: { emit: Broadcaster['emit'] };
 };
@@ -40,5 +37,5 @@ export type Connection = {
  * their own `connection` handler, and both must see every client.
  */
 export type ConnectionHost = Broadcaster & {
-  on(event: 'connection', listener: (connection: Connection) => void): unknown;
+  on(event: 'connection', listener: (connection: Connection) => void): void;
 };

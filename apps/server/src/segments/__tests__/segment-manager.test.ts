@@ -1,77 +1,67 @@
-/** biome-ignore-all lint/suspicious/noEmptyBlockStatements: <mock file> */
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  test,
-  vi,
-} from 'vitest';
-import type { Game } from '@/core/game';
-import type { SpecialScenarios } from '@/core/special-scenarios';
-import type { AudioManager } from '@/segments/audio-manager';
-import { GameGeneration } from '@/segments/game-generation';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { DeathManager } from '@/core/death-manager';
+import { Game } from '@/core/game';
+import type { Player } from '@/core/player';
+import { SpecialScenarios } from '@/core/special-scenarios';
+import { enterSegment } from '@/__tests__/helpers/segments';
+import { AudioManager } from '@/segments/audio-manager';
 import {
   resolveSegmentTimeoutMs,
   SegmentsManager,
 } from '@/segments/segments-manager';
-import type { SocketType } from '@/server/sockets';
+import type { Broadcaster } from '@/server/broadcaster';
+
+const fakeIo = () =>
+  ({
+    to: vi.fn().mockReturnThis(),
+    emit: vi.fn(),
+  }) satisfies Broadcaster;
 
 describe('SegmentsManager', () => {
   let segmentsManager: SegmentsManager;
-  let mockIo: SocketType;
-  let mockGame: Game;
-  let mockAudioManager: AudioManager;
+  let mockIo: ReturnType<typeof fakeIo>;
+  let game: Game;
+  let audioManager: AudioManager;
+
+  const addPlayer = (
+    name: string,
+    sid: string,
+    role: Parameters<Player['setRole']>[0]
+  ) => {
+    const player = game.addPlayer(name, sid);
+    player.setRole(role);
+    game.setPlayerTeams(player);
+
+    if (role !== 'WEREWOLF' && role !== 'VILLAGER') {
+      game.setSpecialRolePlayer(player);
+    }
+
+    return player;
+  };
 
   beforeEach(() => {
-    mockGame = {
-      getWerewolfList: vi
-        .fn()
-        .mockReturnValue([
-          { getSocketId: () => 'werewolf1-socket-id' },
-          { getSocketId: () => 'werewolf2-socket-id' },
-        ]),
-      getSpecialRolePlayer: vi.fn().mockReturnValue({ getSocketId: () => 'cupid-sid' }),
-      getAlivePlayers: vi.fn().mockReturnValue([
-        { getSocketId: () => 'cupid-sid' },
-        { getSocketId: () => 'p2-sid' },
-        { getSocketId: () => 'p3-sid' },
-      ]),
-      setLovers: vi.fn(),
-      canWitchHeal: vi.fn().mockReturnValue(true),
-      canWitchPoison: vi.fn().mockReturnValue(true),
-      getWerewolfTarget: vi.fn().mockReturnValue('victim-sid'),
-      getLovers: vi.fn().mockReturnValue([
-        { getSocketId: () => 'p2-sid', getName: () => 'P2' },
-        { getSocketId: () => 'p3-sid', getName: () => 'P3' },
-      ]),
-      processPendingDeaths: vi.fn().mockReturnValue([]),
-      checkIfWinner: vi.mocked('werewolves'),
-    } as unknown as Game;
-    mockIo = {
-      to: vi.fn().mockReturnThis(),
-      emit: vi.fn(),
-    } as unknown as SocketType;
-
-    mockAudioManager = {
-      playSegmentAudio: vi.fn(),
-      generation: new GameGeneration(),
-    } as unknown as AudioManager;
-
-    const mockSpecialScenarios = {
-      secondLoverIsHunter: vi.fn(),
-      partnerIsHunter: vi.fn(),
-    } as unknown as SpecialScenarios;
-
+    mockIo = fakeIo();
+    const deathManager = new DeathManager();
+    game = new Game(mockIo, deathManager);
+    audioManager = new AudioManager(deathManager);
     segmentsManager = new SegmentsManager(
-      mockGame,
+      game,
       mockIo,
-      mockAudioManager,
-      mockSpecialScenarios
+      audioManager,
+      new SpecialScenarios(game, audioManager)
     );
+
+    // Cupid joins first, so the two players after it are the lovers a
+    // Cupid timeout picks; no seer or witch, so their phases auto-skip
+    addPlayer('Cupid', 'cupid-sid', 'CUPID');
+    addPlayer('P2', 'p2-sid', 'VILLAGER');
+    addPlayer('P3', 'p3-sid', 'VILLAGER');
+    addPlayer('Wolf', 'wolf-sid', 'WEREWOLF');
   });
 
   afterEach(() => {
+    // Clears any segment deadline a test scheduled
+    segmentsManager.resetForNewGame();
     vi.restoreAllMocks();
   });
 
@@ -107,11 +97,23 @@ describe('SegmentsManager', () => {
   });
 
   test('should play werewolf winning audio to announce win', () => {
-    segmentsManager.currentSegment = 4;
+    const winAudio = vi.spyOn(audioManager, 'playWerewolvesWonAudio');
+    enterSegment(segmentsManager, 'DAY');
+
+    // Both plain villagers die: the wolf against Cupid is wolf parity
+    for (const player of game.getPlayerList().values()) {
+      if (player.getRole() === 'VILLAGER') {
+        game.handlePlayerDeath(player);
+      }
+    }
+
+    expect(segmentsManager.isGameOver()).toBe(true);
+    expect(winAudio).toHaveBeenCalled();
+    expect(segmentsManager.getCurrentSegmentType()).toBe('FINISHED');
   });
 
   test('emits client-safe phase changes when a segment starts', async () => {
-    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
+    enterSegment(segmentsManager, 'CUPID');
 
     await SegmentsManager.prototype.playSegment.call(segmentsManager);
 
@@ -120,21 +122,21 @@ describe('SegmentsManager', () => {
 
   test('Cupid timeout chooses the first two eligible players and advances', async () => {
     vi.useFakeTimers();
-    process.env.SEGMENT_TIMEOUT_MS = '1000';
+    vi.stubEnv('SEGMENT_TIMEOUT_MS', '1000');
+    // Only the segments a test plays explicitly run; transitions park
     vi.spyOn(segmentsManager, 'playSegment').mockResolvedValue(undefined);
-    vi.mocked(mockGame.getLovers).mockReturnValue([]);
+    const setLovers = vi.spyOn(game, 'setLovers');
 
     try {
       segmentsManager.startGame();
-      (
-        segmentsManager as unknown as { scheduleDeadline: (segment: string) => void }
-      ).scheduleDeadline('CUPID');
+      // Playing Cupid for real schedules its deadline
+      await SegmentsManager.prototype.playSegment.call(segmentsManager);
       await vi.advanceTimersByTimeAsync(1000);
 
-      expect(mockGame.setLovers).toHaveBeenCalledWith(['p2-sid', 'p3-sid']);
+      expect(setLovers).toHaveBeenCalledWith(['p2-sid', 'p3-sid']);
       expect(segmentsManager.getCurrentSegmentType()).toBe('LOVERS');
     } finally {
-      delete process.env.SEGMENT_TIMEOUT_MS;
+      vi.unstubAllEnvs();
       vi.useRealTimers();
     }
   });
@@ -151,6 +153,7 @@ describe('SegmentsManager', () => {
 
     // Each is overridable by its own env var without touching the others
     vi.stubEnv('DAY_VOTE_TIMEOUT_MS', '5000');
+
     try {
       expect(resolveSegmentTimeoutMs('DAY')).toBe(5000);
       expect(resolveSegmentTimeoutMs('CUPID')).toBe(120_000);
@@ -160,6 +163,7 @@ describe('SegmentsManager', () => {
 
     // The global override still wins over defaults for every segment
     vi.stubEnv('SEGMENT_TIMEOUT_MS', '1234');
+
     try {
       expect(resolveSegmentTimeoutMs('CUPID')).toBe(1234);
       expect(resolveSegmentTimeoutMs('DAY')).toBe(1234);
@@ -172,17 +176,16 @@ describe('SegmentsManager', () => {
     vi.useFakeTimers();
     vi.stubEnv('CUPID_TIMEOUT_MS', '2000');
     vi.stubEnv('LOVERS_TIMEOUT_MS', '500');
+    // Only the segments a test plays explicitly run; transitions park
     vi.spyOn(segmentsManager, 'playSegment').mockResolvedValue(undefined);
-    vi.mocked(mockGame.getLovers).mockReturnValue([]);
-    const schedule = (
-      segmentsManager as unknown as {
-        scheduleDeadline: (segment: string) => void;
-      }
-    ).scheduleDeadline.bind(segmentsManager);
+
+    // Playing a segment for real is what schedules its deadline
+    const playCurrentSegment = () =>
+      SegmentsManager.prototype.playSegment.call(segmentsManager);
 
     try {
       segmentsManager.startGame();
-      schedule('CUPID');
+      await playCurrentSegment();
 
       // The Cupid deadline (2000ms) must NOT fire at the Lovers duration
       await vi.advanceTimersByTimeAsync(500);
@@ -191,7 +194,7 @@ describe('SegmentsManager', () => {
       expect(segmentsManager.getCurrentSegmentType()).toBe('LOVERS');
 
       // The Lovers deadline fires at its own, shorter duration
-      schedule('LOVERS');
+      await playCurrentSegment();
       await vi.advanceTimersByTimeAsync(500);
       expect(segmentsManager.getCurrentSegmentType()).toBe('SEER');
     } finally {
@@ -201,13 +204,11 @@ describe('SegmentsManager', () => {
   });
 
   test('auto-skips unavailable Witch phases', async () => {
+    // Transitions park instead of playing the next segment
     vi.spyOn(segmentsManager, 'playSegment').mockResolvedValue(undefined);
-    vi.mocked(mockGame.getSpecialRolePlayer).mockReturnValue(undefined);
-    segmentsManager.currentSegment = segmentsManager.segments.findIndex(
-      (segment) => segment.type === 'WITCH-HEAL'
-    );
-    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
+    enterSegment(segmentsManager, 'WITCH-HEAL');
 
+    // No witch joined: WITCH-HEAL skips itself and stops on WITCH-POISON
     await SegmentsManager.prototype.playSegment.call(segmentsManager);
 
     expect(segmentsManager.getCurrentSegmentType()).toBe('WITCH-POISON');

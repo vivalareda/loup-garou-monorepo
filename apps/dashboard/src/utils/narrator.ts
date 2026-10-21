@@ -25,14 +25,17 @@ socket.on('narrator:play', (clipId, clip) => {
   const { setCurrentClip } = useNarratorStore.getState();
   const audio = new Audio(`/audio/${encodeURI(clip)}.mp3`);
   playingClipIds.add(clipId);
+
   // A broken clip can both fire `error` and reject `play()`: report it once
   const finish = () => {
     if (!playingClipIds.delete(clipId)) {
       return;
     }
+
     if (useNarratorStore.getState().currentClip === clip) {
       setCurrentClip(null);
     }
+
     socket.emit('narrator:done', clipId);
   };
 
@@ -41,7 +44,7 @@ socket.on('narrator:play', (clipId, clip) => {
   // Missing clips (some segments have none yet) are skipped, like the
   // server-side player does
   audio.addEventListener('error', finish);
-  audio.play().catch((error: unknown) => {
+  audio.play().catch((error) => {
     console.error(`Narrator could not play ${clip}:`, error);
     finish();
   });

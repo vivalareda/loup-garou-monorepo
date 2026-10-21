@@ -1,3 +1,4 @@
+import type { FrameData, ServerFrame } from '@repo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   type ClientWebSocket,
@@ -9,7 +10,7 @@ const CONNECTING = 0;
 const OPEN = 1;
 const CLOSED = 3;
 
-type FakeListener = (event: { data: unknown; code: number }) => void;
+type FakeListener = (event: { data: FrameData; code: number }) => void;
 
 /** A WebSocket the test opens, feeds and drops by hand. */
 class FakeWebSocket implements ClientWebSocket {
@@ -27,15 +28,18 @@ class FakeWebSocket implements ClientWebSocket {
       FakeWebSocket.failNext = false;
       throw new Error('bad url');
     }
+
     this.url = url;
     FakeWebSocket.instances.push(this);
   }
 
   static latest() {
     const [socket] = FakeWebSocket.instances.slice(-1);
+
     if (!socket) {
       throw new Error('no socket was opened');
     }
+
     return socket;
   }
 
@@ -43,6 +47,7 @@ class FakeWebSocket implements ClientWebSocket {
     if (this.readyState !== OPEN) {
       throw new Error('not open');
     }
+
     this.sent.push(data);
   }
 
@@ -69,19 +74,20 @@ class FakeWebSocket implements ClientWebSocket {
     this.fire('close', undefined, code);
   }
 
-  serverSends(frame: unknown) {
+  serverSends(frame: ServerFrame) {
     this.fire('message', JSON.stringify(frame));
   }
 
-  serverSendsRaw(data: unknown) {
+  serverSendsRaw(data: FrameData) {
     this.fire('message', data);
   }
 
-  frames() {
-    return this.sent.map((frame) => JSON.parse(frame) as unknown);
+  frames(): unknown[] {
+    return this.sent.map((frame) => JSON.parse(frame));
   }
 
-  private fire(type: string, data?: unknown, code = 1000) {
+  /** `data` only matters for `message`; the other events ignore it. */
+  private fire(type: string, data: FrameData = '', code = 1000) {
     for (const listener of this.listeners.get(type) ?? []) {
       listener({ data, code });
     }
@@ -89,6 +95,7 @@ class FakeWebSocket implements ClientWebSocket {
 }
 
 const ROOM_URL = 'ws://game.test/room/default';
+const OTHER_ROOM_URL = 'ws://game.test/room/OTHER';
 
 function silence() {
   // Expected warnings: keep the test output readable
@@ -159,8 +166,54 @@ describe('RealtimeClient', () => {
       expect(FakeWebSocket.instances).toHaveLength(1);
     });
 
+    it('waits for connect(url) when constructed without a URL', () => {
+      const client = createRealtimeClient(null, { WebSocket: FakeWebSocket });
+      expect(FakeWebSocket.instances).toHaveLength(0);
+      expect(() => client.connect()).toThrow('needs a URL');
+
+      client.connect(ROOM_URL);
+
+      expect(FakeWebSocket.latest().url).toBe(ROOM_URL);
+      expect(client.url).toBe(ROOM_URL);
+    });
+
+    it('moves to another URL, closing the current connection', () => {
+      const client = makeClient({
+        bufferBeforeConnect: ['player:join'],
+      });
+
+      const first = FakeWebSocket.latest();
+      first.open();
+      const onDisconnect = vi.fn();
+      client.on('disconnect', onDisconnect);
+
+      client.connect(OTHER_ROOM_URL);
+      // Buffered again until the new room's first connection
+      expect(client.emit('player:join', 'Ana')).toBe(true);
+      const second = FakeWebSocket.latest();
+      second.open();
+
+      expect(first.closedWith).toBe(1000);
+      expect(onDisconnect).toHaveBeenCalledExactlyOnceWith('client disconnect');
+      expect(second.url).toBe(OTHER_ROOM_URL);
+      expect(second.frames()).toEqual([
+        { event: 'player:join', args: ['Ana'] },
+      ]);
+    });
+
+    it('keeps the connection when connect(url) names the current URL', () => {
+      const client = makeClient();
+      FakeWebSocket.latest().open();
+
+      client.connect(ROOM_URL);
+
+      expect(FakeWebSocket.instances).toHaveLength(1);
+      expect(client.connected).toBe(true);
+    });
+
     it('uses the global WebSocket when none is injected', () => {
       vi.stubGlobal('WebSocket', FakeWebSocket);
+
       try {
         createRealtimeClient(ROOM_URL);
         expect(FakeWebSocket.instances).toHaveLength(1);
@@ -201,6 +254,7 @@ describe('RealtimeClient', () => {
       const client = makeClient({
         bufferBeforeConnect: ['player:join', 'lobby:get-players-list'],
       });
+
       const socket = FakeWebSocket.latest();
       let sentWhenConnectFired: unknown[] = [];
       client.on('connect', () => {
@@ -234,6 +288,7 @@ describe('RealtimeClient', () => {
       const client = makeClient({
         bufferBeforeConnect: ['admin:next-segment'],
       });
+
       FakeWebSocket.latest().open();
       FakeWebSocket.latest().drop();
 
@@ -584,18 +639,23 @@ describe('RealtimeClient', () => {
       FakeWebSocket.latest().drop();
 
       const delays: number[] = [];
+
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const before = FakeWebSocket.instances.length;
         let waited = 0;
+
         while (FakeWebSocket.instances.length === before) {
           vi.advanceTimersByTime(10);
           waited += 10;
         }
+
         delays.push(waited);
+
         if (attempt < 4) {
           FakeWebSocket.latest().drop();
         }
       }
+
       expect(delays).toEqual([100, 200, 400, 500, 500]);
 
       FakeWebSocket.latest().open();
@@ -723,6 +783,7 @@ describe('RealtimeClient', () => {
       const client = makeClient({
         bufferBeforeConnect: ['lobby:get-players-list', 'agent:get-state'],
       });
+
       const callback = vi.fn();
       client.emit('lobby:get-players-list');
       client.emit('agent:get-state', callback);

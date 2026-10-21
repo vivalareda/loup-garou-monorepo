@@ -6,7 +6,7 @@ import type { WebSocketHost } from '@/server/websocket-host';
 /**
  * Serves the WebSocket endpoint on the Node http server: upgrades on
  * `/room/<code>` go to `host`, any other path is refused. The Node server
- * hosts a single game, so the room code is not used yet.
+ * hosts a single game, so the room code is not used.
  *
  * Liveness is the host's job (the app-level ping/pong of wire.ts and its
  * idle timeout), the same on Node and in a Durable Object, so no protocol

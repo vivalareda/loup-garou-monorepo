@@ -114,7 +114,7 @@ describe('registerGameEventListeners', () => {
     expect(usePlayerStore.getState().isAlive).toBe(true);
     expect(useModalStore.getState().modalState.open).toBe(false);
     expect(sessions.stored()).toBeNull();
-    expect(router.replace).toHaveBeenCalledWith('/');
+    expect(router.replace).toHaveBeenCalledWith('/join');
   });
 
   it('opens the seer pick modal and stores the vision result', () => {

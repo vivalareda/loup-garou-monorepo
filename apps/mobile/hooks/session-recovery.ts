@@ -1,8 +1,7 @@
 import type { RealtimeClient } from '@repo/realtime';
 import { applyGameSnapshot, type SnapshotRouter } from '@/hooks/game-snapshot';
+import { clearLocalGame, type Rooms } from '@/hooks/room';
 import { useConnectionStore } from '@/hooks/use-connection-store';
-import { useGameStore } from '@/hooks/use-game-store';
-import { useModalStore } from '@/hooks/use-modal-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
 import type { SessionTokens } from '@/utils/session';
 
@@ -20,14 +19,26 @@ function onDisconnect() {
 export function registerSessionRecovery(
   router: SnapshotRouter,
   socket: RealtimeClient,
-  sessions: SessionTokens
+  sessions: SessionTokens,
+  rooms: Pick<Rooms, 'currentEntry' | 'leaveIfGone'>
 ) {
+  /** Drops every trace of the game and sends the player to `route`. */
+  const resetToScreen = (route: '/' | '/join') => {
+    useConnectionStore.getState().setStatus('unrecoverable');
+    useConnectionStore.getState().setRecoveryFailed(true);
+    clearLocalGame();
+    router.replace(route);
+  };
+
   const onConnect = () => {
     useConnectionStore.getState().setStatus('connected');
+    // A token read that finishes after a room change belongs to the old
+    // room: sending it would only get the new room's seat reset
+    const entry = rooms.currentEntry();
     sessions
       .get()
       .then((token) => {
-        if (token) {
+        if (token && rooms.currentEntry() === entry) {
           socket.emit('player:rejoin', token);
         }
       })
@@ -46,22 +57,51 @@ export function registerSessionRecovery(
       console.error('Failed to clear session token', error);
     });
 
-    // Only disruptive when we were actually in a game: reset everything
-    // and land back on the join screen with an explanation
-    if (usePlayerStore.getState().player !== null) {
-      useConnectionStore.getState().setStatus('unrecoverable');
-      useConnectionStore.getState().setRecoveryFailed(true);
-      useGameStore.getState().resetGame();
-      usePlayerStore.getState().reset();
-      useModalStore.getState().closeModal();
-      router.replace('/');
+    // The room is still there (this answer came from it), only the seat
+    // is gone: back to its join screen with an explanation, whether the
+    // player was mid-game or relaunched the app (rooms.restore) on the
+    // room screen
+    if (
+      usePlayerStore.getState().player !== null ||
+      useConnectionStore.getState().roomCode !== null
+    ) {
+      resetToScreen('/join');
     }
+  };
+
+  // A refused reconnect may mean the room itself is gone (it expired while
+  // the phone slept): then stop retrying and go back to the room screen.
+  // One check at a time, as failed attempts repeat every few seconds
+  let checkingRoom = false;
+
+  const onConnectError = () => {
+    const { roomCode } = useConnectionStore.getState();
+
+    if (!roomCode || checkingRoom) {
+      return;
+    }
+
+    checkingRoom = true;
+    rooms
+      .leaveIfGone(roomCode)
+      .then((left) => {
+        if (left) {
+          resetToScreen('/');
+        }
+      })
+      .catch(() => {
+        // Server unreachable: keep reconnecting
+      })
+      .finally(() => {
+        checkingRoom = false;
+      });
   };
 
   socket.on('connect', onConnect);
   socket.on('disconnect', onDisconnect);
   socket.on('game:snapshot', onSnapshot);
   socket.on('player:rejoin-failed', onRejoinFailed);
+  socket.on('connect_error', onConnectError);
 
   // The socket may have connected before these listeners existed (app cold
   // start): attempt the initial session restore explicitly
@@ -74,5 +114,6 @@ export function registerSessionRecovery(
     socket.off('disconnect', onDisconnect);
     socket.off('game:snapshot', onSnapshot);
     socket.off('player:rejoin-failed', onRejoinFailed);
+    socket.off('connect_error', onConnectError);
   };
 }

@@ -1,4 +1,5 @@
 import type { RealtimeClient } from '@repo/realtime';
+import { clearLocalGame } from '@/hooks/room';
 import { useGameStore } from '@/hooks/use-game-store';
 import { useModalStore } from '@/hooks/use-modal-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
@@ -12,6 +13,12 @@ const ACTION_ERROR_MESSAGES = new Map([
   ['Game already started', 'La partie a déjà commencé.'],
   ['Game is finished', 'La partie est terminée.'],
   ['Game is not finished', "La partie n'est pas terminée."],
+  ['Invalid player count', 'Nombre de joueurs invalide.'],
+  ['More players have already joined', 'Plus de joueurs ont déjà rejoint.'],
+  [
+    'Only the host can change the player count',
+    "Seul l'hôte peut changer le nombre de joueurs.",
+  ],
   [
     'Hunter pick is not allowed now',
     'Le chasseur ne peut pas tirer maintenant.',
@@ -39,7 +46,7 @@ export function translateActionError(message: string) {
 
 /** The only routes these listeners ever navigate to. */
 export type GameEventRoute =
-  | '/'
+  | '/join'
   | '/death-screen'
   | '/winner-screen'
   | '/loser-screen';
@@ -165,15 +172,14 @@ export function registerGameEventListeners(
   });
 
   socket.on('game:restarted', () => {
-    console.log('Server restarted the game — back to the lobby');
-    useGameStore.getState().resetGame();
-    usePlayerStore.getState().reset();
-    useModalStore.getState().closeModal();
-    // The server dropped all players; the old token can never rejoin
+    console.log('Server restarted the game — back to the join screen');
+    clearLocalGame();
+    // The server dropped all players; the old token can never rejoin. The
+    // room is the same: everyone joins it again under a name
     sessions.clear().catch((error) => {
       console.error('Failed to clear session token', error);
     });
-    router.replace('/');
+    router.replace('/join');
   });
 
   return () => {

@@ -321,10 +321,10 @@ describe('WebSocketHost', () => {
       const { socket, connection } = connect(host);
       const other = connect(host);
 
-      connection.emit('lobby:players-list', [], 6);
+      connection.emit('lobby:players-list', [], 6, null);
 
       expect(socket.frames()).toEqual([
-        { event: 'lobby:players-list', args: [[], 6] },
+        { event: 'lobby:players-list', args: [[], 6, null] },
       ]);
       expect(other.socket.sent).toEqual([]);
     });

@@ -46,6 +46,8 @@ type GameData = {
   isWaitingForPlayers: boolean;
   /** Players the lobby needs before the game auto-starts (from the server). */
   requiredPlayerCount: number | null;
+  /** The lobby's host, who sets that count (from the server). */
+  hostSocketId: string | null;
   /** The werewolves' victim the witch may heal (SID from witch:can-heal). */
   werewolvesVictim: string | null;
   /** The Seer's latest vision (from seer:vision-result). */
@@ -118,6 +120,7 @@ const createInitialGameState = (): GameData => ({
   dayVoteTie: [],
   isWaitingForPlayers: false,
   requiredPlayerCount: null,
+  hostSocketId: null,
   werewolvesVictim: null,
   seerVision: null,
   countdown: null,
@@ -204,16 +207,20 @@ export const useGameStore = create<GameState>((set, get) => ({
   // Socket management
   initializeSocketListeners: (socket) => {
     // Existing socket listeners
-    socket.on('lobby:players-list', (players, requiredPlayerCount) => {
-      set(() => {
-        const { player } = usePlayerStore.getState();
+    socket.on(
+      'lobby:players-list',
+      (players, requiredPlayerCount, hostSocketId) => {
+        set(() => {
+          const { player } = usePlayerStore.getState();
 
-        return {
-          playersList: players.filter((p) => p.socketId !== player?.socketId),
-          requiredPlayerCount,
-        };
-      });
-    });
+          return {
+            playersList: players.filter((p) => p.socketId !== player?.socketId),
+            requiredPlayerCount,
+            hostSocketId,
+          };
+        });
+      }
+    );
 
     socket.on('lobby:update-players-list', (newPlayer) => {
       set((state) => ({ playersList: [...state.playersList, newPlayer] }));

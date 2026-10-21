@@ -1,11 +1,17 @@
+import {
+  isValidPlayerCount,
+  MAX_PLAYER_COUNT,
+  MIN_PLAYER_COUNT,
+} from '@repo/types';
+
 const DEFAULT_PLAYER_COUNT = 6;
-const MIN_PLAYER_COUNT = 4;
 
 /**
- * Number of players a game needs before it auto-starts. Read from the
- * PLAYER_COUNT env var (default 6). Called at server startup so an invalid
- * value crashes the process immediately with a clear error instead of
- * silently never starting a game.
+ * Number of players a new room's game starts at, until its host changes
+ * it (`lobby:set-player-count`). Read from the PLAYER_COUNT env var
+ * (default 6). Called at server startup so an invalid value crashes the
+ * process immediately with a clear error instead of silently never
+ * starting a game.
  */
 export function resolvePlayerCount(
   rawValue: string | undefined = process.env.PLAYER_COUNT
@@ -16,9 +22,9 @@ export function resolvePlayerCount(
 
   const count = Number(rawValue);
 
-  if (!Number.isInteger(count) || count < MIN_PLAYER_COUNT) {
+  if (!isValidPlayerCount(count)) {
     throw new Error(
-      `Invalid PLAYER_COUNT "${rawValue}": must be an integer >= ${MIN_PLAYER_COUNT}`
+      `Invalid PLAYER_COUNT "${rawValue}": must be an integer from ${MIN_PLAYER_COUNT} to ${MAX_PLAYER_COUNT}`
     );
   }
 

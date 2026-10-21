@@ -82,6 +82,14 @@ export function createFakeGameServer() {
       connection.fire('open');
     },
 
+    /** A connection attempt is refused: the client fires `connect_error`. */
+    refuse() {
+      socket.connect();
+      const connection = current();
+      connection.readyState = CLOSED;
+      connection.fire('close', '', 1006);
+    },
+
     /** The network drops: the client fires `disconnect`. */
     drop() {
       const connection = current();

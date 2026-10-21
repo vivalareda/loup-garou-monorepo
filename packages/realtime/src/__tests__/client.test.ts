@@ -95,6 +95,7 @@ class FakeWebSocket implements ClientWebSocket {
 }
 
 const ROOM_URL = 'ws://game.test/room/default';
+const OTHER_ROOM_URL = 'ws://game.test/room/OTHER';
 
 function silence() {
   // Expected warnings: keep the test output readable
@@ -163,6 +164,51 @@ describe('RealtimeClient', () => {
       client.connect();
 
       expect(FakeWebSocket.instances).toHaveLength(1);
+    });
+
+    it('waits for connect(url) when constructed without a URL', () => {
+      const client = createRealtimeClient(null, { WebSocket: FakeWebSocket });
+      expect(FakeWebSocket.instances).toHaveLength(0);
+      expect(() => client.connect()).toThrow('needs a URL');
+
+      client.connect(ROOM_URL);
+
+      expect(FakeWebSocket.latest().url).toBe(ROOM_URL);
+      expect(client.url).toBe(ROOM_URL);
+    });
+
+    it('moves to another URL, closing the current connection', () => {
+      const client = makeClient({
+        bufferBeforeConnect: ['player:join'],
+      });
+
+      const first = FakeWebSocket.latest();
+      first.open();
+      const onDisconnect = vi.fn();
+      client.on('disconnect', onDisconnect);
+
+      client.connect(OTHER_ROOM_URL);
+      // Buffered again until the new room's first connection
+      expect(client.emit('player:join', 'Ana')).toBe(true);
+      const second = FakeWebSocket.latest();
+      second.open();
+
+      expect(first.closedWith).toBe(1000);
+      expect(onDisconnect).toHaveBeenCalledExactlyOnceWith('client disconnect');
+      expect(second.url).toBe(OTHER_ROOM_URL);
+      expect(second.frames()).toEqual([
+        { event: 'player:join', args: ['Ana'] },
+      ]);
+    });
+
+    it('keeps the connection when connect(url) names the current URL', () => {
+      const client = makeClient();
+      FakeWebSocket.latest().open();
+
+      client.connect(ROOM_URL);
+
+      expect(FakeWebSocket.instances).toHaveLength(1);
+      expect(client.connected).toBe(true);
     });
 
     it('uses the global WebSocket when none is injected', () => {

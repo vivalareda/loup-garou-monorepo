@@ -3,9 +3,8 @@
 Context: the server is mid-migration to Effect-TS (started Dec 2025). The migration
 exists for three reasons: **pausing segment execution** while waiting on player input
 (hunter revenge pick, lover death chain), **DI via layers** for testing, and **typed
-errors**. The current `.effect.ts` files are DI wrappers only — the pause/resume payoff
-(`Deferred`) is not implemented yet. The next gameplay feature (post-day-vote death
-scenarios, see `notes.md`) is the vehicle to finish that part of the migration.
+errors**. The pause/resume payoff (`Deferred`) lives in the day-vote and night-dawn
+resolution programs (Step 2 and `plans/001`); the rest of the server is still plain classes.
 
 ## Step 1 — Stabilize the repo
 
@@ -83,12 +82,22 @@ shots, recursively (a revenge target can itself be a lover). `Game`'s pure logic
 - [x] `day-vote-scenarios.test.ts`: one test per scenario + grief-cascade on the
       revenge target + tie + night-flow fallback (52 tests total, all green)
 
+## Step 5 — Effect 4 — DONE
+
+- [x] `effect` `^3.21` → `4.0.0`, `@effect/tsgo` → `^0.56` (supports Effect 4 and
+      TypeScript 7.0.2). API changes in the live code: `Effect.gen(this, …)` →
+      `Effect.gen({ self: this }, …)`, `Deferred.unsafeDone` → `Deferred.doneUnsafe`
+- [x] Deleted the unused `*.effect.ts` scaffolding (`index.effect.ts`, `game-service`,
+      `http-server`, `socket-io`, `socket-event-router`, `event-handlers`): nothing
+      live imported them. With it went `socket.io`, `@effect/platform` and
+      `@effect/platform-node` (folded into `effect` in v4 and unused anyway)
+
 ## Later / parked
 
 - Full port of the segment runner (`SegmentsManager`) to Effect — the day-vote chain
   proves the pattern; night flow (`handleHunterPlayerPick` etc.) still uses the queue
 - Revote-on-tie instead of nobody-dies (needs mobile UI for `day:vote-tie`)
 - Mobile UI for the `day:vote-tie` event
-- Game restart in the Effect entry point (`index.effect.ts` logs "not yet implemented")
 - Intro audio TODO in `segments-manager.ts`
-- Switch `dev` script to the Effect entry point once it reaches parity
+- An Effect entry point / socket-handler layer (the old `*.effect.ts` scaffolding was
+  deleted in Step 5; it was unused and still Socket.io-based)

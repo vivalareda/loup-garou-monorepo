@@ -155,11 +155,31 @@ export function isRoomCode(code: string): boolean {
   return ROOM_CODE.test(code);
 }
 
+const CODE_SEPARATORS = /[\s-]+/g;
+
+/**
+ * A room code as a person typed or read it out: separators (spaces,
+ * dashes) dropped and upper-cased, so "abcd efgh" and "ABCD-EFGH" both
+ * give "ABCDEFGH". Room codes are case-insensitive on the server too.
+ */
+export function normalizeRoomCode(input: string): string {
+  return input.replace(CODE_SEPARATORS, '').toUpperCase();
+}
+
 /** The room code in a `/room/<code>` path, or null for any other path. */
 export function parseRoomPath(pathname: string): string | null {
   const code = ROOM_PATH.exec(pathname)?.[1];
 
   return code !== undefined && isRoomCode(code) ? code : null;
+}
+
+/** `?token=<accessToken>`, or nothing without a token. */
+function tokenQuery(accessToken: string | undefined) {
+  return accessToken ? `?token=${encodeURIComponent(accessToken)}` : '';
+}
+
+function trimBaseUrl(baseUrl: string) {
+  return baseUrl.trim().replace(TRAILING_SLASHES, '');
 }
 
 /**
@@ -179,12 +199,65 @@ export function roomUrl(
     );
   }
 
-  const base = baseUrl
-    .trim()
-    .replace(HTTP_SCHEME, 'ws$1://')
-    .replace(TRAILING_SLASHES, '');
+  const base = trimBaseUrl(baseUrl).replace(HTTP_SCHEME, 'ws$1://');
 
-  const query = accessToken ? `?token=${encodeURIComponent(accessToken)}` : '';
+  return `${base}/room/${roomCode}${tokenQuery(accessToken)}`;
+}
 
-  return `${base}/room/${roomCode}${query}`;
+/*
+ * The HTTP room API, next to the WebSocket endpoint and behind the same
+ * `?token=`:
+ * - `POST /rooms` creates a private room: 201 with a `RoomInfo`
+ * - `GET /rooms/<code>` checks that a room exists: 200 with its
+ *   `RoomInfo`, 404 when there is no such room
+ * A room must be created before `/room/<code>` accepts sockets. The Node
+ * server hosts a single game, so it "creates" DEFAULT_ROOM_CODE and finds
+ * every code.
+ */
+
+export type RoomInfo = { code: string };
+
+export type RoomsRequest =
+  | { kind: 'create' }
+  | { kind: 'find'; code: string }
+  | { kind: 'bad-code' };
+
+const ROOMS_PATH = /^\/rooms(?:\/([^/]+))?\/?$/;
+
+/** The room API call a request makes, or null when it is not one. */
+export function parseRoomsRequest(
+  method: string,
+  pathname: string
+): RoomsRequest | null {
+  const match = ROOMS_PATH.exec(pathname);
+
+  if (!match) {
+    return null;
+  }
+
+  const code = match[1];
+
+  if (code === undefined) {
+    return method === 'POST' ? { kind: 'create' } : null;
+  }
+
+  if (method !== 'GET') {
+    return null;
+  }
+
+  return isRoomCode(code) ? { kind: 'find', code } : { kind: 'bad-code' };
+}
+
+/**
+ * The room API URL (http(s), unlike `roomUrl`): `/rooms` to create a room,
+ * `/rooms/<code>` to look one up.
+ */
+export function roomsApiUrl(
+  baseUrl: string,
+  roomCode?: string,
+  accessToken?: string
+): string {
+  const path = roomCode === undefined ? '/rooms' : `/rooms/${roomCode}`;
+
+  return `${trimBaseUrl(baseUrl)}${path}${tokenQuery(accessToken)}`;
 }

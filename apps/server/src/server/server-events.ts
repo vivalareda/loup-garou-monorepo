@@ -1,8 +1,9 @@
-import type {
-  Countdown,
-  GamePhase,
-  PendingPrompt,
-  PlayerGameSnapshot,
+import {
+  type Countdown,
+  type GamePhase,
+  isValidPlayerCount,
+  type PendingPrompt,
+  type PlayerGameSnapshot,
 } from '@repo/types';
 import { Schema } from 'effect';
 import { resolvePlayerCount } from '@/config';
@@ -39,7 +40,8 @@ export class GameEvents {
   private readonly game: Game;
   private readonly eventsActions: EventsActions;
   private readonly segmentsManager: SegmentsManager;
-  private readonly requiredPlayerCount = resolvePlayerCount();
+  /** The game starts once this many players joined; the host may change it. */
+  private requiredPlayerCount = resolvePlayerCount();
   private pendingLoverAcks = new Set<string>();
   /** Grace timers for disconnected players, keyed by session token. */
   private readonly graceTimers = new Map<string, NodeJS.Timeout>();
@@ -66,6 +68,10 @@ export class GameEvents {
     this.io.on('connection', (socket) => {
       socket.on('player:join', (name: string) => {
         this.handlePlayerJoin(socket, name);
+      });
+
+      socket.on('lobby:set-player-count', (count: number) => {
+        this.handleSetPlayerCount(socket, count);
       });
 
       socket.on('game:restart', () => {
@@ -158,8 +164,7 @@ export class GameEvents {
 
   setupGettersEvents(socket: Connection) {
     socket.on('lobby:get-players-list', () => {
-      const playersArray = this.game.getClientPlayerList();
-      socket.emit('lobby:players-list', playersArray, this.requiredPlayerCount);
+      socket.emit('lobby:players-list', ...this.lobbyState());
     });
 
     socket.on('agent:get-state', (callback) => {
@@ -245,12 +250,69 @@ export class GameEvents {
       `Player joined: ${trimmedName} (ID: ${socket.id}), player count: ${this.game.getPlayerList()}`
     );
 
-    if (this.game.getPlayerList().size === this.requiredPlayerCount) {
-      this.game.assignRoles();
-      this.game.alertPlayersOfRoles();
-      this.io.emit('lobby:villagers-list', this.game.getVillagersList());
-      this.segmentsManager.startGame();
+    this.startIfFull();
+  }
+
+  /**
+   * The lobby's host (its earliest joined player) sets how many players
+   * the game starts at: within MIN/MAX_PLAYER_COUNT and never below the
+   * players already in. Reaching it starts the game at once, so setting
+   * the count to the current headcount is how the host starts early.
+   */
+  private handleSetPlayerCount(socket: Connection, count: number) {
+    const rejection = this.playerCountRejection(socket.id, count);
+
+    if (rejection) {
+      socket.emit('alert:action-error', rejection);
+
+      return;
     }
+
+    console.log(`👥 Host set the player count to ${count}`);
+    this.requiredPlayerCount = count;
+    this.io.emit('lobby:players-list', ...this.lobbyState());
+    this.startIfFull();
+  }
+
+  private playerCountRejection(senderSid: string, count: number) {
+    if (this.segmentsManager.hasStarted()) {
+      return 'Game already started';
+    }
+
+    if (this.game.getFirstJoinedPlayer()?.getSocketId() !== senderSid) {
+      return 'Only the host can change the player count';
+    }
+
+    if (!isValidPlayerCount(count)) {
+      return 'Invalid player count';
+    }
+
+    if (count < this.game.getPlayerList().size) {
+      return 'More players have already joined';
+    }
+
+    return null;
+  }
+
+  /** `lobby:players-list`'s arguments: roster, required count and host. */
+  private lobbyState() {
+    return [
+      this.game.getClientPlayerList(),
+      this.requiredPlayerCount,
+      this.game.getFirstJoinedPlayer()?.getSocketId() ?? null,
+    ] as const;
+  }
+
+  /** Deals the roles and starts the game once the lobby is full. */
+  private startIfFull() {
+    if (this.game.getPlayerList().size !== this.requiredPlayerCount) {
+      return;
+    }
+
+    this.game.assignRoles();
+    this.game.alertPlayersOfRoles();
+    this.io.emit('lobby:villagers-list', this.game.getVillagersList());
+    this.segmentsManager.startGame();
   }
 
   private isNameTaken(trimmedName: string) {
@@ -312,11 +374,7 @@ export class GameEvents {
 
     // Their socket ID changed: refresh every client's roster and the
     // werewolves' target list so stale IDs don't reject future actions
-    this.io.emit(
-      'lobby:players-list',
-      this.game.getClientPlayerList(),
-      this.requiredPlayerCount
-    );
+    this.io.emit('lobby:players-list', ...this.lobbyState());
 
     if (this.segmentsManager.hasStarted()) {
       this.io.emit('lobby:villagers-list', this.game.getVillagersList());
@@ -776,6 +834,8 @@ export class GameEvents {
       // Lobby: free the seat so the room isn't stuck waiting on a ghost
       this.game.removePlayer(socketId);
       this.io.emit('lobby:player-died', socketId);
+      // The full lobby too: if the host left, the next player took over
+      this.io.emit('lobby:players-list', ...this.lobbyState());
       console.log(`Player ${player.getName()} left the lobby`);
 
       return;

@@ -11,23 +11,26 @@
     "bindings": [{ "name": "GAME_ROOM", "class_name": "GameRoom" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GameRoom"] }],
-  // The built dashboard, same origin as the game. Only /room/* runs the
-  // Worker; every other path is a static file or the SPA's index.html
+  // The built dashboard, same origin as the game. Only the game's paths
+  // (/room/* sockets, the /rooms API) run the Worker; every other path is
+  // a static file or the SPA's index.html
   "assets": {
     "directory": "../dashboard/dist-worker",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/room/*"],
+    "run_worker_first": ["/room/*", "/rooms", "/rooms/*"],
   },
   // Game config, read through process.env like on Node (same defaults).
   // The per-segment timeouts (WEREWOLF_TIMEOUT_MS, ...) are left to their
   // code defaults: setting them here would shadow SEGMENT_TIMEOUT_MS, the
   // one override for short test games (--var or .dev.vars)
+  // PLAYER_COUNT: the count a new room's game starts at; its host can
+  // change it in the lobby (4-16).
   // ENABLE_ADMIN_EVENTS: "true" turns on the dashboard's admin:* testing
   // tools, which let any client drive the game (local testing only).
   // MAX_CONNECTIONS_PER_ROOM: further upgrades get a 503.
   // ACCESS_TOKEN is deliberately absent: set it as a secret (or --var) to
-  // require ?token= on /room/*; unset, rooms are open
+  // require ?token= on /room/* and /rooms; unset, they are open
   "vars": {
     "PLAYER_COUNT": "6",
     "DISCONNECT_GRACE_MS": "90000",

@@ -80,9 +80,12 @@ export type ServerToClientEvents = EventMap<{
   'lobby:player-died': (playerSid: string) => void;
 
   'lobby:update-players-list': (player: PlayerListItem) => void;
+  // The full lobby: who joined, how many players start the game, and the
+  // host (the earliest joined player, who sets that count), if anyone joined
   'lobby:players-list': (
     playersList: PlayerListItem[],
-    requiredPlayerCount: number
+    requiredPlayerCount: number,
+    hostSocketId: string | null
   ) => void;
   'game:snapshot': (snapshot: PlayerGameSnapshot) => void;
   // The presented session token matched no player (server restarted, game
@@ -142,6 +145,9 @@ export type ClientToServerEvents = EventMap<{
   'agent:get-state': (callback: (snapshot: PlayerGameSnapshot) => void) => void;
 
   'player:join': (playerName: string) => void;
+  // Host only, in the lobby: the game starts once this many players joined
+  // (at once if they already have). MIN_PLAYER_COUNT..MAX_PLAYER_COUNT
+  'lobby:set-player-count': (count: number) => void;
   'player:rejoin': (sessionToken: string) => void;
   // Play-again after a finished game; any player may trigger it
   'game:restart': () => void;
@@ -237,6 +243,7 @@ const clientEventNames: Record<keyof ClientToServerEvents, true> = {
   'lobby:get-players-list': true,
   'agent:get-state': true,
   'player:join': true,
+  'lobby:set-player-count': true,
   'player:rejoin': true,
   'game:restart': true,
   'admin:start-game': true,

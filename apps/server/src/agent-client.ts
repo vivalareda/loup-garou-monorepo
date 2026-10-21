@@ -40,7 +40,7 @@ socket.on('alert:action-error', (message) => {
 });
 
 /** One stdin line: an event name plus its (unvalidated) payload args. */
-const AgentCommand = Schema.parseJson(
+const AgentCommand = Schema.fromJsonString(
   Schema.Struct({
     event: Schema.String,
     args: Schema.optional(Schema.Array(Schema.Unknown)),

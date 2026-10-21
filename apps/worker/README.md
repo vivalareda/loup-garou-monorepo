@@ -146,7 +146,7 @@ Nothing has been deployed yet. What you need:
 
 - **Cloudflare credentials.** Locally, `pnpm --filter worker exec alchemy
   profile edit --add Cloudflare` once (OAuth or a pasted API token, saved
-  in `~/.alchemy/profiles.json`; no `wrangler login`). In CI, set
+  under `~/.alchemy/`; no `wrangler login`). In CI, set
   `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` instead.
 - **`ACCESS_TOKEN`** (optional), in the shell or `apps/worker/.env`.
 - **Nothing else.** Alchemy 2 has no `ALCHEMY_PASSWORD`. Secrets are

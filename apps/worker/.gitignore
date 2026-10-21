@@ -1,3 +1,5 @@
 # Alchemy state (what is deployed) and deploy-time secrets
 .alchemy
 .env
+# Secrets from the wrangler setup, never to be committed
+.dev.vars*

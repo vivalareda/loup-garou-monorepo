@@ -1,17 +1,14 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  ImageBackground,
-  Keyboard,
-  SafeAreaView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from 'react-native';
+import { Keyboard, Text, View } from 'react-native';
+import { Banner } from '@/components/ui/banner';
+import { FadeIn } from '@/components/ui/fade-in';
+import { Field } from '@/components/ui/field';
+import { ForestScreen } from '@/components/ui/forest-screen';
+import { PrimaryButton } from '@/components/ui/primary-button';
 import type { RoomEntry } from '@/hooks/room';
 import { useConnectionStore } from '@/hooks/use-connection-store';
+import { palette } from '@/lib/theme';
 import { rooms } from '@/utils/rooms';
 
 /**
@@ -46,67 +43,67 @@ export default function RoomScreen() {
   };
 
   return (
-    <ImageBackground
-      className="flex-1"
-      resizeMethod="resize"
-      source={require('@/assets/join-screen-background.png')}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <SafeAreaView className="flex-1 items-center justify-center pb-24">
-          <View className="mt-80 w-72 items-center">
+    <ForestScreen dismissKeyboard>
+      <View className="flex-1 justify-end px-8 pb-10">
+        <FadeIn delayMs={120}>
+          <View className="w-full max-w-sm self-center">
             {recoveryFailed && (
-              <View className="mb-4 rounded-xl bg-amber-500/90 px-4 py-3">
-                <Text className="text-center font-semibold text-slate-900">
-                  Cette partie n'existe plus — créez-en une autre.
-                </Text>
-              </View>
+              <Banner
+                message="Cette partie n'existe plus — créez-en une autre."
+                tone="warn"
+              />
             )}
-            {error && (
-              <View className="mb-4 rounded-xl bg-red-500/90 px-4 py-3">
-                <Text className="text-center font-semibold text-white">
-                  {error}
-                </Text>
-              </View>
-            )}
-            <TouchableOpacity
-              className={`w-full rounded-lg px-8 py-4 ${
-                busy ? 'bg-slate-400/40' : 'bg-slate-200/50'
-              }`}
-              disabled={busy}
-              onPress={() => enter(() => rooms.createAndEnter())}
-            >
-              <Text className="text-center text-lg font-bold">
-                Créer une partie
-              </Text>
-            </TouchableOpacity>
+            {error && <Banner message={error} tone="danger" />}
 
-            <Text className="mt-10 text-center text-2xl font-bold text-white">
-              Code de la partie
-            </Text>
-            <TextInput
+            <PrimaryButton
+              disabled={busy}
+              label={busy ? 'Connexion…' : 'Créer une partie'}
+              onPress={() => enter(() => rooms.createAndEnter())}
+            />
+
+            <View className="my-7 flex-row items-center gap-3">
+              <View
+                className="h-px flex-1"
+                style={{ backgroundColor: 'rgba(230, 231, 212, 0.22)' }}
+              />
+              <Text
+                style={{
+                  color: palette.moonDim,
+                  fontFamily: 'Outfit_500Medium',
+                  fontSize: 12,
+                  letterSpacing: 2,
+                  textTransform: 'uppercase',
+                }}
+              >
+                ou rejoindre
+              </Text>
+              <View
+                className="h-px flex-1"
+                style={{ backgroundColor: 'rgba(230, 231, 212, 0.22)' }}
+              />
+            </View>
+
+            <Field
               autoCapitalize="characters"
               autoCorrect={false}
-              className="mt-4 h-16 w-full rounded-lg border-2 border-gray-100/50 bg-slate-600 pb-2 text-center text-2xl font-bold text-white"
+              label="Code de la partie"
               onChangeText={setCode}
               onSubmitEditing={() => enter(() => rooms.joinByCode(code))}
               placeholder="ABCD-2345"
-              placeholderTextColor="#94a3b8"
               value={code}
             />
-            <TouchableOpacity
-              className={`mt-4 w-full rounded-lg px-8 py-4 ${
-                busy ? 'bg-slate-400/40' : 'bg-slate-200/50'
-              }`}
-              disabled={busy}
-              onPress={() => enter(() => rooms.joinByCode(code))}
-            >
-              <Text className="text-center text-lg font-bold">
-                {busy ? 'Connexion…' : 'Rejoindre'}
-              </Text>
-            </TouchableOpacity>
+
+            <View className="mt-4">
+              <PrimaryButton
+                disabled={busy}
+                label={busy ? 'Connexion…' : 'Rejoindre'}
+                onPress={() => enter(() => rooms.joinByCode(code))}
+                variant="ghost"
+              />
+            </View>
           </View>
-        </SafeAreaView>
-      </TouchableWithoutFeedback>
-    </ImageBackground>
+        </FadeIn>
+      </View>
+    </ForestScreen>
   );
 }

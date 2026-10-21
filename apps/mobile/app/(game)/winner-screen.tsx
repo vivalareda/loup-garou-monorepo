@@ -1,35 +1,58 @@
 import { ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { EndGamePanel } from '@/components/end-game-panel';
+import { ForestScreen } from '@/components/ui/forest-screen';
+import { Panel } from '@/components/ui/primary-button';
 import { useGameStore } from '@/hooks/use-game-store';
 import { usePlayerStore } from '@/hooks/use-player-store';
+import { palette } from '@/lib/theme';
 
 export default function WinnerScreen() {
   const { player } = usePlayerStore();
   const { gameResult } = useGameStore();
 
   return (
-    <SafeAreaView className="flex-1 bg-green-900">
-      <ScrollView contentContainerClassName="flex-grow items-center justify-center px-6 py-8">
-        <View className="w-full items-center">
-          <Text className="mb-4 text-8xl">🎉</Text>
+    <ForestScreen solid>
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 24,
+          paddingVertical: 32,
+        }}
+      >
+        <View className="w-full max-w-md items-center">
+          <Text
+            className="mb-2 text-center text-xs uppercase tracking-[3px]"
+            style={{ color: palette.success, fontFamily: 'Outfit_500Medium' }}
+          >
+            Fin de partie
+          </Text>
+          <Text
+            className="mb-3 text-center text-4xl"
+            style={{ color: palette.moon, fontFamily: 'Cinzel_700Bold' }}
+          >
+            Victoire
+          </Text>
+          <Text
+            className="mb-6 text-center text-xl"
+            style={{ color: palette.moonDim, fontFamily: 'Outfit_500Medium' }}
+          >
+            {player?.name}
+          </Text>
 
-          <View className="mb-4 items-center">
-            <Text className="mb-2 text-3xl font-bold text-green-400">
-              Victoire !
+          <Panel>
+            <Text
+              className="text-center text-base"
+              style={{ color: palette.snow, fontFamily: 'Outfit_400Regular' }}
+            >
+              Votre équipe a gagné la partie.
             </Text>
-            <Text className="text-xl text-slate-300">{player?.name}</Text>
-          </View>
-
-          <View className="rounded-2xl border-2 border-green-400/30 bg-green-900/20 px-6 py-4">
-            <Text className="text-center text-lg font-medium text-green-400">
-              Votre équipe a gagné la partie !
-            </Text>
-          </View>
+          </Panel>
 
           <EndGamePanel result={gameResult} />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ForestScreen>
   );
 }

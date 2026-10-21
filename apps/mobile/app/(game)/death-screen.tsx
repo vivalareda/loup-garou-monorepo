@@ -1,30 +1,45 @@
 import { Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ForestScreen } from '@/components/ui/forest-screen';
+import { Panel } from '@/components/ui/primary-button';
 import { usePlayerStore } from '@/hooks/use-player-store';
+import { palette } from '@/lib/theme';
 
 export default function DeathScreen() {
   const { player } = usePlayerStore();
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-900">
+    <ForestScreen solid>
       <View className="flex-1 items-center justify-center px-6">
-        <View className="items-center">
-          <Text className="mb-4 text-8xl">💀</Text>
+        <View className="w-full max-w-md items-center">
+          <Text
+            className="mb-2 text-center text-xs uppercase tracking-[3px]"
+            style={{ color: palette.danger, fontFamily: 'Outfit_500Medium' }}
+          >
+            Éliminé
+          </Text>
+          <Text
+            className="mb-3 text-center text-4xl"
+            style={{ color: palette.moon, fontFamily: 'Cinzel_700Bold' }}
+          >
+            Vous êtes mort
+          </Text>
+          <Text
+            className="mb-8 text-center text-xl"
+            style={{ color: palette.moonDim, fontFamily: 'Outfit_500Medium' }}
+          >
+            {player?.name}
+          </Text>
 
-          <View className="mb-8 items-center">
-            <Text className="mb-2 text-3xl font-bold text-red-400">
-              Vous êtes mort
+          <Panel>
+            <Text
+              className="text-center text-base leading-6"
+              style={{ color: palette.snow, fontFamily: 'Outfit_400Regular' }}
+            >
+              Vous pouvez continuer à observer la partie en silence.
             </Text>
-            <Text className="text-xl text-slate-300">{player?.name}</Text>
-          </View>
-
-          <View className="rounded-2xl border-2 border-red-400/30 bg-red-900/20 px-6 py-4">
-            <Text className="text-center text-slate-300">
-              Vous pouvez continuer à observer la partie
-            </Text>
-          </View>
+          </Panel>
         </View>
       </View>
-    </SafeAreaView>
+    </ForestScreen>
   );
 }

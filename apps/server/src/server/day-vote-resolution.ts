@@ -41,7 +41,7 @@ export class DayVoteResolution {
     }
 
     this.pendingHunterPick = null;
-    Deferred.unsafeDone(pick, Effect.succeed(targetSid));
+    Deferred.doneUnsafe(pick, Effect.succeed(targetSid));
     return true;
   }
 
@@ -53,7 +53,7 @@ export class DayVoteResolution {
     const pick = this.pendingHunterPick;
     if (pick) {
       this.pendingHunterPick = null;
-      Deferred.unsafeDone(pick, Effect.fail(new StaleGame()));
+      Deferred.doneUnsafe(pick, Effect.fail(new StaleGame()));
     }
   }
 
@@ -71,7 +71,7 @@ export class DayVoteResolution {
     votedPlayer: Player,
     generation: number
   ): Effect.Effect<void, StaleGame> {
-    return Effect.gen(this, function* () {
+    return Effect.gen({ self: this }, function* () {
       // "The village has spoken"
       yield* this.play('Day-vote/Vote-Death');
 
@@ -99,7 +99,7 @@ export class DayVoteResolution {
     dead: Player,
     generation: number
   ): Effect.Effect<void, StaleGame> {
-    return Effect.gen(this, function* () {
+    return Effect.gen({ self: this }, function* () {
       const partner = this.game.isPlayerLover(dead)
         ? this.game.getPartner(dead)
         : undefined;
@@ -134,7 +134,7 @@ export class DayVoteResolution {
   }
 
   private awaitHunterPick(): Effect.Effect<string | null, StaleGame> {
-    return Effect.gen(this, function* () {
+    return Effect.gen({ self: this }, function* () {
       const pick = yield* Deferred.make<string, StaleGame>();
       this.pendingHunterPick = pick;
       const hunter = this.game.getSpecialRolePlayer('HUNTER');

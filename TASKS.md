@@ -26,8 +26,6 @@ pnpm build
 ```
 
 Do not change the intentional nobody-dies tie rule until the dedicated rule task below.
-Do not wire the dead `socket-event-router.effect.ts` or `event-handlers.effect.ts` into
-production as part of unrelated work.
 
 ## P0: Restore a playable happy path
 
@@ -446,13 +444,9 @@ Do not enable Seer assignment until the complete private server-to-mobile path e
 
 ### 21. Repository cleanup after gameplay is stable
 
-- [ ] Complete relevant remaining plans: 012, 013, 015, 016, 017, 019, 020, and 021.
-- [ ] Do not complete plan 014 merely to repair dead Effect handlers unless the Effect
-      migration is actively resumed.
-- [ ] Reconcile or remove the parallel Effect socket handler implementation before it is
-      wired in; it currently lacks parity with live authorization and disconnect behavior.
-- [ ] Only switch the dev script to `index.effect.ts` after lifecycle, socket handlers,
-      restart, tests, and behavior all match the live entry point.
+- [ ] Complete relevant remaining plans: 012, 015, 016, 017, 019, 020, and 021.
+- [x] Remove the parallel Effect socket handler implementation (the `*.effect.ts`
+      files, deleted in the Effect 4 upgrade; plans 013 and 014 are moot).
 - [ ] Update `README.md`, `DOCUMENTATION.md`, `PLAN.md`, and `plans/README.md` to reflect
       the final supported roles, run commands, lifecycle, and completed work.
 

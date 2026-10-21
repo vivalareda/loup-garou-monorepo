@@ -36,10 +36,10 @@ export function awaitInGame<A>(
   generation: number,
   run: Effect.Effect<A, StaleGame>
 ): Effect.Effect<A, StaleGame> {
-  return Effect.flatMap(run, (value) =>
-    segmentsManager.isCurrentGeneration(generation)
-      ? Effect.succeed(value)
-      : Effect.fail(new StaleGame())
+  return Effect.filterOrFail(
+    run,
+    () => segmentsManager.isCurrentGeneration(generation),
+    () => new StaleGame()
   );
 }
 

@@ -51,7 +51,7 @@ export class NightDawnResolution {
     }
 
     this.pendingHunterPick = null;
-    Deferred.unsafeDone(pick, Effect.succeed(targetSid));
+    Deferred.doneUnsafe(pick, Effect.succeed(targetSid));
     return true;
   }
 
@@ -63,12 +63,12 @@ export class NightDawnResolution {
     const pick = this.pendingHunterPick;
     if (pick) {
       this.pendingHunterPick = null;
-      Deferred.unsafeDone(pick, Effect.fail(new StaleGame()));
+      Deferred.doneUnsafe(pick, Effect.fail(new StaleGame()));
     }
   }
 
   private resolveDawn(generation: number): Effect.Effect<void, StaleGame> {
-    return Effect.gen(this, function* () {
+    return Effect.gen({ self: this }, function* () {
       const audioManager = this.segmentsManager.audioManager;
       const specialScenarios = this.segmentsManager.specialScenarios;
 
@@ -138,7 +138,7 @@ export class NightDawnResolution {
   private hunterPickAndContinue(
     generation: number
   ): Effect.Effect<void, StaleGame> {
-    return Effect.gen(this, function* () {
+    return Effect.gen({ self: this }, function* () {
       const audioManager = this.segmentsManager.audioManager;
 
       // Pause until the socket handler feeds in the pick
@@ -198,7 +198,7 @@ export class NightDawnResolution {
   }
 
   private awaitHunterPick(): Effect.Effect<string | null, StaleGame> {
-    return Effect.gen(this, function* () {
+    return Effect.gen({ self: this }, function* () {
       const pick = yield* Deferred.make<string, StaleGame>();
       this.pendingHunterPick = pick;
       const hunter = this.game.getSpecialRolePlayer('HUNTER');

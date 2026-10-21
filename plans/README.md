@@ -30,14 +30,14 @@ execute the verification-baseline and least-risky first.
 | 008  | Fix `killHunterRevenge` double-kill on `processPendingDeaths` | P2 | M | — | DONE |
 | 009  | Add timeout to hunter `Deferred` (no infinite hang) | P2 | M | — | DONE |
 | 012  | Use per-field Zustand selectors in mobile (perf) | P2 | S | — | TODO |
-| 013  | Reconcile duplicate `GameState` Context.Tags (Effect landmine) | P2 | S | — | TODO |
+| 013  | Reconcile duplicate `GameState` Context.Tags (Effect landmine) | P2 | S | — | OBSOLETE (files deleted in the Effect 4 upgrade) |
 | 015  | Delete dead/duplicate code in `Game` (commented block, clones, alias) | P2 | S | — | TODO |
 | 017  | Broaden `.gitignore` + untrack `server.log` | P2 | S | — | TODO |
 | 018  | Add `check-types` + vitest to mobile and dashboard | P2 | M | 002 | TODO |
 | 020  | Fix stale `DOCUMENTATION.md` architecture section | P2 | S | — | TODO |
 | 022  | Add `.env.example` for server/dashboard + root `AGENTS.md` | P2 | S | — | DONE |
 | 025  | Surface `night:deaths-announced` to mobile (direction) | P2 | M | 010 | TODO |
-| 014  | Fix `event-handlers.effect.ts` call to nonexistent `handleHunterPlayerPick` | P3 | S | — | TODO |
+| 014  | Fix `event-handlers.effect.ts` call to nonexistent `handleHunterPlayerPick` | P3 | S | — | OBSOLETE (files deleted in the Effect 4 upgrade) |
 | 016  | Remove no-op `this.segmentsManager;` in witch-poison handler | P3 | S | — | TODO |
 | 019  | Align TypeScript versions across workspace + shared `tsconfig.base.json` | P3 | L | 002 | TODO |
 | 021  | Fix README references to nonexistent scripts | P3 | S | — | TODO |

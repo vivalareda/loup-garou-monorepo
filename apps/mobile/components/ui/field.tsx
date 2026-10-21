@@ -23,8 +23,15 @@ export function Field({
   return (
     <View className="w-full">
       <Text
-        className="mb-3 text-center text-sm uppercase tracking-[2px]"
-        style={{ color: palette.moonDim, fontFamily: 'Outfit_500Medium' }}
+        style={{
+          marginBottom: 12,
+          textAlign: 'center',
+          fontSize: 12,
+          letterSpacing: 2.5,
+          textTransform: 'uppercase',
+          color: palette.moonDim,
+          fontFamily: 'Outfit_500Medium',
+        }}
       >
         {label}
       </Text>

@@ -9,12 +9,11 @@ import {
   useFonts as useOutfit,
 } from '@expo-google-fonts/outfit';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // oxlint-disable-next-line import/no-unassigned-import -- NativeWind's stylesheet is loaded for its side effect: it registers the Tailwind classes
 import '../global.css';
 import React, { useEffect, useRef } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, StatusBar, View } from 'react-native';
 import { GlobalModal } from '@/components/global-modal';
 import { useSessionRecovery } from '@/hooks/use-session-recovery';
 import { setAndroidNavigationBar } from '@/lib/android-navigation-bar';
@@ -44,12 +43,15 @@ export default function RootLayout() {
   const hasMounted = useRef(false);
   const { colorScheme, isDarkColorScheme } = useColorScheme();
   const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false);
+
   const [cinzelLoaded] = useCinzel({ Cinzel_700Bold });
+
   const [outfitLoaded] = useOutfit({
     Outfit_400Regular,
     Outfit_500Medium,
     Outfit_600SemiBold,
   });
+
   const fontsReady = cinzelLoaded && outfitLoaded;
 
   // Reconnect/session-recovery listeners live at the root so they survive
@@ -84,8 +86,13 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-      <StatusBar style="light" />
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: palette.night }}>
+      <StatusBar
+        backgroundColor={palette.night}
+        barStyle="light-content"
+      />
+      <GestureHandlerRootView
+        style={{ flex: 1, backgroundColor: palette.night }}
+      >
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="join" />

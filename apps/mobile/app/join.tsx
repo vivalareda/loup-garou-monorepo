@@ -2,7 +2,6 @@ import { Link, Redirect, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Banner } from '@/components/ui/banner';
-import { FadeIn } from '@/components/ui/fade-in';
 import { Field } from '@/components/ui/field';
 import { ForestScreen } from '@/components/ui/forest-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -108,67 +107,65 @@ export default function JoinRoom() {
   return (
     <ForestScreen dismissKeyboard>
       <View className="flex-1 justify-end px-8 pb-10">
-        <FadeIn delayMs={80}>
-          <View className="w-full max-w-sm self-center">
-            {recoveryFailed && (
-              <Banner
-                message="Session précédente expirée — rejoignez la partie."
-                tone="warn"
-              />
-            )}
-            {joinError && <Banner message={joinError} tone="danger" />}
-
-            <Field
-              autoCapitalize="words"
-              label="Votre nom"
-              onChangeText={setName}
-              onSubmitEditing={handleJoinGame}
-              placeholder="Alex"
-              value={name}
+        <View className="w-full max-w-sm self-center">
+          {recoveryFailed && (
+            <Banner
+              message="Session précédente expirée — rejoignez la partie."
+              tone="warn"
             />
+          )}
+          {joinError && <Banner message={joinError} tone="danger" />}
 
-            <View className="mt-5">
-              <PrimaryButton
-                disabled={isJoining}
-                label={isJoining ? 'Connexion…' : 'Entrer dans la partie'}
-                onPress={handleJoinGame}
-              />
-            </View>
+          <Field
+            autoCapitalize="words"
+            label="Votre nom"
+            onChangeText={setName}
+            onSubmitEditing={handleJoinGame}
+            placeholder="Alex"
+            value={name}
+          />
 
-            <TouchableOpacity
-              accessibilityRole="button"
-              className="mt-5 items-center py-2"
-              onPress={handleChangeRoom}
-            >
-              <Text
-                style={{
-                  color: palette.moonDim,
-                  fontFamily: 'Outfit_500Medium',
-                  fontSize: 15,
-                  textDecorationLine: 'underline',
-                }}
-              >
-                Changer de partie
-              </Text>
-            </TouchableOpacity>
-
-            {isDev && (
-              <Link asChild href="/modal-test">
-                <TouchableOpacity className="mt-6 items-center py-2">
-                  <Text
-                    style={{
-                      color: palette.bark,
-                      fontFamily: 'Outfit_400Regular',
-                      fontSize: 13,
-                    }}
-                  >
-                    Test modal
-                  </Text>
-                </TouchableOpacity>
-              </Link>
-            )}
+          <View className="mt-5">
+            <PrimaryButton
+              disabled={isJoining}
+              label={isJoining ? 'Connexion…' : 'Entrer dans la partie'}
+              onPress={handleJoinGame}
+            />
           </View>
-        </FadeIn>
+
+          <TouchableOpacity
+            accessibilityRole="button"
+            className="mt-5 items-center py-2"
+            onPress={handleChangeRoom}
+          >
+            <Text
+              style={{
+                color: palette.moonDim,
+                fontFamily: 'Outfit_500Medium',
+                fontSize: 15,
+                textDecorationLine: 'underline',
+              }}
+            >
+              Changer de partie
+            </Text>
+          </TouchableOpacity>
+
+          {isDev && (
+            <Link asChild href="/modal-test">
+              <TouchableOpacity className="mt-6 items-center py-2">
+                <Text
+                  style={{
+                    color: palette.bark,
+                    fontFamily: 'Outfit_400Regular',
+                    fontSize: 13,
+                  }}
+                >
+                  Test modal
+                </Text>
+              </TouchableOpacity>
+            </Link>
+          )}
+        </View>
       </View>
     </ForestScreen>
   );

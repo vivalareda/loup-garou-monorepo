@@ -1,13 +1,44 @@
+import type { ReactNode } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { palette } from '@/lib/theme';
+
+type ButtonVariant = 'primary' | 'ghost' | 'danger';
 
 type PrimaryButtonProps = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
-  variant?: 'primary' | 'ghost' | 'danger';
+  variant?: ButtonVariant;
   accessibilityLabel?: string;
 };
+
+function buttonBackground(variant: ButtonVariant, disabled: boolean) {
+  if (variant === 'danger') {
+    return palette.danger;
+  }
+
+  if (variant === 'ghost') {
+    return 'transparent';
+  }
+
+  if (disabled) {
+    return 'rgba(230, 231, 212, 0.28)';
+  }
+
+  return palette.moon;
+}
+
+function buttonTextColor(variant: ButtonVariant) {
+  if (variant === 'primary') {
+    return palette.ink;
+  }
+
+  if (variant === 'danger') {
+    return palette.snow;
+  }
+
+  return palette.moon;
+}
 
 export function PrimaryButton({
   label,
@@ -16,22 +47,6 @@ export function PrimaryButton({
   variant = 'primary',
   accessibilityLabel,
 }: PrimaryButtonProps) {
-  const backgroundColor =
-    variant === 'primary'
-      ? disabled
-        ? 'rgba(230, 231, 212, 0.28)'
-        : palette.moon
-      : variant === 'danger'
-        ? palette.danger
-        : 'transparent';
-
-  const textColor =
-    variant === 'primary'
-      ? palette.ink
-      : variant === 'danger'
-        ? palette.snow
-        : palette.moon;
-
   return (
     <TouchableOpacity
       accessibilityLabel={accessibilityLabel ?? label}
@@ -42,7 +57,7 @@ export function PrimaryButton({
       style={{
         width: '100%',
         borderRadius: 14,
-        backgroundColor,
+        backgroundColor: buttonBackground(variant, disabled),
         borderWidth: variant === 'ghost' ? 1.5 : 0,
         borderColor:
           variant === 'ghost' ? 'rgba(230, 231, 212, 0.35)' : 'transparent',
@@ -54,7 +69,7 @@ export function PrimaryButton({
       <Text
         className="text-center text-lg"
         style={{
-          color: textColor,
+          color: buttonTextColor(variant),
           fontFamily: 'Outfit_600SemiBold',
           letterSpacing: 0.3,
         }}
@@ -108,7 +123,7 @@ export function StepperButton({ label, onPress, disabled }: IconButtonProps) {
   );
 }
 
-export function Panel({ children }: { children: React.ReactNode }) {
+export function Panel({ children }: { children: ReactNode }) {
   return (
     <View
       style={{

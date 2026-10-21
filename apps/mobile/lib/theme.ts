@@ -16,8 +16,8 @@ export const palette = {
   warnSoft: 'rgba(212, 162, 90, 0.2)',
   success: '#6F9B72',
   successSoft: 'rgba(111, 155, 114, 0.2)',
-  overlay: 'rgba(8, 14, 18, 0.55)',
-  panel: 'rgba(20, 32, 40, 0.82)',
-  panelBorder: 'rgba(230, 231, 212, 0.16)',
+  overlay: 'rgba(8, 14, 18, 0.72)',
+  panel: 'rgba(14, 24, 30, 0.92)',
+  panelBorder: 'rgba(230, 231, 212, 0.22)',
   ink: '#0B1216',
 } as const;

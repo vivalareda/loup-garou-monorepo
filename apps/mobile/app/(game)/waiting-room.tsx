@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Banner } from '@/components/ui/banner';
-import { FadeIn } from '@/components/ui/fade-in';
 import { ForestScreen } from '@/components/ui/forest-screen';
 import { Panel, PrimaryButton, StepperButton } from '@/components/ui/primary-button';
 import { formatRoomCode } from '@/hooks/room';
@@ -153,115 +152,131 @@ export default function WaitingRoom() {
         className="flex-1"
         contentContainerStyle={{
           flexGrow: 1,
-          justifyContent: 'center',
+          justifyContent: 'flex-end',
           paddingHorizontal: 24,
-          paddingVertical: 32,
+          paddingTop: 48,
+          paddingBottom: 28,
         }}
       >
-        <FadeIn>
-          <View className="w-full max-w-md gap-6 self-center">
-            {roomCode && (
-              <Panel>
-                <Text
-                  className="text-center text-xs uppercase tracking-[3px]"
-                  style={{
-                    color: palette.moonDim,
-                    fontFamily: 'Outfit_500Medium',
-                  }}
-                >
-                  Code de la partie
-                </Text>
-                <Text
-                  className="mt-2 text-center text-4xl tracking-[6px]"
-                  style={{
-                    color: palette.moon,
-                    fontFamily: 'Cinzel_700Bold',
-                  }}
-                  selectable
-                >
-                  {formatRoomCode(roomCode)}
-                </Text>
-                <Text
-                  className="mt-3 text-center text-sm"
-                  style={{
-                    color: palette.moonDim,
-                    fontFamily: 'Outfit_400Regular',
-                  }}
-                >
-                  Partagez ce code avec vos amis
-                </Text>
-              </Panel>
-            )}
-
-            {requiredPlayerCount !== null && (
-              <View className="items-center">
-                <Text
-                  style={{
-                    color: palette.snow,
-                    fontFamily: 'Cinzel_700Bold',
-                    fontSize: 42,
-                  }}
-                >
-                  {joinedCount}
-                  <Text
-                    style={{
-                      color: palette.moonDim,
-                      fontFamily: 'Outfit_400Regular',
-                      fontSize: 28,
-                    }}
-                  >
-                    /{requiredPlayerCount}
-                  </Text>
-                </Text>
-                <Text
-                  className="mt-1 text-sm uppercase tracking-[2px]"
-                  style={{
-                    color: palette.moonDim,
-                    fontFamily: 'Outfit_500Medium',
-                  }}
-                >
-                  joueurs connectés
-                </Text>
-              </View>
-            )}
-
-            {isHost && requiredPlayerCount !== null && (
-              <HostControls
-                joinedCount={joinedCount}
-                requiredPlayerCount={requiredPlayerCount}
-              />
-            )}
-
-            {actionError && <Banner message={actionError} tone="danger" />}
-
+        <View className="w-full max-w-md gap-5 self-center">
+          {roomCode && (
             <Panel>
               <Text
-                className="mb-3 text-center text-xs uppercase tracking-[2px]"
                 style={{
+                  textAlign: 'center',
+                  fontSize: 11,
+                  letterSpacing: 3,
+                  textTransform: 'uppercase',
                   color: palette.moonDim,
                   fontFamily: 'Outfit_500Medium',
                 }}
               >
-                Dans la salle
+                Code de la partie
               </Text>
-              <PlayerChip isYou name={player.name} />
-              {others.map((p) => (
-                <PlayerChip key={p.socketId} name={p.name} />
-              ))}
-              {others.length === 0 && (
+              <Text
+                selectable
+                style={{
+                  marginTop: 8,
+                  textAlign: 'center',
+                  fontSize: 36,
+                  letterSpacing: 6,
+                  color: palette.moon,
+                  fontFamily: 'Cinzel_700Bold',
+                }}
+              >
+                {formatRoomCode(roomCode)}
+              </Text>
+              <Text
+                style={{
+                  marginTop: 10,
+                  textAlign: 'center',
+                  fontSize: 14,
+                  color: palette.moonDim,
+                  fontFamily: 'Outfit_400Regular',
+                }}
+              >
+                Partagez ce code avec vos amis
+              </Text>
+            </Panel>
+          )}
+
+          {requiredPlayerCount !== null && (
+            <View className="items-center">
+              <Text
+                style={{
+                  color: palette.snow,
+                  fontFamily: 'Cinzel_700Bold',
+                  fontSize: 40,
+                }}
+              >
+                {joinedCount}
                 <Text
-                  className="mt-2 text-center text-sm"
                   style={{
                     color: palette.moonDim,
                     fontFamily: 'Outfit_400Regular',
+                    fontSize: 26,
                   }}
                 >
-                  Attendez que d'autres joueurs vous rejoignent
+                  /{requiredPlayerCount}
                 </Text>
-              )}
-            </Panel>
-          </View>
-        </FadeIn>
+              </Text>
+              <Text
+                style={{
+                  marginTop: 4,
+                  fontSize: 12,
+                  letterSpacing: 2,
+                  textTransform: 'uppercase',
+                  color: palette.moonDim,
+                  fontFamily: 'Outfit_500Medium',
+                }}
+              >
+                joueurs connectés
+              </Text>
+            </View>
+          )}
+
+          {isHost && requiredPlayerCount !== null && (
+            <HostControls
+              joinedCount={joinedCount}
+              requiredPlayerCount={requiredPlayerCount}
+            />
+          )}
+
+          {actionError && <Banner message={actionError} tone="danger" />}
+
+          <Panel>
+            <Text
+              style={{
+                marginBottom: 12,
+                textAlign: 'center',
+                fontSize: 11,
+                letterSpacing: 2,
+                textTransform: 'uppercase',
+                color: palette.moonDim,
+                fontFamily: 'Outfit_500Medium',
+              }}
+            >
+              Dans la salle
+            </Text>
+            <PlayerChip isYou name={player.name} />
+            {others.map((p) => (
+              <PlayerChip key={p.socketId} name={p.name} />
+            ))}
+            {others.length === 0 && (
+              <Text
+                style={{
+                  marginTop: 8,
+                  textAlign: 'center',
+                  fontSize: 14,
+                  color: palette.moonDim,
+                  fontFamily: 'Outfit_400Regular',
+                }}
+              >
+                Attendez que d'autres joueurs vous rejoignent
+              </Text>
+            )}
+          </Panel>
+        </View>
       </ScrollView>
     </ForestScreen>
   );

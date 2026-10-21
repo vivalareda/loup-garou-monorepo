@@ -50,7 +50,9 @@ describe('Game.handleDisconnect', () => {
 
     expect(p.isAlive).toBe(false);
     // alert:player-is-dead is sent to the disconnected socket
-    expect(socketEmit.get('a-sid')).toHaveBeenCalledWith('alert:player-is-dead');
+    expect(socketEmit.get('a-sid')).toHaveBeenCalledWith(
+      'alert:player-is-dead'
+    );
     // lobby:player-died is broadcast to everyone
     expect(ioEmitSpy).toHaveBeenCalledWith('lobby:player-died', 'a-sid');
   });
@@ -121,9 +123,9 @@ describe('Game.handleDisconnect', () => {
       (c) => c[0] === 'lobby:player-died'
     ).length;
 
-    const firstSocketEmits = socketEmit.get('a-sid')?.mock.calls.filter(
-      (c) => c[0] === 'alert:player-is-dead'
-    ).length;
+    const firstSocketEmits = socketEmit
+      .get('a-sid')
+      ?.mock.calls.filter((c) => c[0] === 'alert:player-is-dead').length;
 
     // Second disconnect (adapter double-fire)
     game.handleDisconnect('a-sid');
@@ -132,9 +134,9 @@ describe('Game.handleDisconnect', () => {
       (c) => c[0] === 'lobby:player-died'
     ).length;
 
-    const secondSocketEmits = socketEmit.get('a-sid')?.mock.calls.filter(
-      (c) => c[0] === 'alert:player-is-dead'
-    ).length;
+    const secondSocketEmits = socketEmit
+      .get('a-sid')
+      ?.mock.calls.filter((c) => c[0] === 'alert:player-is-dead').length;
 
     expect(p.isAlive).toBe(false);
     expect(firstDeathEmits).toBe(1);

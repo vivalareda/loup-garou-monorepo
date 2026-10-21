@@ -14,21 +14,28 @@ const url = roomUrl(
   process.env.ACCESS_TOKEN || undefined
 );
 
-const names = process.argv.slice(2).length >= 6
-  ? process.argv.slice(2)
-  : ['agent-1', 'agent-2', 'agent-3', 'agent-4', 'agent-5', 'agent-6'];
+const names =
+  process.argv.slice(2).length >= 6
+    ? process.argv.slice(2)
+    : ['agent-1', 'agent-2', 'agent-3', 'agent-4', 'agent-5', 'agent-6'];
 
-const clients: Array<{ name: string; socket: RealtimeClient; acted: string }> = [];
+const clients: Array<{ name: string; socket: RealtimeClient; acted: string }> =
+  [];
 let started = false;
 let finished = false;
 
 const pick = (players: SnapshotPlayer[], selfId: string) => {
-  const alive = players.filter((player) => player.isAlive && player.socketId !== selfId);
+  const alive = players.filter(
+    (player) => player.isAlive && player.socketId !== selfId
+  );
 
   return alive[Math.floor(Math.random() * alive.length)];
 };
 
-const act = (client: (typeof clients)[number], snapshot: PlayerGameSnapshot) => {
+const act = (
+  client: (typeof clients)[number],
+  snapshot: PlayerGameSnapshot
+) => {
   if (finished || !snapshot.pendingPrompt || !snapshot.self.socketId) return;
   const prompt = snapshot.pendingPrompt;
   const key = `${snapshot.phase}:${prompt.kind}`;
@@ -40,10 +47,21 @@ const act = (client: (typeof clients)[number], snapshot: PlayerGameSnapshot) => 
   const target = pick(snapshot.players, selfId);
 
   if (prompt.kind === 'CUPID') {
-    const choices = snapshot.players.filter((p) => p.isAlive && p.socketId !== selfId).slice(0, 2);
-    client.socket.emit('cupid:lovers-pick', choices.map((p) => p.socketId));
+    const choices = snapshot.players
+      .filter((p) => p.isAlive && p.socketId !== selfId)
+      .slice(0, 2);
+    client.socket.emit(
+      'cupid:lovers-pick',
+      choices.map((p) => p.socketId)
+    );
   } else if (prompt.kind === 'WEREWOLF' || prompt.kind === 'DAY-VOTE') {
-    if (target) client.socket.emit(prompt.kind === 'WEREWOLF' ? 'werewolf:player-voted' : 'day:player-voted', target.socketId);
+    if (target)
+      client.socket.emit(
+        prompt.kind === 'WEREWOLF'
+          ? 'werewolf:player-voted'
+          : 'day:player-voted',
+        target.socketId
+      );
   } else if (prompt.kind === 'WITCH-HEAL') {
     client.socket.emit('witch:skipped-heal');
   } else if (prompt.kind === 'WITCH-POISON') {
@@ -63,22 +81,34 @@ for (const name of names) {
     socket.emit('player:join', name);
     setTimeout(() => {
       socket.emit('agent:get-state', (snapshot: PlayerGameSnapshot) => {
-        process.stdout.write(`${JSON.stringify({ agent: name, ...snapshot })}\\n`);
+        process.stdout.write(
+          `${JSON.stringify({ agent: name, ...snapshot })}\\n`
+        );
         act(client, snapshot);
       });
     }, 50);
   });
 
-  const requestState = () => socket.emit('agent:get-state', (snapshot: PlayerGameSnapshot) => {
-    client.acted = '';
-    process.stdout.write(`${JSON.stringify({ agent: name, ...snapshot })}\\n`);
+  const requestState = () =>
+    socket.emit('agent:get-state', (snapshot: PlayerGameSnapshot) => {
+      client.acted = '';
+      process.stdout.write(
+        `${JSON.stringify({ agent: name, ...snapshot })}\\n`
+      );
 
-    if (snapshot.phase === 'FINISHED') finished = true;
-    else act(client, snapshot);
-  });
+      if (snapshot.phase === 'FINISHED') finished = true;
+      else act(client, snapshot);
+    });
 
   socket.on('game:phase-changed', requestState);
-  const promptEvents: (keyof ServerToClientEvents)[] = ['cupid:pick-required', 'werewolf:pick-required', 'witch:can-heal', 'witch:pick-poison-player', 'hunter:pick-required', 'day:voting-phase-start'];
+  const promptEvents: (keyof ServerToClientEvents)[] = [
+    'cupid:pick-required',
+    'werewolf:pick-required',
+    'witch:can-heal',
+    'witch:pick-poison-player',
+    'hunter:pick-required',
+    'day:voting-phase-start',
+  ];
 
   for (const promptEvent of promptEvents) {
     socket.on(promptEvent, requestState);
@@ -96,7 +126,9 @@ for (const name of names) {
     act(client, snapshot);
   });
   socket.on('lobby:player-data', () => {
-    socket.emit('agent:get-state', (snapshot: PlayerGameSnapshot) => act(client, snapshot));
+    socket.emit('agent:get-state', (snapshot: PlayerGameSnapshot) =>
+      act(client, snapshot)
+    );
   });
   socket.on('lobby:villagers-list', () => {
     if (!started && clients.length === names.length) {

@@ -112,7 +112,11 @@ describe('day discussion and countdowns', () => {
 
     await segmentsManager.getGameActions().dayAction();
 
-    expect(ioEmit).toHaveBeenCalledWith('game:countdown', 'DAY-DISCUSSION', 5000);
+    expect(ioEmit).toHaveBeenCalledWith(
+      'game:countdown',
+      'DAY-DISCUSSION',
+      5000
+    );
     expect(emittedEvents()).not.toContain('day:voting-phase-start');
     expect(segmentsManager.getGameActions().isDayVotingOpen()).toBe(false);
 

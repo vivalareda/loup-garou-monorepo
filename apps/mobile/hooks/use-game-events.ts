@@ -22,7 +22,8 @@ const ACTION_ERROR_MESSAGES: Record<string, string> = {
   'Seer action is not allowed now': 'La voyante ne peut pas agir maintenant.',
   'Vote is out of date': 'Ce vote est obsolète.',
   'Werewolf vote is not allowed now': 'Le vote des loups-garous est fermé.',
-  'Witch heal is not allowed now': 'La sorcière ne peut pas soigner maintenant.',
+  'Witch heal is not allowed now':
+    'La sorcière ne peut pas soigner maintenant.',
   'Witch poison is not allowed now':
     'La sorcière ne peut pas empoisonner maintenant.',
 };

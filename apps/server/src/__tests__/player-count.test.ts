@@ -137,8 +137,12 @@ describe('PLAYER_COUNT driven auto-start', () => {
       new SpecialScenarios(game, audioManager)
     );
     const eventsActions = new EventsActions(game, segmentsManager, mockIo);
-    new GameEvents(game, segmentsManager, mockIo, eventsActions)
-      .setupSocketHandlers();
+    new GameEvents(
+      game,
+      segmentsManager,
+      mockIo,
+      eventsActions
+    ).setupSocketHandlers();
   });
 
   afterEach(() => {

@@ -24,7 +24,7 @@ import { GameEvents } from '@/server/server-events';
 export class SocketIO extends Context.Tag('SocketIO')<
   SocketIO,
   Server<ClientToServerEvents, ServerToClientEvents>
->() { }
+>() {}
 
 /**
  * HTTP Server service - wraps the existing HTTP server
@@ -32,7 +32,7 @@ export class SocketIO extends Context.Tag('SocketIO')<
 export class HttpServerService extends Context.Tag('HttpServer')<
   HttpServerService,
   HttpServer
->() { }
+>() {}
 
 /**
  * Game state service - manages all game-related instances
@@ -49,7 +49,7 @@ export class GameState extends Context.Tag('GameState')<
     readonly gameEvents: GameEvents;
     readonly loversAlertCount: Ref.Ref<number>;
   }
->() { }
+>() {}
 
 // =============================================================================
 // Layers (simple wrappers - no resource management needed, already exists)

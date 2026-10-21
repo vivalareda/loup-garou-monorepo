@@ -260,9 +260,7 @@ export class Game {
     const forcedHunterName = process.env.DEV_FORCE_HUNTER;
 
     const forcedHunterPlayer = forcedHunterName
-      ? [...this.players.values()].find(
-          (p) => p.getName() === forcedHunterName
-        )
+      ? [...this.players.values()].find((p) => p.getName() === forcedHunterName)
       : undefined;
 
     if (forcedHunterPlayer) {

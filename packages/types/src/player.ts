@@ -10,15 +10,19 @@ export type GamePlayer = {
 };
 
 export type PlayerGetters = {
-  [K in keyof GamePlayer as K extends 'type' | 'isAlive' | 'sessionToken'
-    ? never
-    : `get${Capitalize<K>}`]: () => GamePlayer[K];
+  [
+    K in keyof GamePlayer as K extends 'type' | 'isAlive' | 'sessionToken'
+      ? never
+      : `get${Capitalize<K>}`
+  ]: () => GamePlayer[K];
 };
 
 export type PlayerSetters = {
-  [K in keyof GamePlayer as K extends 'isAlive' | 'role'
-    ? `set${Capitalize<K>}`
-    : never]: (value: GamePlayer[K]) => void;
+  [
+    K in keyof GamePlayer as K extends 'isAlive' | 'role'
+      ? `set${Capitalize<K>}`
+      : never
+  ]: (value: GamePlayer[K]) => void;
 };
 
 export type Player = GamePlayer | WaitingRoomPlayer;

@@ -9,7 +9,6 @@
     "deploy": "pnpm --filter dashboard build:worker && wrangler deploy",
     "cf-typegen": "wrangler types --strict-vars=false",
     "check-types": "tsc --noEmit",
-    "lint": "biome lint .",
     "test": "vitest",
     "test:run": "vitest run"
   },

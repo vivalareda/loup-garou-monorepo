@@ -1,4 +1,11 @@
-import { beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from 'vitest';
 import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
@@ -41,7 +48,11 @@ describe('Post day-vote death scenarios (notes.md)', () => {
     playAudioSpy = vi.spyOn(audioManager, 'playAudio');
   });
 
-  const addPlayer = (name: string, sid: string, role: Parameters<Player['setRole']>[0]) => {
+  const addPlayer = (
+    name: string,
+    sid: string,
+    role: Parameters<Player['setRole']>[0]
+  ) => {
     const player = game.addPlayer(name, sid);
     player.setRole(role);
     game.setPlayerTeams(player);

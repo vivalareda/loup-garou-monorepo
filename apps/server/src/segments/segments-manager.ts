@@ -464,7 +464,9 @@ export class SegmentsManager {
   // One transition per segment: a second call while this segment is
   // already ending (a wolf's repeated agreeing vote, a deadline racing the
   // last action) is a no-op
-  async advanceSegment({ playEndAudio = true }: { playEndAudio?: boolean } = {}) {
+  async advanceSegment({
+    playEndAudio = true,
+  }: { playEndAudio?: boolean } = {}) {
     if (this.endingRun === this.segmentRun) {
       return;
     }

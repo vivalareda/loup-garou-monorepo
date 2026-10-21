@@ -98,8 +98,7 @@ describe('disconnect grace period and reconnection', () => {
   };
 
   const setSegment = (type: string) => {
-    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted =
-      true;
+    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
 
     const index = segmentsManager.segments.findIndex(
       (segment) => segment.type === type
@@ -354,8 +353,7 @@ describe('disconnect grace period and reconnection', () => {
     addPlayer('Wolf', 'wolf-sid', 'WEREWOLF');
     const villager = addPlayer('A', 'a-sid', 'VILLAGER');
     game.alertWinnersAndLosers('villagers');
-    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted =
-      true;
+    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
     (segmentsManager as unknown as { gameFinished: boolean }).gameFinished =
       true;
 
@@ -498,7 +496,7 @@ describe('disconnect grace period and reconnection', () => {
     expect(wolf.isAlive).toBe(true);
   });
 
-  it('does not let a name join steal a connected player\'s seat', () => {
+  it("does not let a name join steal a connected player's seat", () => {
     const wolf = addPlayer('Alice', 'alice-sid', 'WEREWOLF');
     addPlayer('B', 'b-sid', 'VILLAGER');
     setSegment('WEREWOLF');

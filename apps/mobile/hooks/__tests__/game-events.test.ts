@@ -55,9 +55,8 @@ describe('registerGameEventListeners', () => {
   });
 
   const register = async () => {
-    const { registerGameEventListeners } = await import(
-      '@/hooks/use-game-events'
-    );
+    const { registerGameEventListeners } =
+      await import('@/hooks/use-game-events');
 
     return registerGameEventListeners(router);
   };

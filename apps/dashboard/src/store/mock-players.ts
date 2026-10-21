@@ -561,9 +561,7 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
   },
 
   skipHeal: (playerId: string) => {
-    console.log(
-      '🧙‍♀️ [WITCH STORE] Skipping heal - emitting witch:skipped-heal'
-    );
+    console.log('🧙‍♀️ [WITCH STORE] Skipping heal - emitting witch:skipped-heal');
     const player = get().players.get(playerId);
 
     if (player?.socket) {
@@ -619,7 +617,9 @@ export const useMockPlayerStore = create<MockPlayerStore>((set, get) => ({
 
   // Day vote actions
   voteDayPlayer: (playerId: string, targetPlayerId: string) => {
-    console.log(`☀️ [DAY VOTE] Player ${playerId} voting for ${targetPlayerId}`);
+    console.log(
+      `☀️ [DAY VOTE] Player ${playerId} voting for ${targetPlayerId}`
+    );
     const player = get().players.get(playerId);
 
     if (player?.socket) {

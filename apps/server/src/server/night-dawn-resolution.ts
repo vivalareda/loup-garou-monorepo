@@ -159,7 +159,9 @@ export class NightDawnResolution {
       );
 
       if (targetSid === null) {
-        console.warn('Night-dawn hunter pick timed out — skipping revenge kill');
+        console.warn(
+          'Night-dawn hunter pick timed out — skipping revenge kill'
+        );
 
         if (this.segmentsManager.isGameOver()) {
           return;

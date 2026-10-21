@@ -8,7 +8,7 @@
   "compatibility_flags": ["nodejs_compat"],
   // One GameRoom per room code; each holds its game in memory only
   "durable_objects": {
-    "bindings": [{ "name": "GAME_ROOM", "class_name": "GameRoom" }]
+    "bindings": [{ "name": "GAME_ROOM", "class_name": "GameRoom" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GameRoom"] }],
   // The built dashboard, same origin as the game. Only /room/* runs the
@@ -17,7 +17,7 @@
     "directory": "../dashboard/dist-worker",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/room/*"]
+    "run_worker_first": ["/room/*"],
   },
   // Game config, read through process.env like on Node (same defaults).
   // The per-segment timeouts (WEREWOLF_TIMEOUT_MS, ...) are left to their
@@ -33,7 +33,7 @@
     "DISCONNECT_GRACE_MS": "90000",
     "DAY_DISCUSSION_MS": "120000",
     "ENABLE_ADMIN_EVENTS": "false",
-    "MAX_CONNECTIONS_PER_ROOM": "32"
+    "MAX_CONNECTIONS_PER_ROOM": "32",
   },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
 }

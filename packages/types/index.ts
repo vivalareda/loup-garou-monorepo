@@ -1,8 +1,4 @@
-export type {
-  DeathCause,
-  DeathInfo,
-  PendingDeath,
-} from './src/death';
+export type { DeathCause, DeathInfo, PendingDeath } from './src/death';
 
 export {
   type ClientToServerEvents,
@@ -32,11 +28,7 @@ export {
 
 export { getRoleDescription, type Role } from './src/role';
 
-export type {
-  Segment,
-  SegmentType,
-  segments,
-} from './src/segment';
+export type { Segment, SegmentType, segments } from './src/segment';
 
 export {
   type AckFrame,

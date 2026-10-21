@@ -100,10 +100,10 @@ describe('Server-side role validation', () => {
   };
 
   const setSegment = (type: string) => {
-    (
-      segmentsManager as unknown as { gameStarted: boolean }
-    ).gameStarted = true;
-    const index = segmentsManager.segments.findIndex((segment) => segment.type === type);
+    (segmentsManager as unknown as { gameStarted: boolean }).gameStarted = true;
+    const index = segmentsManager.segments.findIndex(
+      (segment) => segment.type === type
+    );
 
     if (index !== -1) {
       segmentsManager.currentSegment = index;

@@ -574,9 +574,9 @@ export function PlayerView() {
       <WitchHealModal
         isOpen={Boolean(
           activePlayer.showHealModal &&
-            activePlayer.player &&
-            isGamePlayer(activePlayer.player) &&
-            activePlayer.player.isAlive
+          activePlayer.player &&
+          isGamePlayer(activePlayer.player) &&
+          activePlayer.player.isAlive
         )}
         onClose={() => closeHealModal(activePlayer.id)}
         onHeal={() => healPlayer(activePlayer.id)}
@@ -590,9 +590,9 @@ export function PlayerView() {
         currentPlayerName={activePlayer.name}
         isOpen={Boolean(
           activePlayer.showPoisonModal &&
-            activePlayer.player &&
-            isGamePlayer(activePlayer.player) &&
-            activePlayer.player.isAlive
+          activePlayer.player &&
+          isGamePlayer(activePlayer.player) &&
+          activePlayer.player.isAlive
         )}
         onClose={() => closePoisonModal(activePlayer.id)}
         onPoison={(targetPlayerId: string) =>

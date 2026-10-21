@@ -19,7 +19,8 @@ This is a pnpm + turborepo monorepo for a real-time Werewolf (Loup-Garou) game:
 | Dev mobile | `pnpm dev:mobile`                |
 | Dev dashboard | `pnpm --filter dashboard dev`¹ |
 | Typecheck  | `pnpm check-types` (turbo fans out to all packages) |
-| Lint       | `pnpm lint`                      |
+| Lint       | `pnpm lint` (oxlint, root only)  |
+| Format     | `pnpm format` (oxfmt)            |
 | Build      | `pnpm build`                     |
 | Server tests | `pnpm --filter server test:run` |
 | Client tests | `pnpm --filter @repo/realtime test:run` |
@@ -158,7 +159,7 @@ While the migration is in progress:
 ## Conventions
 
 - Strict TS mode is not enforced workspace-wide (root `tsconfig.json` only sets `strictNullChecks`). Plans to add `tsconfig.base.json` with `strict: true` are tracked in `plans/`.
-- Biome + ultracite handle formatting (`biome.jsonc` at root); lint-staged runs `ultracite format` on staged files.
+- Oxlint (`.oxlintrc.json`, with the vendored anti-slop plugins in `tools/oxlint/anti-slop`) lints and oxfmt (`.oxfmtrc.json`) formats; run `pnpm lint` / `pnpm format` from the root. lint-staged runs `oxfmt` on staged files.
 - Socket events live in `packages/types/src/event.ts` (`ClientToServerEvents`, `ServerToClientEvents`). Adding a new event requires editing that file.
 
 ## Per-package quirks

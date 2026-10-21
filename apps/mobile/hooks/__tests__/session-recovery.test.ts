@@ -202,9 +202,8 @@ describe('registerSessionRecovery', () => {
   });
 
   const register = async () => {
-    const { registerSessionRecovery } = await import(
-      '@/hooks/use-session-recovery'
-    );
+    const { registerSessionRecovery } =
+      await import('@/hooks/use-session-recovery');
 
     return registerSessionRecovery(router);
   };

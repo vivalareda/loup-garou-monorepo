@@ -1,12 +1,5 @@
 /** biome-ignore-all lint/suspicious/noEmptyBlockStatements: <mock file> */
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  test,
-  vi,
-} from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Game } from '@/core/game';
 import type { SpecialScenarios } from '@/core/special-scenarios';
 import type { AudioManager } from '@/segments/audio-manager';
@@ -31,12 +24,16 @@ describe('SegmentsManager', () => {
           { getSocketId: () => 'werewolf1-socket-id' },
           { getSocketId: () => 'werewolf2-socket-id' },
         ]),
-      getSpecialRolePlayer: vi.fn().mockReturnValue({ getSocketId: () => 'cupid-sid' }),
-      getAlivePlayers: vi.fn().mockReturnValue([
-        { getSocketId: () => 'cupid-sid' },
-        { getSocketId: () => 'p2-sid' },
-        { getSocketId: () => 'p3-sid' },
-      ]),
+      getSpecialRolePlayer: vi
+        .fn()
+        .mockReturnValue({ getSocketId: () => 'cupid-sid' }),
+      getAlivePlayers: vi
+        .fn()
+        .mockReturnValue([
+          { getSocketId: () => 'cupid-sid' },
+          { getSocketId: () => 'p2-sid' },
+          { getSocketId: () => 'p3-sid' },
+        ]),
       setLovers: vi.fn(),
       canWitchHeal: vi.fn().mockReturnValue(true),
       canWitchPoison: vi.fn().mockReturnValue(true),
@@ -127,7 +124,9 @@ describe('SegmentsManager', () => {
     try {
       segmentsManager.startGame();
       (
-        segmentsManager as unknown as { scheduleDeadline: (segment: string) => void }
+        segmentsManager as unknown as {
+          scheduleDeadline: (segment: string) => void;
+        }
       ).scheduleDeadline('CUPID');
       await vi.advanceTimersByTimeAsync(1000);
 

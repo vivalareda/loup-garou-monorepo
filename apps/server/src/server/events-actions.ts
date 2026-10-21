@@ -73,7 +73,9 @@ export class EventsActions {
     const voter = this.game.getPlayerBySocketId(voterSid);
 
     if (!voter || !voter.isAlive) {
-      console.warn(`day:player-voted rejected from ${voterSid} (voter not alive)`);
+      console.warn(
+        `day:player-voted rejected from ${voterSid} (voter not alive)`
+      );
 
       return;
     }

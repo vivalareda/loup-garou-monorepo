@@ -3,17 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "scripts": {
-    "check-types": "tsc --noEmit",
-    "lint": "biome check . --write",
-    "test": "vitest",
-    "test:run": "vitest run"
-  },
+  "main": "./index.ts",
+  "types": "./index.ts",
   "exports": {
     ".": "./index.ts"
   },
-  "main": "./index.ts",
-  "types": "./index.ts",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
   "dependencies": {
     "@repo/types": "workspace:*"
   },

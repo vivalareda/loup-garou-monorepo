@@ -3,16 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "scripts": {
-    "build": "tsc",
-    "check-types": "tsc --noEmit",
-    "lint": "biome check . --write"
-  },
+  "main": "./index.ts",
+  "types": "./index.ts",
   "exports": {
     ".": "./index.ts"
   },
-  "main": "./index.ts",
-  "types": "./index.ts",
+  "scripts": {
+    "build": "tsc",
+    "check-types": "tsc --noEmit"
+  },
   "devDependencies": {
     "@types/node": "^22.17.2",
     "tsx": "^4.20.4",

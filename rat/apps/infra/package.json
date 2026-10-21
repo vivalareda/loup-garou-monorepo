@@ -1,0 +1,25 @@
+{
+  "name": "@loup/infra",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Alchemy stack stub for the Loup-Garou Cloudflare Worker (replaces wrangler deploy).",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check": "pnpm run typecheck",
+    "test": "node -e \"console.log('infra: stub — see alchemy.run.ts')\"",
+    "plan": "node ./scripts/not-yet.mjs plan",
+    "deploy": "node ./scripts/not-yet.mjs deploy",
+    "dev": "node ./scripts/not-yet.mjs dev",
+    "destroy": "node ./scripts/not-yet.mjs destroy"
+  },
+  "dependencies": {
+    "@loup/worker": "workspace:*",
+    "alchemy": "2.0.0-beta.83",
+    "effect": "4.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2"
+  }
+}

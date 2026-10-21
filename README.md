@@ -22,10 +22,12 @@ loup-garou/
 ├── apps/
 │   ├── mobile/          # React Native mobile app (Expo)
 │   ├── server/          # Node.js backend (raw WebSockets via `ws`)
+│   ├── worker/          # Cloudflare Worker (wrangler; to be replaced by Alchemy)
 │   └── dashboard/       # React web dashboard for testing
 ├── packages/
 │   ├── types/           # Shared TypeScript types + wire protocol
 │   └── realtime/        # Typed WebSocket client used by every app
+├── rat/                 # Effect 4 + Alchemy migration (CLI/MCP harness) — see rat/README.md
 └── turbo.json          # Turborepo configuration
 ```
 

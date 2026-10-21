@@ -1,0 +1,20 @@
+{
+  "name": "loup-rat",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Rat-stack migration workspace for Loup-Garou: Effect 4 capabilities, CLI+MCP harness, Alchemy Worker.",
+  "type": "module",
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "check": "pnpm -r run check",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "cli": "pnpm --filter @loup/cli cli",
+    "mcp": "pnpm --filter @loup/cli mcp",
+    "infra:plan": "pnpm --filter @loup/infra plan",
+    "infra:dev": "pnpm --filter @loup/infra dev"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}

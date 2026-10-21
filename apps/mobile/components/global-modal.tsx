@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useGameStore } from '@/hooks/use-game-store';
 import { type ModalData, useModalStore } from '@/hooks/use-modal-store';
+import { palette } from '@/lib/theme';
 import { socket } from '@/utils/sockets';
 
 // Shared empty selection, so derived `selection` stays referentially stable
@@ -130,10 +131,10 @@ export function GlobalModal() {
     const selected = isSelected(item);
     const disabled = isItemDisabled(item);
 
-    return clsx('mb-2 rounded-lg border-2 p-3', {
-      'border-blue-500 bg-blue-100': selected,
-      'border-gray-300 bg-gray-50 opacity-40': disabled,
-      'border-gray-300 bg-gray-50': !(selected || disabled),
+    return clsx('mb-2 rounded-xl border p-3', {
+      'border-[#E6E7D4] bg-[#E6E7D4]/20': selected,
+      'border-[#3A4E56] bg-[#142028]/60 opacity-40': disabled,
+      'border-[#3A4E56] bg-[#142028]/80': !(selected || disabled),
     });
   };
 
@@ -204,14 +205,28 @@ export function GlobalModal() {
             >
               <View className="flex-row items-center justify-between">
                 <Text
-                  className={`${isSelected(item) ? 'text-blue-800 font-medium' : 'text-gray-800'}`}
+                  style={{
+                    color: isSelected(item) ? palette.moon : palette.snow,
+                    fontFamily: isSelected(item)
+                      ? 'Outfit_600SemiBold'
+                      : 'Outfit_400Regular',
+                    fontSize: 16,
+                  }}
                 >
                   {getPlayerNameFromSid(item)}
                 </Text>
-                {isSelected(item) && <Text className="text-blue-600">✓</Text>}
+                {isSelected(item) && (
+                  <Text style={{ color: palette.moon, fontSize: 16 }}>✓</Text>
+                )}
               </View>
               {modalData.werewolfModal && (
-                <Text className="text-sm">
+                <Text
+                  className="mt-1 text-sm"
+                  style={{
+                    color: palette.moonDim,
+                    fontFamily: 'Outfit_400Regular',
+                  }}
+                >
                   {getVoteCount(item)}/{totalWerewolves}
                 </Text>
               )}
@@ -230,47 +245,85 @@ export function GlobalModal() {
 
     if (modalData.type === 'yes-no') {
       return (
-        <View className="mt-4 flex-row space-x-3">
+        <View className="mt-4 flex-row gap-3">
           <TouchableOpacity
-            className="flex-1 rounded-lg bg-red-500 px-4 py-2"
+            className="flex-1 rounded-xl px-4 py-3"
             onPress={handleNoClick}
+            style={{ backgroundColor: palette.danger }}
           >
-            <Text className="py-2 text-center font-medium text-white">No</Text>
+            <Text
+              className="text-center"
+              style={{
+                color: palette.snow,
+                fontFamily: 'Outfit_600SemiBold',
+              }}
+            >
+              Non
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            className="flex-1 rounded-lg bg-green-500 px-4 py-2"
+            className="flex-1 rounded-xl px-4 py-3"
             onPress={handleYesClick}
+            style={{ backgroundColor: palette.success }}
           >
-            <Text className="py-2 text-center font-medium text-white">Yes</Text>
+            <Text
+              className="text-center"
+              style={{
+                color: palette.snow,
+                fontFamily: 'Outfit_600SemiBold',
+              }}
+            >
+              Oui
+            </Text>
           </TouchableOpacity>
         </View>
       );
     }
 
     return (
-      <View className="mt-4 flex-row space-x-3">
+      <View className="mt-4 flex-row gap-3">
         {modalData.onSkip && (
           <TouchableOpacity
-            className="flex-1 rounded-lg bg-slate-500 px-4 py-2"
+            className="flex-1 rounded-xl px-4 py-3"
             onPress={handleSkip}
+            style={{
+              borderWidth: 1,
+              borderColor: palette.panelBorder,
+              backgroundColor: 'transparent',
+            }}
           >
-            <Text className="py-2 text-center font-medium text-white">
+            <Text
+              className="text-center"
+              style={{
+                color: palette.moon,
+                fontFamily: 'Outfit_600SemiBold',
+              }}
+            >
               {modalData.skipLabel ?? 'Passer'}
             </Text>
           </TouchableOpacity>
         )}
 
         <TouchableOpacity
-          className={clsx(
-            'flex-1 rounded-lg px-4 py-2',
-            isButtonDisabled() ? 'bg-gray-500 opacity-50' : 'bg-blue-500'
-          )}
+          className="flex-1 rounded-xl px-4 py-3"
           disabled={isButtonDisabled()}
           onPress={handleModalClose}
+          style={{
+            backgroundColor: isButtonDisabled()
+              ? 'rgba(230, 231, 212, 0.28)'
+              : palette.moon,
+            opacity: isButtonDisabled() ? 0.7 : 1,
+          }}
         >
-          <Text className="py-2 text-center font-medium text-white">
-            {modalData.confirmLabel ?? 'Confirm Selection'}
+          <Text
+            className="text-center"
+            style={{
+              color: palette.ink,
+              fontFamily: 'Outfit_600SemiBold',
+            }}
+          >
+            {modalData.confirmLabel ?? 'Confirmer'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -284,11 +337,25 @@ export function GlobalModal() {
       transparent
       visible={isOpen}
     >
-      <View className="flex-1 items-center justify-center bg-black/50">
+      <View
+        className="flex-1 items-center justify-center px-4"
+        style={{ backgroundColor: 'rgba(8, 14, 18, 0.72)' }}
+      >
         <TouchableWithoutFeedback>
-          <View className="mx-4 w-full max-w-sm rounded-lg bg-white p-6 shadow-2xl">
+          <View
+            className="w-full max-w-sm p-6"
+            style={{
+              borderRadius: 20,
+              backgroundColor: palette.forest,
+              borderWidth: 1,
+              borderColor: palette.panelBorder,
+            }}
+          >
             {modalData.title && (
-              <Text className="mb-4 text-center text-lg font-semibold text-gray-900">
+              <Text
+                className="mb-4 text-center text-xl"
+                style={{ color: palette.moon, fontFamily: 'Cinzel_700Bold' }}
+              >
                 {modalData.title}
               </Text>
             )}

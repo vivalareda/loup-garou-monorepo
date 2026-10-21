@@ -6,6 +6,7 @@ import { useConnectionStore } from '@/hooks/use-connection-store';
 import { useGameEvents } from '@/hooks/use-game-events';
 import { useGameStore } from '@/hooks/use-game-store';
 import { useModalStore } from '@/hooks/use-modal-store';
+import { palette } from '@/lib/theme';
 import { socket } from '@/utils/sockets';
 
 export default function GameLayout() {
@@ -54,8 +55,19 @@ export default function GameLayout() {
         <Stack.Screen name="game-interface" />
       </Stack>
       {connectionStatus === 'reconnecting' && (
-        <View className="absolute left-4 right-4 top-14 z-50 rounded-xl bg-amber-500/95 px-4 py-3 shadow-lg">
-          <Text className="text-center font-semibold text-slate-900">
+        <View
+          className="absolute left-4 right-4 top-14 z-50 px-4 py-3"
+          style={{
+            borderRadius: 14,
+            backgroundColor: palette.warn,
+            borderWidth: 1,
+            borderColor: 'rgba(11, 18, 22, 0.2)',
+          }}
+        >
+          <Text
+            className="text-center"
+            style={{ color: palette.ink, fontFamily: 'Outfit_600SemiBold' }}
+          >
             Connexion perdue — reconnexion en cours…
           </Text>
         </View>

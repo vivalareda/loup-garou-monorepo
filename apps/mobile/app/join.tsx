@@ -1,19 +1,14 @@
 import { Link, Redirect, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  Button,
-  ImageBackground,
-  Keyboard,
-  SafeAreaView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { Banner } from '@/components/ui/banner';
+import { Field } from '@/components/ui/field';
+import { ForestScreen } from '@/components/ui/forest-screen';
+import { PrimaryButton } from '@/components/ui/primary-button';
 import { useConnectionStore } from '@/hooks/use-connection-store';
 import { registerJoinListeners, submitJoin } from '@/hooks/use-join-game';
 import { usePlayerStore } from '@/hooks/use-player-store';
+import { palette } from '@/lib/theme';
 import { rooms } from '@/utils/rooms';
 import { sessionTokens } from '@/utils/session';
 import { socket } from '@/utils/sockets';
@@ -35,9 +30,6 @@ export default function JoinRoom() {
     useConnectionStore();
 
   const isDev = process.env.NODE_ENV === 'development';
-
-  // Session restore on app start and after reconnects is handled globally
-  // by useSessionRecovery in the root layout.
 
   useEffect(
     () =>
@@ -113,68 +105,68 @@ export default function JoinRoom() {
   }
 
   return (
-    <ImageBackground
-      className="flex-1"
-      resizeMethod="resize"
-      source={require('@/assets/join-screen-background.png')}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <SafeAreaView className="flex-1 items-center justify-center pb-24">
-          <View className="items-center justify-between gap-20">
-            <View className="mt-32 pb-12">
-              <Text className="text-7xl font-bold text-white"> </Text>
-            </View>
-            <View className="mt-56 items-center self-stretch">
-              {recoveryFailed && (
-                <View className="mb-4 rounded-xl bg-amber-500/90 px-4 py-3">
-                  <Text className="text-center font-semibold text-slate-900">
-                    Session précédente expirée — rejoignez la partie.
-                  </Text>
-                </View>
-              )}
-              {joinError && (
-                <View className="mb-4 rounded-xl bg-red-500/90 px-4 py-3">
-                  <Text className="text-center font-semibold text-white">
-                    {joinError}
-                  </Text>
-                </View>
-              )}
-              <Text className="text-center text-4xl font-bold text-white">
-                Entrez votre nom
-              </Text>
-              <TextInput
-                className="mt-4 h-16 w-full rounded-lg border-2 border-gray-100/50 bg-slate-600 pb-2 text-center text-2xl font-bold text-white"
-                onChangeText={setName}
-                value={name}
-              />
-              <View className="mt-8 w-52 items-center justify-center">
-                <TouchableOpacity
-                  className={`rounded-lg px-8 py-4 ${
-                    isJoining ? 'bg-slate-400/40' : 'bg-slate-200/50'
-                  }`}
-                  disabled={isJoining}
-                  onPress={handleJoinGame}
-                >
-                  <Text>{isJoining ? 'Connexion…' : 'Join game'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity className="mt-4" onPress={handleChangeRoom}>
-                  <Text className="text-white underline">
-                    Changer de partie
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+    <ForestScreen dismissKeyboard>
+      <View className="flex-1 justify-end px-8 pb-10">
+        <View className="w-full max-w-sm self-center">
+          {recoveryFailed && (
+            <Banner
+              message="Session précédente expirée — rejoignez la partie."
+              tone="warn"
+            />
+          )}
+          {joinError && <Banner message={joinError} tone="danger" />}
 
-            <View>
-              {isDev && (
-                <Link asChild href="/modal-test">
-                  <Button title="🧪 Test Modal" />
-                </Link>
-              )}
-            </View>
+          <Field
+            autoCapitalize="words"
+            label="Votre nom"
+            onChangeText={setName}
+            onSubmitEditing={handleJoinGame}
+            placeholder="Alex"
+            value={name}
+          />
+
+          <View className="mt-5">
+            <PrimaryButton
+              disabled={isJoining}
+              label={isJoining ? 'Connexion…' : 'Entrer dans la partie'}
+              onPress={handleJoinGame}
+            />
           </View>
-        </SafeAreaView>
-      </TouchableWithoutFeedback>
-    </ImageBackground>
+
+          <TouchableOpacity
+            accessibilityRole="button"
+            className="mt-5 items-center py-2"
+            onPress={handleChangeRoom}
+          >
+            <Text
+              style={{
+                color: palette.moonDim,
+                fontFamily: 'Outfit_500Medium',
+                fontSize: 15,
+                textDecorationLine: 'underline',
+              }}
+            >
+              Changer de partie
+            </Text>
+          </TouchableOpacity>
+
+          {isDev && (
+            <Link asChild href="/modal-test">
+              <TouchableOpacity className="mt-6 items-center py-2">
+                <Text
+                  style={{
+                    color: palette.bark,
+                    fontFamily: 'Outfit_400Regular',
+                    fontSize: 13,
+                  }}
+                >
+                  Test modal
+                </Text>
+              </TouchableOpacity>
+            </Link>
+          )}
+        </View>
+      </View>
+    </ForestScreen>
   );
 }

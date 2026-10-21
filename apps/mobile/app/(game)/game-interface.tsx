@@ -15,8 +15,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { ROLE_LABELS } from '@/components/end-game-panel';
+import { Banner } from '@/components/ui/banner';
+import { ForestScreen } from '@/components/ui/forest-screen';
+import { Panel, PrimaryButton } from '@/components/ui/primary-button';
 import { useCardFlip } from '@/hooks/use-card-flip';
 import { useGameStore } from '@/hooks/use-game-store';
 import { type ModalState, useModalStore } from '@/hooks/use-modal-store';
@@ -26,6 +28,7 @@ import {
   handleWitchPoisonChoice,
   type WitchEmit,
 } from '@/hooks/witch-actions';
+import { palette } from '@/lib/theme';
 import { socket } from '@/utils/sockets';
 
 // The witch decisions take their emit as a parameter so they stay pure and
@@ -100,7 +103,10 @@ function PhaseCountdown({
   }
 
   return (
-    <Text className="mt-1 text-center text-sm text-slate-400">
+    <Text
+      className="mt-2 text-center text-sm"
+      style={{ color: palette.moonDim, fontFamily: 'Outfit_500Medium' }}
+    >
       {COUNTDOWN_LABELS[countdown.phase] ?? countdown.phase} —{' '}
       {formatRemaining(remaining)}
     </Text>
@@ -356,32 +362,49 @@ export default function GameInterface() {
 
   const getWitchHealModalData = useCallback((victimName: string | null) => {
     return (
-      <View className="items-center justify-center py-4">
-        <View className="mb-4 rounded-2xl border-2 border-red-400 bg-gradient-to-b from-red-900/20 to-slate-800/50 p-6 shadow-lg">
-          <View className="items-center">
-            <Text className="mb-2 text-sm font-medium uppercase tracking-wide text-red-300">
-              Victime des Loups-Garous
-            </Text>
-            <View className="mb-3 h-px w-16 bg-red-400" />
-            <Text className="text-2xl font-bold text-white">
-              {victimName ?? 'Inconnu'}
-            </Text>
-            {victimName && (
-              <View className="mt-3 rounded-full bg-red-500/20 px-3 py-1">
-                <Text className="text-xs text-red-300">💀 En danger</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        <View className="items-center">
-          <View className="mb-2 h-12 w-8 rounded-full bg-gradient-to-b from-green-400 to-green-600 shadow-lg">
-            <View className="mx-auto mt-1 h-2 w-6 rounded-full bg-green-300" />
-          </View>
-          <Text className="text-xs font-medium text-green-400">
-            Potion de Guérison
+      <View className="items-center justify-center py-2">
+        <View
+          style={{
+            width: '100%',
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: 'rgba(196, 92, 74, 0.45)',
+            backgroundColor: palette.dangerSoft,
+            padding: 20,
+            marginBottom: 16,
+          }}
+        >
+          <Text
+            className="mb-2 text-center text-xs uppercase tracking-[2px]"
+            style={{ color: palette.danger, fontFamily: 'Outfit_500Medium' }}
+          >
+            Victime des loups-garous
           </Text>
+          <View
+            className="mx-auto mb-3 h-px w-14"
+            style={{ backgroundColor: 'rgba(196, 92, 74, 0.55)' }}
+          />
+          <Text
+            className="text-center text-2xl"
+            style={{ color: palette.snow, fontFamily: 'Cinzel_700Bold' }}
+          >
+            {victimName ?? 'Inconnu'}
+          </Text>
+          {victimName ? (
+            <Text
+              className="mt-3 text-center text-xs uppercase tracking-[1px]"
+              style={{ color: palette.danger, fontFamily: 'Outfit_500Medium' }}
+            >
+              En danger
+            </Text>
+          ) : null}
         </View>
+        <Text
+          className="text-center text-sm"
+          style={{ color: palette.success, fontFamily: 'Outfit_500Medium' }}
+        >
+          Potion de guérison
+        </Text>
       </View>
     );
   }, []);
@@ -422,8 +445,16 @@ export default function GameInterface() {
 
     return (
       <View className="items-center justify-center py-4">
-        <Text className="text-lg text-slate-700">{seerVision.playerName}</Text>
-        <Text className="mt-2 text-2xl font-bold text-slate-900">
+        <Text
+          className="text-lg"
+          style={{ color: palette.moonDim, fontFamily: 'Outfit_500Medium' }}
+        >
+          {seerVision.playerName}
+        </Text>
+        <Text
+          className="mt-2 text-2xl"
+          style={{ color: palette.moon, fontFamily: 'Cinzel_700Bold' }}
+        >
           {ROLE_LABELS[seerVision.role]}
         </Text>
       </View>
@@ -445,10 +476,15 @@ export default function GameInterface() {
           />
         </View>
         {loverPartnerName && (
-          <Text className="mt-2 text-center text-lg text-slate-700">
+          <Text
+            className="mt-2 text-center text-lg"
+            style={{ color: palette.mist, fontFamily: 'Outfit_400Regular' }}
+          >
             Vous aimez{' '}
-            <Text className="font-bold text-slate-900">{loverPartnerName}</Text>
-            {'\n'}Si l'un de vous meurt, l'autre meurt aussi.
+            <Text style={{ color: palette.ink, fontFamily: 'Outfit_600SemiBold' }}>
+              {loverPartnerName}
+            </Text>
+            {"\n"}Si l'un de vous meurt, l'autre meurt aussi.
           </Text>
         )}
       </View>
@@ -497,9 +533,15 @@ export default function GameInterface() {
 
   if (!player) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-slate-900">
-        <Text className="text-white">Chargement...</Text>
-      </SafeAreaView>
+      <ForestScreen solid>
+        <View className="flex-1 items-center justify-center">
+          <Text
+            style={{ color: palette.moonDim, fontFamily: 'Outfit_500Medium' }}
+          >
+            Chargement…
+          </Text>
+        </View>
+      </ForestScreen>
     );
   }
 
@@ -510,72 +552,108 @@ export default function GameInterface() {
   console.log(`player is: ${player.name}`);
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-900">
+    <ForestScreen solid>
       <View className="flex-1 items-center justify-center px-6">
-        <View className="mb-8">
-          <Text className="mt-2 text-center text-xl text-slate-300">
-            Joueur: {player.name}
+        <View className="mb-6 w-full max-w-md items-center">
+          <Text
+            className="text-center text-xl"
+            style={{ color: palette.snow, fontFamily: 'Outfit_600SemiBold' }}
+          >
+            {player.name}
           </Text>
-          <Text className="mt-2 text-center text-sm font-semibold uppercase tracking-wide text-blue-300">
-            Phase: {currentPhase.replace(/_/g, ' ')}
+          <Text
+            className="mt-2 text-center text-xs uppercase tracking-[2px]"
+            style={{ color: palette.moonDim, fontFamily: 'Outfit_500Medium' }}
+          >
+            {currentPhase.replace(/_/g, ' ')}
           </Text>
           {countdown && <PhaseCountdown countdown={countdown} />}
           {phaseTimedOut && (
-            <Text className="mt-1 text-center text-sm text-orange-300">
+            <Text
+              className="mt-2 text-center text-sm"
+              style={{ color: palette.warn, fontFamily: 'Outfit_500Medium' }}
+            >
               Temps écoulé — la partie continue
             </Text>
           )}
           {actionError && (
-            <Text className="mt-1 text-center text-sm font-semibold text-red-300">
-              {actionError}
-            </Text>
+            <View className="mt-3 w-full">
+              <Banner message={actionError} tone="danger" />
+            </View>
           )}
           {isWaitingForPlayers && (
-            <Text className="mt-2 text-center text-sm text-amber-200">
-              En attente des autres joueurs...
+            <Text
+              className="mt-2 text-center text-sm"
+              style={{ color: palette.warn, fontFamily: 'Outfit_400Regular' }}
+            >
+              En attente des autres joueurs…
             </Text>
           )}
           {isDiscussionActive && isAlive && (
-            <TouchableOpacity
-              accessibilityLabel="Passer au vote"
-              accessibilityRole="button"
-              className="mt-3 self-center rounded-lg bg-blue-500/80 px-6 py-2"
-              onPress={() => socket.emit('day:start-vote')}
-            >
-              <Text className="font-semibold text-white">Passer au vote</Text>
-            </TouchableOpacity>
+            <View className="mt-4 w-56">
+              <PrimaryButton
+                accessibilityLabel="Passer au vote"
+                label="Passer au vote"
+                onPress={() => socket.emit('day:start-vote')}
+                variant="ghost"
+              />
+            </View>
           )}
         </View>
 
         {(nightDeaths.length > 0 || dayVoteTie.length > 0) && (
-          <View className="mb-6 w-full rounded-2xl border border-slate-700 bg-slate-800/70 p-4">
-            {nightDeaths.length > 0 && (
-              <View>
-                <Text className="text-center text-sm font-semibold uppercase tracking-wide text-red-300">
-                  Victimes de la nuit
-                </Text>
-                {nightDeaths.map((death) => (
+          <View className="mb-6 w-full max-w-md">
+            <Panel>
+              {nightDeaths.length > 0 && (
+                <View>
                   <Text
-                    className="mt-2 text-center text-base text-slate-100"
-                    key={`${death.playerId}-${death.cause}`}
+                    className="text-center text-xs uppercase tracking-[2px]"
+                    style={{
+                      color: palette.danger,
+                      fontFamily: 'Outfit_500Medium',
+                    }}
                   >
-                    {death.playerName || getPublicPlayerName(death.playerId)} (
-                    {death.cause})
+                    Victimes de la nuit
                   </Text>
-                ))}
-              </View>
-            )}
+                  {nightDeaths.map((death) => (
+                    <Text
+                      className="mt-2 text-center text-base"
+                      key={`${death.playerId}-${death.cause}`}
+                      style={{
+                        color: palette.snow,
+                        fontFamily: 'Outfit_400Regular',
+                      }}
+                    >
+                      {death.playerName || getPublicPlayerName(death.playerId)}{' '}
+                      ({death.cause})
+                    </Text>
+                  ))}
+                </View>
+              )}
 
-            {dayVoteTie.length > 0 && (
-              <View className={nightDeaths.length > 0 ? 'mt-4' : undefined}>
-                <Text className="text-center text-sm font-semibold uppercase tracking-wide text-yellow-300">
-                  Egalite du vote
-                </Text>
-                <Text className="mt-2 text-center text-base text-slate-100">
-                  {dayVoteTie.join(', ')}: personne ne meurt.
-                </Text>
-              </View>
-            )}
+              {dayVoteTie.length > 0 && (
+                <View className={nightDeaths.length > 0 ? 'mt-4' : undefined}>
+                  <Text
+                    className="text-center text-xs uppercase tracking-[2px]"
+                    style={{
+                      color: palette.warn,
+                      fontFamily: 'Outfit_500Medium',
+                    }}
+                  >
+                    Égalité du vote
+                  </Text>
+                  <Text
+                    className="mt-2 text-center text-base"
+                    style={{
+                      color: palette.snow,
+                      fontFamily: 'Outfit_400Regular',
+                    }}
+                  >
+                    {dayVoteTie.join(', ')}: personne ne meurt.
+                  </Text>
+                </View>
+              )}
+            </Panel>
           </View>
         )}
 
@@ -587,33 +665,65 @@ export default function GameInterface() {
             style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
           >
             <Animated.View
-              className="absolute inset-0 items-center justify-center rounded-3xl border-2 border-slate-700 bg-slate-800 shadow-2xl"
+              className="absolute inset-0 items-center justify-center rounded-3xl"
               style={{
                 transform: [{ rotateY: animations.frontInterpolate }],
                 opacity: animations.frontOpacity,
                 backfaceVisibility: 'hidden',
+                backgroundColor: palette.forest,
+                borderWidth: 1.5,
+                borderColor: palette.panelBorder,
               }}
             >
-              <Text className="text-8xl text-slate-500">?</Text>
-              <Text className="mt-4 px-6 text-center text-lg text-slate-400">
-                Appuyez sur la carte pour révéler votre rôle
+              <Text
+                style={{
+                  color: palette.moonDim,
+                  fontFamily: 'Cinzel_700Bold',
+                  fontSize: 72,
+                }}
+              >
+                ?
+              </Text>
+              <Text
+                className="mt-4 px-8 text-center text-base"
+                style={{
+                  color: palette.moonDim,
+                  fontFamily: 'Outfit_400Regular',
+                }}
+              >
+                Appuyez pour révéler votre rôle
               </Text>
             </Animated.View>
 
             <Animated.View
-              className="absolute inset-0 items-center justify-center rounded-3xl border-2 border-blue-500 bg-gradient-to-b from-blue-900 to-slate-800 p-6 shadow-2xl"
+              className="absolute inset-0 items-center justify-center rounded-3xl p-6"
               style={{
                 transform: [{ rotateY: animations.backInterpolate }],
                 opacity: animations.backOpacity,
                 backfaceVisibility: 'hidden',
+                backgroundColor: palette.mist,
+                borderWidth: 1.5,
+                borderColor: palette.moon,
               }}
             >
               <View className="items-center">
-                <Text className="mb-4 text-2xl font-bold text-white">
-                  {player.role}
+                <Text
+                  className="mb-4 text-center text-2xl"
+                  style={{ color: palette.moon, fontFamily: 'Cinzel_700Bold' }}
+                >
+                  {ROLE_LABELS[player.role]}
                 </Text>
-                <View className="h-px w-20 bg-blue-400" />
-                <Text className="mt-4 text-center text-base leading-6 text-slate-200">
+                <View
+                  className="h-px w-20"
+                  style={{ backgroundColor: 'rgba(230, 231, 212, 0.45)' }}
+                />
+                <Text
+                  className="mt-4 text-center text-base leading-6"
+                  style={{
+                    color: palette.snow,
+                    fontFamily: 'Outfit_400Regular',
+                  }}
+                >
                   {getRoleDescription(player.role)}
                 </Text>
               </View>
@@ -622,13 +732,16 @@ export default function GameInterface() {
         </View>
 
         <View className="mt-8">
-          <Text className="text-center text-sm text-slate-500">
+          <Text
+            className="text-center text-sm"
+            style={{ color: palette.bark, fontFamily: 'Outfit_400Regular' }}
+          >
             {isRevealed
               ? 'La carte se cachera automatiquement dans 5 secondes'
               : 'Touchez la carte pour découvrir votre rôle'}
           </Text>
         </View>
       </View>
-    </SafeAreaView>
+    </ForestScreen>
   );
 }

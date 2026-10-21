@@ -1,5 +1,7 @@
 import type { GameEndResult, Role } from '@repo/types';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { Panel, PrimaryButton } from '@/components/ui/primary-button';
+import { palette } from '@/lib/theme';
 import { socket } from '@/utils/sockets';
 
 export const ROLE_LABELS: Record<Role, string> = {
@@ -20,39 +22,60 @@ export function EndGamePanel({ result }: { result: GameEndResult | null }) {
   return (
     <View className="w-full items-center">
       {result && (
-        <View className="mt-8 w-full rounded-2xl border border-slate-500/40 bg-slate-900/40 p-4">
-          <Text className="text-center text-lg font-bold text-white">
-            {result.winningFaction === 'werewolves'
-              ? 'Les Loups-Garous ont gagné'
-              : 'Les Villageois ont gagné'}
-          </Text>
+        <View className="mt-8 w-full">
+          <Panel>
+            <Text
+              className="text-center text-lg"
+              style={{ color: palette.moon, fontFamily: 'Cinzel_700Bold' }}
+            >
+              {result.winningFaction === 'werewolves'
+                ? 'Les Loups-Garous ont gagné'
+                : 'Les Villageois ont gagné'}
+            </Text>
 
-          <View className="mt-4">
-            {result.players.map((revealed) => (
-              <View
-                className="flex-row items-center justify-between py-1"
-                key={revealed.socketId}
-              >
-                <Text className="text-base text-slate-200">
-                  {revealed.isAlive ? '🙂' : '💀'} {revealed.name}
-                </Text>
-                <Text className="text-base font-semibold text-slate-300">
-                  {revealed.role ? ROLE_LABELS[revealed.role] : '?'}
-                </Text>
-              </View>
-            ))}
-          </View>
+            <View className="mt-4">
+              {result.players.map((revealed) => (
+                <View
+                  className="flex-row items-center justify-between py-2"
+                  key={revealed.socketId}
+                  style={{
+                    borderBottomWidth: 1,
+                    borderBottomColor: 'rgba(230, 231, 212, 0.08)',
+                  }}
+                >
+                  <Text
+                    className="text-base"
+                    style={{
+                      color: revealed.isAlive ? palette.snow : palette.moonDim,
+                      fontFamily: 'Outfit_500Medium',
+                    }}
+                  >
+                    {revealed.name}
+                    {!revealed.isAlive ? ' · mort' : ''}
+                  </Text>
+                  <Text
+                    className="text-base"
+                    style={{
+                      color: palette.moonDim,
+                      fontFamily: 'Outfit_400Regular',
+                    }}
+                  >
+                    {revealed.role ? ROLE_LABELS[revealed.role] : '?'}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </Panel>
         </View>
       )}
 
-      <TouchableOpacity
-        accessibilityLabel="Rejouer une partie"
-        accessibilityRole="button"
-        className="mt-8 rounded-xl bg-slate-200/90 px-10 py-4"
-        onPress={() => socket.emit('game:restart')}
-      >
-        <Text className="text-lg font-bold text-slate-900">Rejouer</Text>
-      </TouchableOpacity>
+      <View className="mt-8 w-56">
+        <PrimaryButton
+          accessibilityLabel="Rejouer une partie"
+          label="Rejouer"
+          onPress={() => socket.emit('game:restart')}
+        />
+      </View>
     </View>
   );
 }

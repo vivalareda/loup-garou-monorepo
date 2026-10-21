@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "my-better-t-app",
-    "slug": "my-better-t-app",
+    "name": "Loup Garou",
+    "slug": "loup-garou",
     "version": "1.0.0",
-    "scheme": "my-better-t-app",
+    "scheme": "loup-garou",
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -13,7 +13,8 @@
       "expo-router",
       "expo-secure-store",
       "expo-web-browser",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -22,11 +23,11 @@
     "newArchEnabled": true,
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0B1216"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
@@ -36,7 +37,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0B1216"
       },
       "package": "com.amanvarshney01.mybettertapp",
       "edgeToEdgeEnabled": true

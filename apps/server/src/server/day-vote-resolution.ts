@@ -167,10 +167,6 @@ export class DayVoteResolution {
   }
 
   private killPlayer(player: Player) {
-    if (player.getRole() === 'WITCH') {
-      this.segmentsManager.witchDied();
-    }
-
     this.game.handlePlayerDeath(player);
   }
 

@@ -3,7 +3,7 @@ import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
-import { SegmentsManager } from '@/segments/segments-manager';
+import { SEGMENT_ORDER, SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
 import type { Broadcaster } from '@/server/broadcaster';
 
@@ -57,9 +57,7 @@ describe('Night dawn scenarios', () => {
     let deathQueue = game.getDeathQueue();
     expect(deathQueue).toHaveLength(1);
 
-    const daySegmentIndex = segmentsManager.segments.findIndex(
-      (s) => s.type === 'DAY'
-    );
+    const daySegmentIndex = SEGMENT_ORDER.indexOf('DAY');
 
     segmentsManager.currentSegment = daySegmentIndex;
     await segmentsManager.playSegment();
@@ -94,9 +92,7 @@ describe('Night dawn scenarios', () => {
     game.setSpecialRolePlayer(player2);
     game.addPendingDeath('mock-id-1', 'WEREWOLVES');
 
-    const daySegmentIndex = segmentsManager.segments.findIndex(
-      (s) => s.type === 'DAY'
-    );
+    const daySegmentIndex = SEGMENT_ORDER.indexOf('DAY');
 
     segmentsManager.currentSegment = daySegmentIndex;
     segmentsManager.playSegment();

@@ -90,9 +90,13 @@ describe('SegmentsManager', () => {
     await segmentsManager.finishSegment();
     expect(segmentsManager.getCurrentSegmentType()).toBe('DAY');
 
-    // Night two starts at the Seer: unlike Cupid and Lovers, she wakes
-    // every night
+    // Night two parks on Cupid; playing it passes over Cupid and Lovers.
+    // The Seer wakes every night, so the cycle stops there.
     await segmentsManager.finishSegment();
+    expect(segmentsManager.getCurrentSegmentType()).toBe('CUPID');
+    await SegmentsManager.prototype.playSegment.call(segmentsManager);
+    expect(segmentsManager.getCurrentSegmentType()).toBe('LOVERS');
+    await SegmentsManager.prototype.playSegment.call(segmentsManager);
     expect(segmentsManager.getCurrentSegmentType()).toBe('SEER');
   });
 

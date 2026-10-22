@@ -1,6 +1,9 @@
 import { vi } from 'vitest';
 import type { Game } from '@/core/game';
-import type { SegmentsManager } from '@/segments/segments-manager';
+import {
+  SEGMENT_ORDER,
+  type SegmentsManager,
+} from '@/segments/segments-manager';
 
 /**
  * Starts the game and parks it on the segment `type` without playing any
@@ -15,9 +18,7 @@ export function enterSegment(segmentsManager: SegmentsManager, type: string) {
     segmentsManager.startGame();
   }
 
-  const index = segmentsManager.segments.findIndex(
-    (segment) => segment.type === type
-  );
+  const index = SEGMENT_ORDER.findIndex((segment) => segment === type);
 
   if (index !== -1) {
     segmentsManager.currentSegment = index;

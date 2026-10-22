@@ -47,11 +47,12 @@ export class DayVoteResolution {
 
   /**
    * The village voted `votedPlayer` out — run the full death chain. It
-   * runs as part of the current segment, so the segment ending (or the
-   * game finishing or resetting) interrupts it, pending pick included.
+   * runs as part of the current segment: a reset or the game ending
+   * interrupts it, pending pick included, while the DAY deadline waits
+   * for it.
    */
   run(votedPlayer: Player) {
-    return this.segmentsManager.runInSegment(
+    return this.segmentsManager.runResolution(
       this.resolveElimination(votedPlayer)
     );
   }

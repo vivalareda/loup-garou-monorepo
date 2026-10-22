@@ -26,11 +26,11 @@ export class NightDawnResolution {
 
   /**
    * Kick off the dawn resolution as a background promise. It runs as
-   * part of the current segment, so the segment ending (or the game
-   * finishing or resetting) interrupts it, pending pick included.
+   * part of the current segment: a reset or the game ending interrupts
+   * it, pending pick included, while the DAY deadline waits for it.
    */
   run(): Promise<void> {
-    return this.segmentsManager.runInSegment(this.resolveDawn());
+    return this.segmentsManager.runResolution(this.resolveDawn());
   }
 
   /**

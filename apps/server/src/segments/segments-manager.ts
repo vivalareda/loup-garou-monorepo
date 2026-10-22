@@ -1,5 +1,5 @@
 import type { GamePhase, Segment, SegmentType } from '@repo/types';
-import { Cause, Effect, Fiber, FiberSet, Scope } from 'effect';
+import { Cause, Effect, Fiber, FiberSet, Scope, Semaphore } from 'effect';
 import type { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
 import type { SpecialScenarios } from '@/core/special-scenarios';
@@ -73,6 +73,13 @@ export class SegmentsManager {
    * agreeing vote, a deadline racing the last action) is a no-op.
    */
   private ending = false;
+  /**
+   * Held by a resolution (the dawn, a day vote) while it runs. A deadline
+   * that expires meanwhile waits for it rather than cutting it short,
+   * which would drop deaths it already set in motion (night deaths not
+   * yet processed, a hunter's revenge, a lover's grief).
+   */
+  private readonly resolving = Semaphore.makeUnsafe(1);
   private deadlineEndsAt: number | null = null;
 
   constructor(
@@ -257,11 +264,21 @@ export class SegmentsManager {
   }
 
   /**
+   * Runs a resolution (the dawn, a day vote) as part of the current
+   * segment: the segment's deadline waits for it, but a reset or the game
+   * ending interrupts it, as does the resolution itself advancing the
+   * segment. Resolves once it completes or is interrupted.
+   */
+  runResolution(resolution: Effect.Effect<void>): Promise<void> {
+    return this.runInSegment(Semaphore.withPermit(this.resolving, resolution));
+  }
+
+  /**
    * Runs `effect` as part of the current segment: it is interrupted when
    * the segment ends or the game finishes or is reset. Resolves once it
    * completes or is interrupted, and rejects if it dies.
    */
-  runInSegment(effect: Effect.Effect<void>): Promise<void> {
+  private runInSegment(effect: Effect.Effect<void>): Promise<void> {
     const fiber = Effect.runSync(FiberSet.run(this.segmentFibers, effect));
 
     return Effect.runPromise(
@@ -361,16 +378,14 @@ export class SegmentsManager {
       this.io.emit('game:countdown', segmentType, timeoutMs);
     }
 
+    const timeOut = Effect.sync(() => {
+      console.warn(`[SEGMENT] ${segmentType} timed out; applying fallback`);
+      this.handleSegmentTimeout(segmentType);
+    });
+
     void this.runInSegment(
       Effect.sleep(timeoutMs).pipe(
-        Effect.andThen(
-          Effect.sync(() => {
-            console.warn(
-              `[SEGMENT] ${segmentType} timed out; applying fallback`
-            );
-            this.handleSegmentTimeout(segmentType);
-          })
-        )
+        Effect.andThen(Semaphore.withPermit(this.resolving, timeOut))
       )
     );
   }

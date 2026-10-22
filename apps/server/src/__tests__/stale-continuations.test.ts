@@ -379,3 +379,22 @@ describe('a composite narration reset after its first clip', () => {
     expect(eventsActions.hasPendingHunterPick()).toBe(false);
   });
 });
+
+describe('the LOVERS intro, which the segment does not wait for', () => {
+  it('requests no clip once a reset follows it', async () => {
+    const { runtime, narrator, start } = manualGame();
+    const { hunter, target } = await start();
+    runtime.game.setLovers([hunter.sid, target]);
+    runtime.segmentsManager.currentSegment =
+      runtime.segmentsManager.segments.findIndex(
+        (segment) => segment.type === 'LOVERS'
+      );
+
+    void runtime.segmentsManager.playSegment();
+    runtime.reset();
+    const requestedAtReset = narrator.requested.length;
+    await narrator.finishAll();
+
+    expect(narrator.requested).toHaveLength(requestedAtReset);
+  });
+});

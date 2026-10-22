@@ -121,8 +121,12 @@ export class AudioManager {
 
         switch (segment) {
           case 'LOVERS':
-            // Dont wait for the audio to finish if it's the lovers or day segment
-            yield* Effect.forkDetach(this.playAudio(startAudioFile));
+            // Dont wait for the audio to finish if it's the lovers or day segment.
+            // It starts right away, as a child of the caller's fiber, so it
+            // can't begin after its segment ended
+            yield* Effect.forkChild(this.playAudio(startAudioFile), {
+              startImmediately: true,
+            });
             break;
           case 'DAY':
             yield* this.playAudio('Night-end/Wake-up-everyone');

@@ -33,11 +33,11 @@ export type GameRuntime = {
    * Starts a new game in place: the same objects keep serving the
    * connected clients, so no second `connection` handler is registered.
    *
-   * Work still in flight for the old game sees the game generation
-   * change and stops: a clip in progress rejects with `StaleGame` (no
-   * further clip of its sequence plays), a pending hunter pick is
-   * cancelled with its timeout, and the lovers alerts skip themselves,
-   * so nothing leaks into the new game.
+   * Work still in flight for the old game runs in its segment's fibers,
+   * which the reset interrupts: a narration sequence stops at its pending
+   * clip, a pending hunter pick is cancelled with its timeout, and the
+   * deadline and lovers alerts never fire, so nothing leaks into the
+   * new game.
    */
   reset: () => void;
 };

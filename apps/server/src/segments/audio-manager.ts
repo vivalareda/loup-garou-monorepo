@@ -1,12 +1,15 @@
 import type { SegmentType } from '@repo/types';
+import { Effect } from 'effect';
 import type { DeathManager } from '@/core/death-manager';
-import { GameGeneration, ignoreStaleGame, StaleGame } from './game-generation';
 import { type Narrator, silentNarrator } from './narrator';
 
+/**
+ * Narration as Effects: a sequence of clips runs one clip after the
+ * other, and interrupting the fiber that runs it (its segment ended, the
+ * game finished or was reset) stops it before the next clip.
+ */
 export class AudioManager {
   deathManager: DeathManager;
-  /** Bumped by SegmentsManager when a game finishes or is reset. */
-  readonly generation = new GameGeneration();
   private readonly narrator: Narrator;
 
   constructor(deathManager: DeathManager, narrator: Narrator = silentNarrator) {
@@ -14,9 +17,11 @@ export class AudioManager {
     this.narrator = narrator;
   }
 
-  async playDayVoteHunterHasPartner() {
-    await this.playDayEndAudio();
-    await this.playAudio('Day-vote/Hunter');
+  playDayVoteHunterHasPartner() {
+    return Effect.gen({ self: this }, function* () {
+      yield* this.playDayEndAudio();
+      yield* this.playAudio('Day-vote/Hunter');
+    });
   }
 
   getSegmentStartAudio(segment: SegmentType) {
@@ -67,8 +72,8 @@ export class AudioManager {
     }
   }
 
-  async playDayEndAudio() {
-    await this.playAudio('Day-vote/Vote-Death');
+  playDayEndAudio() {
+    return this.playAudio('Day-vote/Vote-Death');
   }
 
   // isConditionnalEndingAudioSegment(segment: SegmentType) {
@@ -88,127 +93,140 @@ export class AudioManager {
     return 'Night-end/no-death';
   }
 
-  async playSpecialScenarioAudio(scenario: string) {
-    switch (scenario) {
-      case 'hunter died and has lover':
-        console.log('player hunter died and has lover audio');
-        await this.playAudio('Special-death/pre-day-vote-hunter-has-lover');
-        break;
-      default:
-        throw new Error('special scenario audio doest exist');
-    }
-  }
-
-  async playVillagersWonAudio() {
-    await this.playAudio('End-game/Villagers-won');
-  }
-
-  async playWerewolvesWonAudio() {
-    await this.playAudio('End-game/Werewolves-won');
-  }
-
-  async playSegmentAudio(segment: SegmentType, isStarting: boolean) {
-    if (isStarting) {
-      const startAudioFile = this.getSegmentStartAudio(segment);
-
-      switch (segment) {
-        case 'LOVERS':
-          // Dont wait for the audio to finish if it's the lovers or day segment
-          this.playAudio(startAudioFile).catch(ignoreStaleGame);
-          break;
-        case 'DAY':
-          await this.playAudio('Night-end/Wake-up-everyone');
-          await this.playAudio(this.getDeathAnnouncementAudio());
-          await this.playAudio('day-vote-start');
+  playSpecialScenarioAudio(scenario: string) {
+    return Effect.gen({ self: this }, function* () {
+      switch (scenario) {
+        case 'hunter died and has lover':
+          console.log('player hunter died and has lover audio');
+          yield* this.playAudio('Special-death/pre-day-vote-hunter-has-lover');
           break;
         default:
-          await this.playAudio(startAudioFile);
+          throw new Error('special scenario audio doest exist');
+      }
+    });
+  }
+
+  playVillagersWonAudio() {
+    return this.playAudio('End-game/Villagers-won');
+  }
+
+  playWerewolvesWonAudio() {
+    return this.playAudio('End-game/Werewolves-won');
+  }
+
+  playSegmentAudio(segment: SegmentType, isStarting: boolean) {
+    return Effect.gen({ self: this }, function* () {
+      if (isStarting) {
+        const startAudioFile = this.getSegmentStartAudio(segment);
+
+        switch (segment) {
+          case 'LOVERS':
+            // Dont wait for the audio to finish if it's the lovers or day segment.
+            // It starts right away, as a child of the caller's fiber, so it
+            // can't begin after its segment ended
+            yield* Effect.forkChild(this.playAudio(startAudioFile), {
+              startImmediately: true,
+            });
+            break;
+          case 'DAY':
+            yield* this.playAudio('Night-end/Wake-up-everyone');
+            yield* this.playAudio(this.getDeathAnnouncementAudio());
+            yield* this.playAudio('day-vote-start');
+            break;
+          default:
+            yield* this.playAudio(startAudioFile);
+        }
+
+        // Return early after playing start audio - don't play ending audio yet!
+        return;
       }
 
-      // Return early after playing start audio - don't play ending audio yet!
-      return;
-    }
+      // Only play ending audio when isStarting = false
+      if (segment === 'HUNTER') {
+        return;
+      }
 
-    // Only play ending audio when isStarting = false
-    if (segment === 'HUNTER') {
-      return;
-    }
+      const lastAudioFile = this.getSegmentEndAudio(segment);
 
-    const lastAudioFile = this.getSegmentEndAudio(segment);
+      if (!lastAudioFile) {
+        // This mean we would be inside the WITCH-HEAL segment and we need to skip it
+        return;
+      }
 
-    if (!lastAudioFile) {
-      // This mean we would be inside the WITCH-HEAL segment and we need to skip it
-      return;
-    }
-
-    await this.playAudio(lastAudioFile);
+      yield* this.playAudio(lastAudioFile);
+    });
   }
 
-  async playHunterAudio() {
-    await this.playAudio('Night-end/Wake-up-everyone');
-    await this.playAudio('Night-end/Deaths');
-    await this.playAudio('Hunter/Hunter');
+  playHunterAudio() {
+    return Effect.gen({ self: this }, function* () {
+      yield* this.playAudio('Night-end/Wake-up-everyone');
+      yield* this.playAudio('Night-end/Deaths');
+      yield* this.playAudio('Hunter/Hunter');
+    });
   }
 
-  async playSecondLoverIsHunterAudio() {
-    console.log('playing Pre-day-vote/Second-lover-hunter');
-    await this.playAudio('Pre-day-vote/Second-lover-hunter');
+  playSecondLoverIsHunterAudio() {
+    return Effect.gen({ self: this }, function* () {
+      console.log('playing Pre-day-vote/Second-lover-hunter');
+      yield* this.playAudio('Pre-day-vote/Second-lover-hunter');
+    });
   }
 
-  async playDayVoteAudio() {
-    await this.playAudio('day-vote-start-universal');
+  playDayVoteAudio() {
+    return this.playAudio('day-vote-start-universal');
   }
 
-  async playDayVoteLoversDeath() {
-    await this.playDayEndAudio();
-    await this.playAudio('Day-vote/Lover');
+  playDayVoteLoversDeath() {
+    return Effect.gen({ self: this }, function* () {
+      yield* this.playDayEndAudio();
+      yield* this.playAudio('Day-vote/Lover');
+    });
   }
 
-  async playPostHunterAudio() {
-    await this.playAudio('Hunter/Hunter-start-vote');
+  playPostHunterAudio() {
+    return this.playAudio('Hunter/Hunter-start-vote');
   }
 
-  async nightHasEndedAudio() {
-    await this.playAudio('Night-end/Wake-up-everyone');
+  nightHasEndedAudio() {
+    return this.playAudio('Night-end/Wake-up-everyone');
   }
 
-  async playHunterIsLoverAudio() {
-    await this.playAudio('Special-scenarios/hunter-is-lover');
-    await this.playAudio('day-vote-start');
+  playHunterIsLoverAudio() {
+    return Effect.gen({ self: this }, function* () {
+      yield* this.playAudio('Special-scenarios/hunter-is-lover');
+      yield* this.playAudio('day-vote-start');
+    });
   }
 
-  async playHunterKilledLover() {
-    await this.playAudio('Night-end/hunter-killed-lover');
+  playHunterKilledLover() {
+    return this.playAudio('Night-end/hunter-killed-lover');
   }
 
-  async playLoverAudio() {
-    await this.playAudio('Night-end/Wake-up-everyone');
-    await this.playAudio('Special-death/pre-day-vote-lover-2');
-    await this.playAudio('day-vote-start');
+  playLoverAudio() {
+    return Effect.gen({ self: this }, function* () {
+      yield* this.playAudio('Night-end/Wake-up-everyone');
+      yield* this.playAudio('Special-death/pre-day-vote-lover-2');
+      yield* this.playAudio('day-vote-start');
+    });
   }
 
-  async playWinnerAudio(winner: 'werewolves' | 'villagers') {
-    if (winner === 'werewolves') {
-      await this.playWerewolvesWonAudio();
+  playWinnerAudio(winner: 'werewolves' | 'villagers') {
+    return Effect.gen({ self: this }, function* () {
+      if (winner === 'werewolves') {
+        yield* this.playWerewolvesWonAudio();
 
-      return;
-    }
+        return;
+      }
 
-    await this.playVillagersWonAudio();
+      yield* this.playVillagersWonAudio();
+    });
   }
 
   /**
-   * Plays one clip. Every narration goes through here, so this is where
-   * a sequence of clips stops when its game ends mid-clip: it rejects
-   * with `StaleGame` if the game finished or was reset while the clip
-   * played, and the caller's next clips never start.
+   * Plays one clip. Interrupting it stops the wait, not the narrator:
+   * the clip itself plays on, but nothing sequenced after it starts.
    */
-  async playAudio(file: string) {
-    const generation = this.generation.current();
-    await this.narrator.play(file);
-
-    if (!this.generation.isCurrent(generation)) {
-      throw new StaleGame();
-    }
+  playAudio(file: string) {
+    return Effect.promise(() => this.narrator.play(file));
   }
 }

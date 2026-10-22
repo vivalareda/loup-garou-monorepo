@@ -1,3 +1,4 @@
+import { Effect } from 'effect';
 import type { Game } from '@/core/game';
 import type { AudioManager } from '@/segments/audio-manager';
 
@@ -11,15 +12,19 @@ export class SpecialScenarios {
     this.audioManager = audioManager;
   }
 
-  async partnerIsHunter() {
-    await this.audioManager.nightHasEndedAudio();
-    // Don't call playLoverAudio() here as it includes wake-up audio
-    await this.audioManager.playAudio('Special-death/pre-day-vote-lover-2');
-    await this.audioManager.playSecondLoverIsHunterAudio();
+  partnerIsHunter() {
+    return Effect.gen({ self: this }, function* () {
+      yield* this.audioManager.nightHasEndedAudio();
+      // Don't call playLoverAudio() here as it includes wake-up audio
+      yield* this.audioManager.playAudio('Special-death/pre-day-vote-lover-2');
+      yield* this.audioManager.playSecondLoverIsHunterAudio();
+    });
   }
 
-  async hunterIsLover() {
-    await this.audioManager.nightHasEndedAudio();
-    await this.audioManager.playHunterIsLoverAudio();
+  hunterIsLover() {
+    return Effect.gen({ self: this }, function* () {
+      yield* this.audioManager.nightHasEndedAudio();
+      yield* this.audioManager.playHunterIsLoverAudio();
+    });
   }
 }

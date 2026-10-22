@@ -1,12 +1,9 @@
 import type { GamePhase, Segment, SegmentType } from '@repo/types';
+import { Cause, Effect, Fiber, FiberSet, Scope, Semaphore } from 'effect';
 import type { Game } from '@/core/game';
 import { GameActions } from '@/core/game-actions';
 import type { SpecialScenarios } from '@/core/special-scenarios';
 import type { AudioManager } from '@/segments/audio-manager';
-import {
-  type GameGeneration,
-  ignoreStaleGame,
-} from '@/segments/game-generation';
 import type { Broadcaster } from '@/server/broadcaster';
 import { NightDawnResolution } from '@/server/night-dawn-resolution';
 
@@ -59,18 +56,30 @@ export class SegmentsManager {
   private witchPoisonSegment!: Segment;
   private daySegment!: Segment;
   private hunterSegment!: Segment;
-  private segmentDeadline: NodeJS.Timeout | null = null;
   /**
-   * Bumped when the game finishes or is reset. Anything that awaits
-   * (narration, a hunter pick) or runs on a timer captures it first and
-   * gives up if it changed: that work belongs to a game that is over.
-   * Shared with the AudioManager, which checks it after every clip.
+   * The fibers of the segment being played: its intro, action and
+   * deadline, the transition out of it, and whatever it runs meanwhile
+   * (the dawn, a day vote, the lovers alerts). Ending the segment,
+   * finishing or resetting the game interrupts them all, so no narration,
+   * timer or hunter pick of a past segment or game runs on. The set lives
+   * as long as the manager, so the scope it is made in is never closed.
    */
-  private readonly generation: GameGeneration;
-  /** Bumped each time the game moves to another segment. */
-  private segmentRun = 0;
-  /** The segment run being ended by an `advanceSegment` in progress. */
-  private endingRun: number | null = null;
+  private readonly segmentFibers = Effect.runSync(
+    Scope.provide(FiberSet.make<void>(), Scope.makeUnsafe())
+  );
+  /**
+   * Set while `advanceSegment` plays the segment's end clip: one
+   * transition per segment, so a second call meanwhile (a wolf's repeated
+   * agreeing vote, a deadline racing the last action) is a no-op.
+   */
+  private ending = false;
+  /**
+   * Held by a resolution (the dawn, a day vote) while it runs. A deadline
+   * that expires meanwhile waits for it rather than cutting it short,
+   * which would drop deaths it already set in motion (night deaths not
+   * yet processed, a hunter's revenge, a lover's grief).
+   */
+  private readonly resolving = Semaphore.makeUnsafe(1);
   private deadlineEndsAt: number | null = null;
 
   constructor(
@@ -82,7 +91,6 @@ export class SegmentsManager {
     this.io = io;
     this.game = game;
     this.audioManager = audioManager;
-    this.generation = audioManager.generation;
     this.gameActions = new GameActions(game, io, this);
     this.nightDawnResolution = new NightDawnResolution(game, this, io);
     this.specialScenarios = specialScenarios;
@@ -234,9 +242,8 @@ export class SegmentsManager {
   }
 
   resetForNewGame() {
-    this.generation.bump();
-    this.segmentRun++;
-    this.clearDeadline();
+    this.interruptSegment();
+    this.ending = false;
     this.gameActions.closeDayVote();
     this.currentSegment = 0;
     this.gameStarted = false;
@@ -256,35 +263,45 @@ export class SegmentsManager {
     return this.game.isOneOfLoversInDeathQueue();
   }
 
-  getGeneration() {
-    return this.generation.current();
+  /**
+   * Runs a resolution (the dawn, a day vote) as part of the current
+   * segment: the segment's deadline waits for it, but a reset or the game
+   * ending interrupts it, as does the resolution itself advancing the
+   * segment. Resolves once it completes or is interrupted.
+   */
+  runResolution(resolution: Effect.Effect<void>): Promise<void> {
+    return this.runInSegment(Semaphore.withPermit(this.resolving, resolution));
   }
 
-  /** Runs `listener` whenever a game finishes or is reset. */
-  onGameEnded(listener: () => void) {
-    this.generation.onBump(listener);
+  /**
+   * Runs `effect` as part of the current segment: it is interrupted when
+   * the segment ends or the game finishes or is reset. Resolves once it
+   * completes or is interrupted, and rejects if it dies.
+   */
+  private runInSegment(effect: Effect.Effect<void>): Promise<void> {
+    const fiber = Effect.runSync(FiberSet.run(this.segmentFibers, effect));
+
+    return Effect.runPromise(
+      Fiber.join(fiber).pipe(
+        Effect.catchCauseIf(Cause.hasInterruptsOnly, () => Effect.void)
+      )
+    );
   }
 
-  /** False once the game `generation` was captured in has ended. */
-  isCurrentGeneration(generation: number) {
-    return this.generation.isCurrent(generation);
+  /** Calls `callback` after `delayMs`, unless the segment ends first. */
+  afterDelay(delayMs: number, callback: () => void) {
+    void this.runInSegment(
+      Effect.sleep(delayMs).pipe(Effect.andThen(Effect.sync(callback)))
+    );
   }
 
-  /** Plays narration; false if its game ended meanwhile (`StaleGame`). */
-  private async narrate(narration: Promise<void>) {
-    try {
-      await narration;
-
-      return true;
-    } catch (error) {
-      ignoreStaleGame(error);
-
-      return false;
-    }
+  /** Stops everything the current segment runs, its deadline included. */
+  private interruptSegment() {
+    this.deadlineEndsAt = null;
+    Effect.runFork(FiberSet.clear(this.segmentFibers));
   }
 
   async playSegment() {
-    const run = this.segmentRun;
     const segment = this.segments[this.currentSegment];
     console.log(`[SEGMENT] Playing segment: ${segment.type}`);
     this.io.emit('game:phase-changed', this.getCurrentSegmentType());
@@ -298,7 +315,7 @@ export class SegmentsManager {
     if (segment.type === 'DAY') {
       // Dawn (night-death reveal + day start) runs as one resolution
       // program; it pauses internally when the hunter must pick
-      this.scheduleDeadline(segment.type);
+      this.startDeadline(segment.type);
       this.nightDawnResolution.run().catch((error) => {
         console.error('night dawn resolution failed:', error);
       });
@@ -306,18 +323,13 @@ export class SegmentsManager {
       return;
     }
 
-    const narrated = await this.narrate(
-      this.audioManager.playSegmentAudio(segment.type, true)
+    await this.runInSegment(
+      Effect.gen({ self: this }, function* () {
+        yield* this.audioManager.playSegmentAudio(segment.type, true);
+        segment.action();
+        this.startDeadline(segment.type);
+      })
     );
-
-    // Reset, finished, or already moved past (admin:next-segment) while
-    // the intro played
-    if (!narrated || run !== this.segmentRun) {
-      return;
-    }
-
-    segment.action();
-    this.scheduleDeadline(segment.type);
   }
 
   private shouldAutoSkipSegment(segmentType: SegmentType) {
@@ -347,14 +359,17 @@ export class SegmentsManager {
     return false;
   }
 
-  private scheduleDeadline(segmentType: SegmentType) {
+  /**
+   * Times the segment out unless it ends first: the deadline is a sleep
+   * among the segment's fibers, so ending the segment cancels it.
+   */
+  private startDeadline(segmentType: SegmentType) {
     const timeoutMs = resolveSegmentTimeoutMs(segmentType);
 
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
       return;
     }
 
-    this.clearDeadline();
     this.deadlineEndsAt = Date.now() + timeoutMs;
 
     if (segmentType !== 'DAY') {
@@ -363,24 +378,16 @@ export class SegmentsManager {
       this.io.emit('game:countdown', segmentType, timeoutMs);
     }
 
-    this.segmentDeadline = setTimeout(() => {
-      if (this.getCurrentSegmentType() !== segmentType) {
-        return;
-      }
-
+    const timeOut = Effect.sync(() => {
       console.warn(`[SEGMENT] ${segmentType} timed out; applying fallback`);
-      void this.handleSegmentTimeout(segmentType);
-    }, timeoutMs);
-    this.segmentDeadline.unref?.();
-  }
+      this.handleSegmentTimeout(segmentType);
+    });
 
-  private clearDeadline() {
-    if (this.segmentDeadline) {
-      clearTimeout(this.segmentDeadline);
-      this.segmentDeadline = null;
-    }
-
-    this.deadlineEndsAt = null;
+    void this.runInSegment(
+      Effect.sleep(timeoutMs).pipe(
+        Effect.andThen(Semaphore.withPermit(this.resolving, timeOut))
+      )
+    );
   }
 
   getRemainingDeadlineMs() {
@@ -391,7 +398,7 @@ export class SegmentsManager {
     return Math.max(0, this.deadlineEndsAt - Date.now());
   }
 
-  private async handleSegmentTimeout(segmentType: SegmentType) {
+  private handleSegmentTimeout(segmentType: SegmentType) {
     this.io.emit('game:phase-timed-out', segmentType);
 
     if (segmentType === 'DAY') {
@@ -414,14 +421,14 @@ export class SegmentsManager {
       }
     }
 
-    await this.advanceSegment({ playEndAudio: false });
+    void this.advanceSegment({ playEndAudio: false });
   }
 
   isGameOver() {
     const winner = this.game.checkIfWinner();
 
     if (winner === 'villagers') {
-      this.audioManager.playVillagersWonAudio().catch(ignoreStaleGame);
+      Effect.runFork(this.audioManager.playVillagersWonAudio());
       this.game.alertWinnersAndLosers(winner);
       this.markFinished();
 
@@ -429,7 +436,7 @@ export class SegmentsManager {
     }
 
     if (winner === 'werewolves') {
-      this.audioManager.playWerewolvesWonAudio().catch(ignoreStaleGame);
+      Effect.runFork(this.audioManager.playWerewolvesWonAudio());
       this.game.alertWinnersAndLosers(winner);
       this.markFinished();
 
@@ -445,9 +452,8 @@ export class SegmentsManager {
    * and keep a Durable Object awake for nothing.
    */
   private markFinished() {
-    this.generation.bump();
     this.gameFinished = true;
-    this.clearDeadline();
+    this.interruptSegment();
     this.gameActions.closeDayVote();
   }
 
@@ -458,35 +464,34 @@ export class SegmentsManager {
   // playEndAudio: false lets callers that already narrated the segment's
   // outcome (day-vote resolution, tie) move on without the generic end audio
   //
-  // One transition per segment: a second call while this segment is
-  // already ending (a wolf's repeated agreeing vote, a deadline racing the
-  // last action) is a no-op
+  // Ending the segment interrupts its fibers, the caller's own included
+  // (a deadline, a day-vote resolution): nothing runs after this call.
+  // The end clip runs as the segment's last fiber, so a reset or a game
+  // end meanwhile drops the transition.
   async advanceSegment({
     playEndAudio = true,
   }: { playEndAudio?: boolean } = {}) {
-    if (this.endingRun === this.segmentRun) {
+    if (this.ending) {
       return;
     }
 
-    this.endingRun = this.segmentRun;
-    this.clearDeadline();
+    this.ending = true;
+    this.interruptSegment();
     const segment = this.segments[this.currentSegment];
 
-    if (
-      playEndAudio &&
-      !(await this.narrate(
-        this.audioManager.playSegmentAudio(segment.type, false)
-      ))
-    ) {
-      return;
-    }
+    await this.runInSegment(
+      Effect.gen({ self: this }, function* () {
+        if (playEndAudio) {
+          yield* this.audioManager.playSegmentAudio(segment.type, false);
+        }
 
-    this.markFirstNightSegment(segment);
+        this.ending = false;
+        this.markFirstNightSegment(segment);
+        this.currentSegment++;
+        this.findValidSegment();
 
-    this.segmentRun++;
-    this.currentSegment++;
-    this.findValidSegment();
-
-    this.playSegment();
+        this.playSegment();
+      })
+    );
   }
 }

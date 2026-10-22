@@ -4,7 +4,7 @@ import { DeathManager } from '@/core/death-manager';
 import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
 import { AudioManager } from '@/segments/audio-manager';
-import { SegmentsManager } from '@/segments/segments-manager';
+import { SEGMENT_ORDER, SegmentsManager } from '@/segments/segments-manager';
 import type { Broadcaster } from '@/server/broadcaster';
 
 describe('Audio segment order', () => {
@@ -77,9 +77,7 @@ describe('Audio segment order', () => {
         game.setPlayerTeams(player);
       }
 
-      const daySegmentIndex = segmentsManager.segments.findIndex(
-        (s) => s.type === 'DAY'
-      );
+      const daySegmentIndex = SEGMENT_ORDER.indexOf('DAY');
 
       segmentsManager.currentSegment = daySegmentIndex;
 
@@ -123,9 +121,7 @@ describe('Audio segment order', () => {
         game.setPlayerTeams(player);
       }
 
-      const daySegmentIndex = segmentsManager.segments.findIndex(
-        (s) => s.type === 'DAY'
-      );
+      const daySegmentIndex = SEGMENT_ORDER.indexOf('DAY');
 
       segmentsManager.currentSegment = daySegmentIndex;
 

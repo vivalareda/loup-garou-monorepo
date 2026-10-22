@@ -11,7 +11,7 @@ import { Game } from '@/core/game';
 import { SpecialScenarios } from '@/core/special-scenarios';
 import type { Player } from '@/core/player';
 import { AudioManager } from '@/segments/audio-manager';
-import { SegmentsManager } from '@/segments/segments-manager';
+import { SEGMENT_ORDER, SegmentsManager } from '@/segments/segments-manager';
 import { EventsActions } from '@/server/events-actions';
 import type { Broadcaster } from '@/server/broadcaster';
 
@@ -65,9 +65,7 @@ describe('Night dawn death scenarios', () => {
   };
 
   const jumpToDay = () => {
-    const daySegmentIndex = segmentsManager.segments.findIndex(
-      (s) => s.type === 'DAY'
-    );
+    const daySegmentIndex = SEGMENT_ORDER.indexOf('DAY');
 
     segmentsManager.currentSegment = daySegmentIndex;
   };

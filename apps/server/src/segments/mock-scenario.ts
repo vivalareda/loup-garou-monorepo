@@ -1,7 +1,10 @@
 import type { Role } from '@repo/types';
 import type { Game } from '@/core/game';
 import { Player } from '@/core/player';
-import type { SegmentsManager } from '@/segments/segments-manager';
+import {
+  SEGMENT_ORDER,
+  type SegmentsManager,
+} from '@/segments/segments-manager';
 import type { Broadcaster } from '@/server/broadcaster';
 import type { EventsActions } from '@/server/events-actions';
 
@@ -36,9 +39,7 @@ export class MockScenario {
 
     this.game.addPendingDeath(hunter.getSocketId(), 'WEREWOLVES');
 
-    const daySegmentIndex = this.segmentsManager.segments.findIndex(
-      (s) => s.type === 'DAY'
-    );
+    const daySegmentIndex = SEGMENT_ORDER.indexOf('DAY');
 
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();
@@ -55,9 +56,7 @@ export class MockScenario {
 
     this.game.addPendingDeath('mock-id-1', 'WEREWOLVES');
 
-    const daySegmentIndex = this.segmentsManager.segments.findIndex(
-      (s) => s.type === 'DAY'
-    );
+    const daySegmentIndex = SEGMENT_ORDER.indexOf('DAY');
 
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();
@@ -89,9 +88,7 @@ export class MockScenario {
 
     this.game.addPendingDeath('mock-id-1', 'WEREWOLVES');
 
-    const daySegmentIndex = this.segmentsManager.segments.findIndex(
-      (s) => s.type === 'DAY'
-    );
+    const daySegmentIndex = SEGMENT_ORDER.indexOf('DAY');
 
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();
@@ -133,9 +130,7 @@ export class MockScenario {
 
     this.game.addPendingDeath('mock-id-1', 'WEREWOLVES');
 
-    const daySegmentIndex = this.segmentsManager.segments.findIndex(
-      (s) => s.type === 'DAY'
-    );
+    const daySegmentIndex = SEGMENT_ORDER.indexOf('DAY');
 
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();
@@ -286,9 +281,7 @@ export class MockScenario {
     console.log('💀 Added hunter to pending deaths');
 
     // Jump to DAY segment to trigger hunter revenge flow
-    const daySegmentIndex = this.segmentsManager.segments.findIndex(
-      (s) => s.type === 'DAY'
-    );
+    const daySegmentIndex = SEGMENT_ORDER.indexOf('DAY');
 
     this.segmentsManager.currentSegment = daySegmentIndex;
     this.segmentsManager.playSegment();

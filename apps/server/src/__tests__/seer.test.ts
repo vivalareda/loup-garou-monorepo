@@ -211,18 +211,19 @@ describe('Seer phase', () => {
     expect(advance).toHaveBeenCalledWith({ playEndAudio: false });
   });
 
-  it('runs every night, unlike the first-night-only Cupid and Lovers segments', () => {
-    const seerSegment = segmentsManager.segments.find(
-      (segment) => segment.type === 'SEER'
-    );
+  it('runs every night, unlike the first-night-only Cupid and Lovers segments', async () => {
+    addPlayer('Seer', 'seer-sid', 'SEER');
+    setSegment('DAY');
+    vi.spyOn(
+      segmentsManager.audioManager,
+      'playSegmentAudio'
+    ).mockResolvedValue(undefined);
 
-    expect(seerSegment).toBeDefined();
+    // Ending the first day wraps into night two
+    await segmentsManager.finishSegment();
 
-    if (!seerSegment) {
-      return;
-    }
-
-    segmentsManager.markFirstNightSegment(seerSegment);
-    expect(seerSegment.skip).toBe(false);
+    expect(segmentsManager.getCurrentSegmentType()).toBe('SEER');
+    expect(ioEmit).not.toHaveBeenCalledWith('game:phase-changed', 'CUPID');
+    expect(ioEmit).toHaveBeenCalledWith('game:phase-changed', 'SEER');
   });
 });

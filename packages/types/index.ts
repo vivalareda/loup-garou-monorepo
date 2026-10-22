@@ -31,7 +31,7 @@ export {
 
 export { getRoleDescription, type Role } from './src/role';
 
-export type { Segment, SegmentType, segments } from './src/segment';
+export type { SegmentType, segments } from './src/segment';
 
 export {
   type AckFrame,

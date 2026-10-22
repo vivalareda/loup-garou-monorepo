@@ -1,3 +1,4 @@
+import { Effect } from 'effect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DeathManager } from '@/core/death-manager';
@@ -27,10 +28,10 @@ describe('Audio segment order', () => {
     specialScenarios = new SpecialScenarios(game, audioManager);
 
     // audioManager.playSegmentAudio = vi.fn().mockResolvedValue(undefined);
-    audioManager.playVillagersWonAudio = vi.fn().mockResolvedValue(undefined);
-    audioManager.playWerewolvesWonAudio = vi.fn().mockResolvedValue(undefined);
-    audioManager.playHunterAudio = vi.fn().mockResolvedValue(undefined);
-    audioManager.playLoverAudio = vi.fn().mockResolvedValue(undefined);
+    audioManager.playVillagersWonAudio = vi.fn(() => Effect.void);
+    audioManager.playWerewolvesWonAudio = vi.fn(() => Effect.void);
+    audioManager.playHunterAudio = vi.fn(() => Effect.void);
+    audioManager.playLoverAudio = vi.fn(() => Effect.void);
 
     segmentsManager = new SegmentsManager(
       game,

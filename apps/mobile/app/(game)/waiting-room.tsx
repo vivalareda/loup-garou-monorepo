@@ -1,7 +1,8 @@
 import { MAX_PLAYER_COUNT, MIN_PLAYER_COUNT } from '@repo/types';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { SafeAreaView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Share, Text, View } from 'react-native';
+import { Avatar, Backdrop, Banner, Button, Eyebrow } from '@/components/ui';
 import { formatRoomCode } from '@/hooks/room';
 import { useConnectionStore } from '@/hooks/use-connection-store';
 import { useGameStore } from '@/hooks/use-game-store';
@@ -34,33 +35,74 @@ function HostControls({
     joinedCount >= MIN_PLAYER_COUNT && joinedCount < requiredPlayerCount;
 
   return (
-    <View className="items-center gap-4">
-      <View className="flex-row items-center gap-6">
-        <TouchableOpacity
-          className={`rounded-lg px-5 py-2 ${canLower ? 'bg-slate-200/50' : 'bg-slate-400/20'}`}
-          disabled={!canLower}
-          onPress={() => setCount(requiredPlayerCount - 1)}
-        >
-          <Text className="text-2xl font-bold text-white">−</Text>
-        </TouchableOpacity>
-        <Text className="text-white">{requiredPlayerCount} joueurs</Text>
-        <TouchableOpacity
-          className={`rounded-lg px-5 py-2 ${canRaise ? 'bg-slate-200/50' : 'bg-slate-400/20'}`}
-          disabled={!canRaise}
-          onPress={() => setCount(requiredPlayerCount + 1)}
-        >
-          <Text className="text-2xl font-bold text-white">+</Text>
-        </TouchableOpacity>
+    <View className="gap-4 rounded-3xl border border-ink-700 bg-ink-900/80 p-5">
+      <View className="flex-row items-center justify-between">
+        <View>
+          <Eyebrow>Vous êtes l'hôte</Eyebrow>
+          <Text className="mt-1 text-base text-ink-200">Nombre de joueurs</Text>
+        </View>
+        <View className="flex-row items-center gap-3">
+          <Button
+            className="w-12"
+            disabled={!canLower}
+            label="−"
+            onPress={() => setCount(requiredPlayerCount - 1)}
+            size="sm"
+            variant="secondary"
+          />
+          <Text className="w-8 text-center text-2xl font-bold text-moon-100">
+            {requiredPlayerCount}
+          </Text>
+          <Button
+            className="w-12"
+            disabled={!canRaise}
+            label="+"
+            onPress={() => setCount(requiredPlayerCount + 1)}
+            size="sm"
+            variant="secondary"
+          />
+        </View>
       </View>
       {canStartNow && (
-        <TouchableOpacity
-          className="rounded-lg bg-slate-200/50 px-6 py-3"
+        <Button
+          label={`Lancer maintenant à ${joinedCount}`}
           onPress={() => setCount(joinedCount)}
-        >
-          <Text className="font-bold text-white">
-            Lancer à {joinedCount} joueurs
-          </Text>
-        </TouchableOpacity>
+        />
+      )}
+    </View>
+  );
+}
+
+/** One seat of the lobby: a joined player, or an empty chair. */
+function Seat({
+  name,
+  isSelf,
+  isHost,
+}: {
+  name: string | null;
+  isSelf?: boolean;
+  isHost?: boolean;
+}) {
+  if (name === null) {
+    return (
+      <View className="flex-row items-center gap-3 rounded-2xl border border-dashed border-ink-600 px-3 py-2.5">
+        <View className="h-9 w-9 rounded-full border border-dashed border-ink-500" />
+        <Text className="text-ink-400">En attente d'un joueur…</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View className="flex-row items-center gap-3 rounded-2xl bg-ink-800/80 px-3 py-2.5">
+      <Avatar name={name} size={36} />
+      <Text className="flex-1 text-base font-semibold text-moon-100">
+        {name}
+      </Text>
+      {isHost && <Text className="text-xs text-moon-500">👑 Hôte</Text>}
+      {isSelf && (
+        <View className="rounded-full bg-moon/15 px-2 py-0.5">
+          <Text className="text-xs font-semibold text-moon">Vous</Text>
+        </View>
       )}
     </View>
   );
@@ -95,43 +137,85 @@ export default function WaitingRoom() {
   // playersList excludes the local player
   const joinedCount = playersList.length + 1;
   const isHost = hostSocketId !== null && hostSocketId === player.socketId;
+  const displayCode = roomCode ? formatRoomCode(roomCode) : null;
+
+  const emptySeats = Math.max(0, (requiredPlayerCount ?? 0) - joinedCount);
+
+  const shareCode = () => {
+    if (displayCode) {
+      Share.share({
+        message: `Rejoins ma partie de Loup-Garou avec le code ${displayCode}`,
+      }).catch((error) => console.error('Failed to share the code', error));
+    }
+  };
 
   return (
-    <SafeAreaView className="flex-1 items-center justify-center bg-slate-600 pb-24">
-      <View className="w-3/4 gap-16 space-y-5 pt-32">
-        {roomCode && (
-          <View className="items-center">
-            <Text className="text-white">Code de la partie</Text>
-            <Text className="text-4xl font-bold tracking-widest text-white">
-              {formatRoomCode(roomCode)}
+    <Backdrop>
+      <ScrollView contentContainerClassName="gap-6 px-6 pb-10 pt-6">
+        <View className="items-center">
+          <Eyebrow>Salle d'attente</Eyebrow>
+          <Text className="mt-2 text-center text-3xl font-bold text-moon-100">
+            Le village se rassemble
+          </Text>
+        </View>
+
+        {displayCode && (
+          <View className="items-center gap-3 rounded-3xl border border-moon/25 bg-ink-900/80 p-5">
+            <Eyebrow>Code de la partie</Eyebrow>
+            <Text
+              className="text-4xl font-bold tracking-[6px] text-moon"
+              selectable
+            >
+              {displayCode}
             </Text>
+            <Button
+              label="Partager le code"
+              onPress={shareCode}
+              size="sm"
+              variant="secondary"
+            />
           </View>
         )}
-        {requiredPlayerCount !== null && (
-          <Text className="text-center text-3xl font-bold text-white">
-            {joinedCount}/{requiredPlayerCount} joueurs
-          </Text>
-        )}
+
         {isHost && requiredPlayerCount !== null && (
           <HostControls
             joinedCount={joinedCount}
             requiredPlayerCount={requiredPlayerCount}
           />
         )}
-        {actionError && (
-          <Text className="text-center font-semibold text-red-300">
-            {actionError}
-          </Text>
-        )}
-        <Text className="text-center text-white">
-          {playersList.length === 0
-            ? `Vous etes le seul dans la salle d'attente, attendez que d'autres joueurs vous rejoignent`
-            : `${playersList
-                .filter((p) => p.name !== player.name)
-                .map((p) => p.name)
-                .join(', \n')}, \n attendent avec vous`}
+
+        {actionError && <Banner tone="error">{actionError}</Banner>}
+
+        <View className="gap-2">
+          <View className="mb-1 flex-row items-baseline justify-between">
+            <Eyebrow>Joueurs</Eyebrow>
+            {requiredPlayerCount !== null && (
+              <Text className="text-sm font-semibold text-ink-300">
+                {joinedCount} / {requiredPlayerCount}
+              </Text>
+            )}
+          </View>
+          <Seat
+            isHost={hostSocketId === player.socketId}
+            isSelf
+            name={player.name}
+          />
+          {playersList.map((other) => (
+            <Seat
+              isHost={hostSocketId === other.socketId}
+              key={other.socketId}
+              name={other.name}
+            />
+          ))}
+          {Array.from({ length: emptySeats }, (_, seat) => (
+            <Seat key={`empty-${seat}`} name={null} />
+          ))}
+        </View>
+
+        <Text className="text-center text-sm text-ink-400">
+          La partie commence d'elle-même quand tout le monde est là.
         </Text>
-      </View>
-    </SafeAreaView>
+      </ScrollView>
+    </Backdrop>
   );
 }

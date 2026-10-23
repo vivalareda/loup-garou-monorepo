@@ -1,58 +1,86 @@
-import type { GameEndResult, Role } from '@repo/types';
-import { Text, TouchableOpacity, View } from 'react-native';
+import type { GameEndResult } from '@repo/types';
+import { clsx } from 'clsx';
+import { ScrollView, Text, View } from 'react-native';
+import { Avatar, Backdrop, Button, Eyebrow } from '@/components/ui';
+import { useGameStore } from '@/hooks/use-game-store';
+import { usePlayerStore } from '@/hooks/use-player-store';
+import { ROLES } from '@/lib/game-labels';
 import { socket } from '@/utils/sockets';
 
-export const ROLE_LABELS: Record<Role, string> = {
-  WEREWOLF: 'Loup-Garou',
-  VILLAGER: 'Villageois',
-  WITCH: 'Sorcière',
-  CUPID: 'Cupidon',
-  HUNTER: 'Chasseur',
-  SEER: 'Voyante',
-};
+/** Every player's role and fate, revealed once the game is over. */
+function RoleReveal({ result }: { result: GameEndResult }) {
+  return (
+    <View className="w-full gap-2 rounded-3xl border border-ink-700 bg-ink-900/80 p-4">
+      <Eyebrow className="mb-1">Les rôles</Eyebrow>
+      {result.players.map((revealed) => {
+        const role = revealed.role ? ROLES[revealed.role] : null;
+
+        return (
+          <View className="flex-row items-center gap-3" key={revealed.socketId}>
+            <Avatar dead={!revealed.isAlive} name={revealed.name} size={32} />
+            <Text
+              className={clsx(
+                'flex-1 text-base',
+                revealed.isAlive ? 'text-moon-100' : 'text-ink-400 line-through'
+              )}
+            >
+              {revealed.name}
+            </Text>
+            <Text className="text-base font-semibold text-ink-200">
+              {role ? `${role.emblem} ${role.label}` : '?'}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 
 /**
- * End-of-game reveal shared by the winner and loser screens: the winning
- * faction, every player's role and fate, and the play-again control (any
- * player may trigger the server reset).
+ * The winner and loser screens: which side won, every player's role and
+ * fate, and the play-again control (any player may trigger the server
+ * reset).
  */
-export function EndGamePanel({ result }: { result: GameEndResult | null }) {
+export function EndGameScreen({ won }: { won: boolean }) {
+  const { player } = usePlayerStore();
+  const { gameResult } = useGameStore();
+
+  const winners =
+    gameResult?.winningFaction === 'werewolves'
+      ? 'Les loups-garous ont dévoré le village'
+      : 'Le village a vaincu les loups-garous';
+
   return (
-    <View className="w-full items-center">
-      {result && (
-        <View className="mt-8 w-full rounded-2xl border border-slate-500/40 bg-slate-900/40 p-4">
-          <Text className="text-center text-lg font-bold text-white">
-            {result.winningFaction === 'werewolves'
-              ? 'Les Loups-Garous ont gagné'
-              : 'Les Villageois ont gagné'}
+    <Backdrop variant={won ? 'victory' : 'defeat'}>
+      <ScrollView contentContainerClassName="flex-grow items-center justify-center gap-6 px-6 py-8">
+        <View className="items-center">
+          <Text className="text-7xl">{won ? '🏆' : '🥀'}</Text>
+          <Text
+            className={clsx(
+              'mt-4 text-4xl font-bold',
+              won ? 'text-moon' : 'text-blood-300'
+            )}
+          >
+            {won ? 'Victoire !' : 'Défaite'}
           </Text>
-
-          <View className="mt-4">
-            {result.players.map((revealed) => (
-              <View
-                className="flex-row items-center justify-between py-1"
-                key={revealed.socketId}
-              >
-                <Text className="text-base text-slate-200">
-                  {revealed.isAlive ? '🙂' : '💀'} {revealed.name}
-                </Text>
-                <Text className="text-base font-semibold text-slate-300">
-                  {revealed.role ? ROLE_LABELS[revealed.role] : '?'}
-                </Text>
-              </View>
-            ))}
-          </View>
+          {gameResult && (
+            <Text className="mt-2 text-center text-base text-ink-200">
+              {winners}
+            </Text>
+          )}
+          {player && (
+            <Text className="mt-1 text-sm text-ink-400">{player.name}</Text>
+          )}
         </View>
-      )}
 
-      <TouchableOpacity
-        accessibilityLabel="Rejouer une partie"
-        accessibilityRole="button"
-        className="mt-8 rounded-xl bg-slate-200/90 px-10 py-4"
-        onPress={() => socket.emit('game:restart')}
-      >
-        <Text className="text-lg font-bold text-slate-900">Rejouer</Text>
-      </TouchableOpacity>
-    </View>
+        {gameResult && <RoleReveal result={gameResult} />}
+
+        <Button
+          className="self-stretch"
+          label="Rejouer"
+          onPress={() => socket.emit('game:restart')}
+        />
+      </ScrollView>
+    </Backdrop>
   );
 }

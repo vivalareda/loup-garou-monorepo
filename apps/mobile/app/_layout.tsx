@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // oxlint-disable-next-line import/no-unassigned-import -- NativeWind's stylesheet is loaded for its side effect: it registers the Tailwind classes
@@ -9,13 +9,9 @@ import { GlobalModal } from '@/components/global-modal';
 import { useSessionRecovery } from '@/hooks/use-session-recovery';
 import { setAndroidNavigationBar } from '@/lib/android-navigation-bar';
 import { NAV_THEME } from '@/lib/constants';
+import { palette } from '@/lib/palette';
 import { useColorScheme } from '@/lib/use-color-scheme';
 import { rooms } from '@/utils/rooms';
-
-const LIGHT_THEME = {
-  ...DefaultTheme,
-  colors: NAV_THEME.light,
-};
 
 const DARK_THEME = {
   ...DarkTheme,
@@ -24,7 +20,7 @@ const DARK_THEME = {
 
 export default function RootLayout() {
   const hasMounted = useRef(false);
-  const { colorScheme, isDarkColorScheme } = useColorScheme();
+  const { colorScheme } = useColorScheme();
   const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false);
 
   // Reconnect/session-recovery listeners live at the root so they survive
@@ -57,10 +53,17 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-      <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
+    <ThemeProvider value={DARK_THEME}>
+      {/* Every screen is a night scene, whatever the system theme */}
+      {/* oxlint-disable-next-line react/style-prop-object -- expo-status-bar's style is a color scheme name, not a style object */}
+      <StatusBar style="light" />
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: palette.ink[950] },
+          }}
+        >
           <Stack.Screen name="index" />
           <Stack.Screen name="join" />
           <Stack.Screen name="(game)" />

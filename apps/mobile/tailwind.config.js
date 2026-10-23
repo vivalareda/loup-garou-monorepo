@@ -1,14 +1,20 @@
 const { hairlineWidth } = require('nativewind/theme');
+const { palette } = require('./lib/palette');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
-  content: ['./app/**/*.{js,ts,tsx}', './components/**/*.{js,ts,tsx}'],
+  content: [
+    './app/**/*.{js,ts,tsx}',
+    './components/**/*.{js,ts,tsx}',
+    './lib/**/*.{js,ts,tsx}',
+  ],
 
   presets: [require('nativewind/preset')],
   theme: {
     extend: {
       colors: {
+        ...palette,
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {

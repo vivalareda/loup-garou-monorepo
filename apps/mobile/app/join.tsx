@@ -1,16 +1,14 @@
 import { Link, Redirect, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  Button,
-  ImageBackground,
   Keyboard,
-  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
   Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { Backdrop, Banner, Button, Field } from '@/components/ui';
 import { useConnectionStore } from '@/hooks/use-connection-store';
 import { registerJoinListeners, submitJoin } from '@/hooks/use-join-game';
 import { usePlayerStore } from '@/hooks/use-player-store';
@@ -113,68 +111,69 @@ export default function JoinRoom() {
   }
 
   return (
-    <ImageBackground
-      className="flex-1"
-      resizeMethod="resize"
-      source={require('@/assets/join-screen-background.png')}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <SafeAreaView className="flex-1 items-center justify-center pb-24">
-          <View className="items-center justify-between gap-20">
-            <View className="mt-32 pb-12">
-              <Text className="text-7xl font-bold text-white"> </Text>
-            </View>
-            <View className="mt-56 items-center self-stretch">
-              {recoveryFailed && (
-                <View className="mb-4 rounded-xl bg-amber-500/90 px-4 py-3">
-                  <Text className="text-center font-semibold text-slate-900">
-                    Session précédente expirée — rejoignez la partie.
-                  </Text>
-                </View>
-              )}
-              {joinError && (
-                <View className="mb-4 rounded-xl bg-red-500/90 px-4 py-3">
-                  <Text className="text-center font-semibold text-white">
-                    {joinError}
-                  </Text>
-                </View>
-              )}
-              <Text className="text-center text-4xl font-bold text-white">
-                Entrez votre nom
-              </Text>
-              <TextInput
-                className="mt-4 h-16 w-full rounded-lg border-2 border-gray-100/50 bg-slate-600 pb-2 text-center text-2xl font-bold text-white"
-                onChangeText={setName}
-                value={name}
-              />
-              <View className="mt-8 w-52 items-center justify-center">
-                <TouchableOpacity
-                  className={`rounded-lg px-8 py-4 ${
-                    isJoining ? 'bg-slate-400/40' : 'bg-slate-200/50'
-                  }`}
-                  disabled={isJoining}
-                  onPress={handleJoinGame}
-                >
-                  <Text>{isJoining ? 'Connexion…' : 'Join game'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity className="mt-4" onPress={handleChangeRoom}>
-                  <Text className="text-white underline">
-                    Changer de partie
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+    <Backdrop variant="artwork">
+      {/* Tapping outside the field closes the keyboard; not an a11y target */}
+      <Pressable
+        accessible={false}
+        className="flex-1"
+        onPress={Keyboard.dismiss}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          className="flex-1 justify-end px-6 pb-6"
+        >
+          <View className="gap-3">
+            {recoveryFailed && (
+              <Banner tone="warning">
+                Session précédente expirée — rejoignez la partie.
+              </Banner>
+            )}
+            {joinError && <Banner tone="error">{joinError}</Banner>}
 
-            <View>
-              {isDev && (
-                <Link asChild href="/modal-test">
-                  <Button title="🧪 Test Modal" />
-                </Link>
-              )}
-            </View>
+            <Text className="mb-1 text-center text-2xl font-bold text-moon-100">
+              Comment vous appelle-t-on ?
+            </Text>
+            <Field
+              accessibilityLabel="Votre nom"
+              autoCapitalize="words"
+              autoComplete="off"
+              // A name is not a dictionary word: autocorrect turns "Reda"
+              // into "Read" on submit
+              autoCorrect={false}
+              maxLength={20}
+              onChangeText={setName}
+              onSubmitEditing={handleJoinGame}
+              placeholder="Votre nom"
+              returnKeyType="join"
+              spellCheck={false}
+              value={name}
+            />
+            <Button
+              disabled={name.trim() === ''}
+              label="Entrer dans le village"
+              loading={isJoining}
+              onPress={handleJoinGame}
+            />
+            <Button
+              label="Changer de partie"
+              onPress={handleChangeRoom}
+              size="sm"
+              variant="ghost"
+            />
+
+            {isDev && (
+              <Link asChild href="/modal-test">
+                <Button
+                  label="🧪 Tester les modales"
+                  onPress={() => undefined}
+                  size="sm"
+                  variant="ghost"
+                />
+              </Link>
+            )}
           </View>
-        </SafeAreaView>
-      </TouchableWithoutFeedback>
-    </ImageBackground>
+        </KeyboardAvoidingView>
+      </Pressable>
+    </Backdrop>
   );
 }

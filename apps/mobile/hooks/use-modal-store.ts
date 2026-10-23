@@ -29,8 +29,11 @@ export type ModalData = {
   onSkip?: () => void;
   /** Label for the optional Skip button. */
   skipLabel?: string;
-  /** Label for the Confirm button (defaults to "Confirm Selection"). */
+  /** Label for the Confirm button, or a yes-no modal's yes (defaults to
+   * "Confirmer" / "Oui"). */
   confirmLabel?: string;
+  /** Label for a yes-no modal's no (defaults to "Non"). */
+  declineLabel?: string;
   onConfirm?: (...args: any[]) => any;
   disableButtonCondition?: (...args: any[]) => any;
 };

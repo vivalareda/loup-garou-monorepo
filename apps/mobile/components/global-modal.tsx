@@ -1,13 +1,7 @@
 import { clsx } from 'clsx';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  FlatList,
-  Modal,
-  Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from 'react-native';
+import { FlatList, Modal, Pressable, Text, View } from 'react-native';
+import { Avatar, Button } from '@/components/ui';
 import { useGameStore } from '@/hooks/use-game-store';
 import { type ModalData, useModalStore } from '@/hooks/use-modal-store';
 import { socket } from '@/utils/sockets';
@@ -18,7 +12,7 @@ const NO_SELECTION: string[] = [];
 
 function renderChildren(children: React.ReactNode) {
   return (
-    <View className="my-5 w-full items-center justify-center">{children}</View>
+    <View className="my-3 w-full items-center justify-center">{children}</View>
   );
 }
 
@@ -126,17 +120,6 @@ export function GlobalModal() {
 
   const isSelected = (item: string) => selection.includes(item);
 
-  const getListItemStyle = (item: string) => {
-    const selected = isSelected(item);
-    const disabled = isItemDisabled(item);
-
-    return clsx('mb-2 rounded-lg border-2 p-3', {
-      'border-blue-500 bg-blue-100': selected,
-      'border-gray-300 bg-gray-50 opacity-40': disabled,
-      'border-gray-300 bg-gray-50': !(selected || disabled),
-    });
-  };
-
   const isItemDisabled = (item: string) => {
     if (modalData.selectionCount && !isSelected(item)) {
       return selection.length >= modalData.selectionCount;
@@ -192,31 +175,55 @@ export function GlobalModal() {
     }
 
     return (
-      <View className="mb-4 max-h-60">
+      <View className="mb-2 max-h-80">
+        {modalData.selectionCount && modalData.selectionCount > 1 && (
+          <Text className="mb-3 text-center text-sm text-ink-300">
+            {selection.length} / {modalData.selectionCount} sélectionnés
+          </Text>
+        )}
         <FlatList
+          contentContainerClassName="gap-2"
           data={modalData.data}
           keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              className={getListItemStyle(item)}
-              disabled={isItemDisabled(item)}
-              onPress={() => handleSelection(item)}
-            >
-              <View className="flex-row items-center justify-between">
+          renderItem={({ item }) => {
+            const name = getPlayerNameFromSid(item);
+            const selected = isSelected(item);
+
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{
+                  selected,
+                  disabled: isItemDisabled(item),
+                }}
+                className={clsx(
+                  'flex-row items-center gap-3 rounded-2xl border px-3 py-2.5',
+                  selected
+                    ? 'border-moon bg-moon/15'
+                    : 'border-ink-700 bg-ink-900/70',
+                  isItemDisabled(item) && 'opacity-40'
+                )}
+                disabled={isItemDisabled(item)}
+                onPress={() => handleSelection(item)}
+              >
+                <Avatar name={name} size={34} />
                 <Text
-                  className={`${isSelected(item) ? 'text-blue-800 font-medium' : 'text-gray-800'}`}
+                  className={clsx(
+                    'flex-1 text-base',
+                    selected ? 'font-bold text-moon' : 'text-moon-100'
+                  )}
                 >
-                  {getPlayerNameFromSid(item)}
+                  {name}
                 </Text>
-                {isSelected(item) && <Text className="text-blue-600">✓</Text>}
-              </View>
-              {modalData.werewolfModal && (
-                <Text className="text-sm">
-                  {getVoteCount(item)}/{totalWerewolves}
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
+                {modalData.werewolfModal && (
+                  <Text className="text-sm font-semibold text-blood-300">
+                    🐺 {getVoteCount(item)}/{totalWerewolves}
+                  </Text>
+                )}
+                {selected && <Text className="text-lg text-moon">✓</Text>}
+              </Pressable>
+            );
+          }}
           showsVerticalScrollIndicator={false}
         />
       </View>
@@ -230,49 +237,36 @@ export function GlobalModal() {
 
     if (modalData.type === 'yes-no') {
       return (
-        <View className="mt-4 flex-row space-x-3">
-          <TouchableOpacity
-            className="flex-1 rounded-lg bg-red-500 px-4 py-2"
+        <View className="mt-4 flex-row gap-3">
+          <Button
+            className="flex-1"
+            label={modalData.declineLabel ?? 'Non'}
             onPress={handleNoClick}
-          >
-            <Text className="py-2 text-center font-medium text-white">No</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="flex-1 rounded-lg bg-green-500 px-4 py-2"
+            variant="secondary"
+          />
+          <Button
+            className="flex-1"
+            label={modalData.confirmLabel ?? 'Oui'}
             onPress={handleYesClick}
-          >
-            <Text className="py-2 text-center font-medium text-white">Yes</Text>
-          </TouchableOpacity>
+          />
         </View>
       );
     }
 
     return (
-      <View className="mt-4 flex-row space-x-3">
-        {modalData.onSkip && (
-          <TouchableOpacity
-            className="flex-1 rounded-lg bg-slate-500 px-4 py-2"
-            onPress={handleSkip}
-          >
-            <Text className="py-2 text-center font-medium text-white">
-              {modalData.skipLabel ?? 'Passer'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          className={clsx(
-            'flex-1 rounded-lg px-4 py-2',
-            isButtonDisabled() ? 'bg-gray-500 opacity-50' : 'bg-blue-500'
-          )}
+      <View className="mt-4 gap-2">
+        <Button
           disabled={isButtonDisabled()}
+          label={modalData.confirmLabel ?? 'Confirmer'}
           onPress={handleModalClose}
-        >
-          <Text className="py-2 text-center font-medium text-white">
-            {modalData.confirmLabel ?? 'Confirm Selection'}
-          </Text>
-        </TouchableOpacity>
+        />
+        {modalData.onSkip && (
+          <Button
+            label={modalData.skipLabel ?? 'Passer'}
+            onPress={handleSkip}
+            variant="ghost"
+          />
+        )}
       </View>
     );
   };
@@ -281,25 +275,24 @@ export function GlobalModal() {
     <Modal
       animationType="fade"
       onRequestClose={closeModal}
+      statusBarTranslucent
       transparent
       visible={isOpen}
     >
-      <View className="flex-1 items-center justify-center bg-black/50">
-        <TouchableWithoutFeedback>
-          <View className="mx-4 w-full max-w-sm rounded-lg bg-white p-6 shadow-2xl">
-            {modalData.title && (
-              <Text className="mb-4 text-center text-lg font-semibold text-gray-900">
-                {modalData.title}
-              </Text>
-            )}
+      <View className="flex-1 justify-center bg-black/70 px-5">
+        <View className="rounded-[28px] border border-ink-600 bg-ink-800 p-6">
+          {modalData.title && (
+            <Text className="mb-4 text-center text-xl font-bold text-moon-100">
+              {modalData.title}
+            </Text>
+          )}
 
-            {Array.isArray(modalData.data)
-              ? renderPlayerList()
-              : renderChildren(modalData.data)}
+          {Array.isArray(modalData.data)
+            ? renderPlayerList()
+            : renderChildren(modalData.data)}
 
-            {renderButton()}
-          </View>
-        </TouchableWithoutFeedback>
+          {renderButton()}
+        </View>
       </View>
     </Modal>
   );

@@ -13,9 +13,8 @@ const metroConfig = withTurborepoManagedCache(
   ),
 );
 
-metroConfig.resolver.unstable_enablePackageExports = true;
-
-metroConfig.resolver.disableHierarchicalLookup = true;
+// Package exports and hierarchical lookup already default to the values the
+// monorepo needs in SDK 58, so no resolver overrides are required here.
 
 module.exports = metroConfig;
 

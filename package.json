@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@oxlint/plugins": "1.89.0",
+    "@types/react": "19.3.0",
     "lint-staged": "^16.1.5",
     "oxfmt": "0.74.0",
     "oxlint": "1.89.0",

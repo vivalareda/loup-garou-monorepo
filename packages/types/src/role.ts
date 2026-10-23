@@ -18,7 +18,7 @@ export const roleDescriptions: Record<Role, string> = {
   HUNTER:
     'Si vous mourez, vous pouvez immédiatement éliminer un autre joueur avec votre dernière balle.',
   CUPID:
-    'On the first night, choose two players to fall in love. If one dies, the other dies too.',
+    'La première nuit, vous unissez deux joueurs par l’amour. Si l’un meurt, l’autre meurt aussi.',
   WITCH:
     'Vous avez deux potions : une de guérison pour sauver un joueur attaqué par un loup-garou, et une de poison pour éliminer un joueur. Utilisez-les judicieusement.',
 };

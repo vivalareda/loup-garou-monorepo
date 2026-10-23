@@ -8,6 +8,10 @@ import type {
 } from '@repo/types';
 import type { DeathManager } from '@/core/death-manager';
 import { Player } from '@/core/player';
+import { Lovers } from '@/core/lovers';
+import { VotePool } from '@/core/vote-pool';
+import { checkWinner } from '@/core/win-conditions';
+import { buildRolesList } from '@/core/role-assignment';
 import type { Broadcaster } from '@/server/broadcaster';
 
 export type DayVoteResult =
@@ -20,9 +24,9 @@ export class Game {
   private readonly players: Map<string, Player>;
   private readonly specialRolePlayers: Map<Role, Player> = new Map();
   private readonly deathManager: DeathManager;
-  private readonly lovers: Player[] = [];
-  private readonly werewolfVotes: Map<string, string> = new Map(); // voterSid → targetSid
-  private readonly dayVotes: Map<string, string> = new Map(); // voterSid → targetSid
+  private readonly lovers: Lovers = new Lovers();
+  private readonly werewolfVotes: VotePool = new VotePool();
+  private readonly dayVotes: VotePool = new VotePool();
   private witchHasHealPotion = true;
   private witchHasPoisonPotion = true;
   /** The reveal payload of the finished game, kept for reconnect snapshots. */
@@ -40,7 +44,6 @@ export class Game {
     this.io = io;
     this.deathManager = deathManager;
     this.players = new Map<string, Player>();
-    this.lovers = [];
     this.shuffleRoles =
       options?.shuffleRoles ?? ((items) => this.shuffleArray(items));
   }
@@ -64,7 +67,7 @@ export class Game {
   resetForNewGame() {
     this.specialRolePlayers.clear();
     this.deathManager.reset();
-    this.lovers.length = 0;
+    this.lovers.clear();
     this.werewolfVotes.clear();
     this.dayVotes.clear();
     this.availableRoles = [];
@@ -158,21 +161,8 @@ export class Game {
       return;
     }
 
-    for (const votes of [this.werewolfVotes, this.dayVotes]) {
-      const ownVote = votes.get(oldSid);
-
-      if (ownVote !== undefined) {
-        votes.delete(oldSid);
-        votes.set(newSid, ownVote);
-      }
-
-      for (const [voterSid, targetSid] of votes.entries()) {
-        if (targetSid === oldSid) {
-          votes.set(voterSid, newSid);
-        }
-      }
-    }
-
+    this.werewolfVotes.remapSocketId(oldSid, newSid);
+    this.dayVotes.remapSocketId(oldSid, newSid);
     this.deathManager.remapSocketId(oldSid, newSid);
   }
 
@@ -194,35 +184,7 @@ export class Game {
   }
 
   initRolesList() {
-    const playerCount = this.players.size;
-    this.availableRoles = [];
-
-    if (playerCount >= 4) {
-      const werewolfCount = Math.floor(playerCount / 3) || 1;
-
-      for (let i = 0; i < werewolfCount; i++) {
-        this.availableRoles.push('WEREWOLF');
-      }
-
-      this.availableRoles.push('CUPID');
-      this.availableRoles.push('WITCH');
-      this.availableRoles.push('HUNTER');
-
-      // The Seer joins from 5 players up: at 4 there is no free slot left
-      if (playerCount > this.availableRoles.length) {
-        this.availableRoles.push('SEER');
-      }
-
-      const remainingSlots = playerCount - this.availableRoles.length;
-
-      for (let i = 0; i < remainingSlots; i++) {
-        this.availableRoles.push('VILLAGER');
-      }
-    } else {
-      for (let i = 0; i < this.players.size; i++) {
-        this.availableRoles.push('VILLAGER');
-      }
-    }
+    this.availableRoles = buildRolesList(this.players.size);
   }
 
   getPlayerList() {
@@ -274,11 +236,11 @@ export class Game {
 
     // Dev-only: force a specific player to be the hunter by setting
     // DEV_FORCE_HUNTER=<player name> when starting the server. HUNTER is
-    // now in the normal role list, so this just controls WHICH player gets
-    // it. The forced player is handled FIRST, before the loop pops roles,
-    // so the HUNTER slot is still in the shuffled pool to splice out —
-    // otherwise a random player could pop it first and the fallback
-    // splice(0, 1) would remove the wrong role, creating two hunters.
+    // in the normal role list, so this just controls WHICH player gets it.
+    // The forced player is handled FIRST, before the loop pops roles, so the
+    // HUNTER slot is still in the shuffled pool to splice out — otherwise a
+    // random player could pop it first and the fallback splice(0, 1) would
+    // remove the wrong role, creating two hunters.
     const forcedHunterName = process.env.DEV_FORCE_HUNTER;
 
     const forcedHunterPlayer = forcedHunterName
@@ -351,48 +313,18 @@ export class Game {
     this.deathManager.addTeamVillager(player);
   }
 
-  isAnyOfLoverHunter() {
-    for (const lover of this.lovers) {
-      if (lover.getRole() === 'HUNTER') {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   isOneOfLoversInDeathQueue() {
-    for (const lover of this.lovers) {
-      if (this.deathManager.isInDeathQueue(lover.getSocketId())) {
-        return true;
-      }
-    }
-
-    return false;
+    return this.lovers.isAnyInDeathQueue((sid) =>
+      this.deathManager.isInDeathQueue(sid)
+    );
   }
 
   hasPartner(playerSid: string) {
-    for (const lover of this.lovers) {
-      if (lover.getSocketId() === playerSid) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  isOneOfLoversHunter() {
-    for (const lover of this.lovers) {
-      if (lover.getRole() === 'HUNTER') {
-        return true;
-      }
-    }
-
-    return false;
+    return this.lovers.hasPartner(playerSid);
   }
 
   setLovers(selectedPlayers: string[]) {
-    this.lovers.length = 0;
+    const lovers: Player[] = [];
 
     for (const sid of selectedPlayers) {
       const player = this.players.get(sid);
@@ -401,12 +333,14 @@ export class Game {
         throw new Error(`Player with sid ${sid} not found`);
       }
 
-      this.lovers.push(player);
+      lovers.push(player);
     }
+
+    this.lovers.set(lovers);
   }
 
   getLovers() {
-    return this.lovers;
+    return this.lovers.get();
   }
 
   getPlayerBySocketId(socketId: string) {
@@ -434,7 +368,7 @@ export class Game {
     }
 
     // Store vote (overwrites previous vote if any)
-    this.werewolfVotes.set(voterSid, targetSid);
+    this.werewolfVotes.setVote(voterSid, targetSid);
     console.log(`Werewolf ${voterSid} voted for ${targetSid}`);
 
     // Broadcast updated votes to all werewolves
@@ -443,7 +377,7 @@ export class Game {
 
   handleDayVote(voterSid: string, targetSid: string) {
     // Store vote (overwrites previous vote if any)
-    this.dayVotes.set(voterSid, targetSid);
+    this.dayVotes.setVote(voterSid, targetSid);
     console.log(`Player ${voterSid} voted to eliminate ${targetSid}`);
   }
 
@@ -467,7 +401,7 @@ export class Game {
     }
 
     // Validate old vote exists
-    const currentVote = this.werewolfVotes.get(voterSid);
+    const currentVote = this.werewolfVotes.getVote(voterSid);
 
     if (currentVote !== oldTargetSid) {
       throw new Error(
@@ -476,7 +410,7 @@ export class Game {
     }
 
     // Update vote
-    this.werewolfVotes.set(voterSid, newTargetSid);
+    this.werewolfVotes.setVote(voterSid, newTargetSid);
     console.log(
       `Werewolf ${voterSid} changed vote from ${oldTargetSid} to ${newTargetSid}`
     );
@@ -505,13 +439,9 @@ export class Game {
   }
 
   calculateWerewolfVoteTallies() {
-    const tallies: WerewolvesVoteState = {};
-
-    for (const targetSid of this.getRequiredWerewolfVotes().votes) {
-      tallies[targetSid] = (tallies[targetSid] || 0) + 1;
-    }
-
-    return tallies;
+    return this.werewolfVotes.tallies(
+      this.getRequiredWerewolfVotes().requiredSids
+    );
   }
 
   getWerewolfVoteTallies(): WerewolvesVoteState {
@@ -546,7 +476,7 @@ export class Game {
     return {
       requiredSids,
       votes: requiredSids.flatMap((sid) => {
-        const vote = this.werewolfVotes.get(sid);
+        const vote = this.werewolfVotes.getVote(sid);
 
         return vote === undefined ? [] : [vote];
       }),
@@ -573,7 +503,7 @@ export class Game {
   }
 
   getPlayersLover(player: Player) {
-    const lover = this.lovers.find((p) => p !== player);
+    const lover = this.lovers.getPartner(player);
 
     if (!lover) {
       throw new Error(`lover for ${player.getName()} not found`);
@@ -589,7 +519,7 @@ export class Game {
       throw new Error(`${sid} didn't match any player`);
     }
 
-    return this.isPlayerLover(player);
+    return this.lovers.isLover(player);
   }
 
   isHunterInLove() {
@@ -599,7 +529,7 @@ export class Game {
       return;
     }
 
-    const hasLover = this.isPlayerLover(hunter);
+    const hasLover = this.lovers.isLover(hunter);
 
     if (hasLover) {
       const lover = this.getPlayersLover(hunter);
@@ -618,8 +548,8 @@ export class Game {
   }
 
   isPartnerHunter() {
-    const survivingPartner = this.lovers.find(
-      (lover) => !this.deathManager.isInDeathQueue(lover.getSocketId())
+    const survivingPartner = this.lovers.findSurvivor((sid) =>
+      this.deathManager.isInDeathQueue(sid)
     );
 
     return survivingPartner?.getRole() === 'HUNTER';
@@ -638,10 +568,10 @@ export class Game {
 
       // Handle partner suicide if one lover dies
       if (
-        this.isPlayerLover(player) &&
+        this.lovers.isLover(player) &&
         pendingDeath.cause !== 'PARTNER_SUICIDE'
       ) {
-        const partner = this.getPartner(player);
+        const partner = this.lovers.getPartner(player);
 
         if (
           partner?.isAlive &&
@@ -700,13 +630,11 @@ export class Game {
   }
 
   isPlayerLover(player: Player) {
-    return this.lovers.includes(player);
+    return this.lovers.isLover(player);
   }
 
   getPartner(player: Player) {
-    return this.lovers.find(
-      (lover) => lover.getSocketId() !== player.getSocketId()
-    );
+    return this.lovers.getPartner(player);
   }
 
   assignRandomRoles() {
@@ -766,11 +694,11 @@ export class Game {
 
     this.handlePlayerDeath(player);
 
-    this.werewolfVotes.delete(socketId);
-    this.dayVotes.delete(socketId);
+    this.werewolfVotes.removeVote(socketId);
+    this.dayVotes.removeVote(socketId);
 
-    if (this.isPlayerLover(player)) {
-      const partner = this.getPartner(player);
+    if (this.lovers.isLover(player)) {
+      const partner = this.lovers.getPartner(player);
 
       if (partner?.isAlive) {
         this.deathManager.addPartnerSuicide(
@@ -858,13 +786,7 @@ export class Game {
   }
 
   calculateDayVoteTallies() {
-    const tallies: Record<string, number> = {};
-
-    for (const targetSid of this.dayVotes.values()) {
-      tallies[targetSid] = (tallies[targetSid] || 0) + 1;
-    }
-
-    return tallies;
+    return this.dayVotes.tallies();
   }
 
   hasAllPlayersVoted() {
@@ -876,20 +798,22 @@ export class Game {
 
     return (
       expectedVoters.length > 0 &&
-      expectedVoters.every((player) => this.dayVotes.has(player.getSocketId()))
+      expectedVoters.every((player) =>
+        this.dayVotes.hasVote(player.getSocketId())
+      )
     );
   }
 
   hasAnyDayVote() {
-    return this.dayVotes.size > 0;
+    return this.dayVotes.size() > 0;
   }
 
   hasPlayerDayVoted(socketId: string) {
-    return this.dayVotes.has(socketId);
+    return this.dayVotes.hasVote(socketId);
   }
 
   getWerewolfVoteOf(socketId: string) {
-    return this.werewolfVotes.get(socketId);
+    return this.werewolfVotes.getVote(socketId);
   }
 
   getDayVoteResult(): DayVoteResult {
@@ -987,12 +911,6 @@ export class Game {
   }
 
   checkIfWinner() {
-    // The game is only decided once every queued death has been resolved:
-    // alive counts are meaningless while victims are still in the queue
-    if (this.deathManager.getPendingDeaths().length > 0) {
-      return null;
-    }
-
     const villagers = this.deathManager
       .getTeamVillagers()
       .filter((p) => p.isAlive);
@@ -1001,211 +919,16 @@ export class Game {
       .getTeamWerewolves()
       .filter((p) => p.isAlive);
 
-    console.log('villagers alive', villagers.length);
-    console.log('werewolves alive', werewolves.length);
+    const livingWitch = villagers.find((p) => p.role === 'WITCH');
 
-    // An empty lobby has no winner; a total wipe still counts as a village
-    // win below — eradicating the werewolves is the village's win condition
-    if (this.players.size === 0) {
-      return null;
-    }
-
-    if (werewolves.length === 0) {
-      return 'villagers';
-    }
-
-    // Parity: wolves control every day vote from here, unless a living
-    // witch can still swing the numbers at night with a potion
-    if (werewolves.length >= villagers.length) {
-      const witch = villagers.find((player) => player.role === 'WITCH');
-
-      if (witch && (this.witchHasHealPotion || this.witchHasPoisonPotion)) {
-        return null; // Game continues
-      }
-
-      return 'werewolves';
-    }
-
-    return null; // Game continues
+    return checkWinner({
+      totalPlayers: this.players.size,
+      pendingDeathCount: this.deathManager.getPendingDeaths().length,
+      livingVillagerCount: villagers.length,
+      livingWerewolfCount: werewolves.length,
+      witchCanStillAct:
+        livingWitch !== undefined &&
+        (this.witchHasHealPotion || this.witchHasPoisonPotion),
+    });
   }
 }
-
-//   getWerewolfTarget() {
-//     if (!this.hasAllWerewolvesAgreed()) {
-//       return;
-//     }
-//
-//     const tallies = this.calculateWerewolfVoteTallies();
-//
-//     let maxVotes = 0;
-//     let targetSid: string | null = null;
-//
-//     for (const [playerName, votes] of Object.entries(tallies)) {
-//       if (votes > maxVotes) {
-//         maxVotes = votes;
-//         targetSid = playerName;
-//       }
-//     }
-//
-//     return targetSid;
-//   }
-//
-//   healWerewolfVictim() {
-//     this.deathManager.healWerewolvesVictim();
-//     this.witchHasHealPotion = false;
-//   }
-//
-//   witchKill(playerSid: string) {
-//     this.deathManager.addWitchPoison(playerSid);
-//     this.witchHasPoisonPotion = false;
-//   }
-//
-//   canWitchHeal();
-//   {
-//   return this.
-//   witchHasHealPotion;
-// }
-//
-// canWitchPoison();
-// {
-//   return this.witchHasPoisonPotion;
-// }
-//
-// calculateDayVoteTallies();
-// {
-//   const tallies: Record<string, number> = {};
-//
-//   for (const targetSid of this.dayVotes.values()) {
-//     tallies[targetSid] = (tallies[targetSid] || 0) + 1;
-//   }
-//
-//   return tallies;
-// }
-//
-// hasAllPlayersVoted();
-// {
-//   // For simplicity, we can determine this by checking expected number of votes
-//   // The frontend will send votes from all eligible players
-//   const expectedVoters = Array.from(this.players.keys()).filter((playerId) => {
-//     const player = this.players.get(playerId);
-//     return player?.isAlive;
-//   });
-//
-//   return this.dayVotes.size === expectedVoters.length;
-// }
-//
-// getDayVoteTarget();
-// {
-//   const tallies = this.calculateDayVoteTallies();
-//   console.log('day vote tallies', tallies);
-//
-//   let maxVotes = 0;
-//   let targetSid: string | null = null;
-//   let tieCount = 0;
-//
-//   // Find player(s) with most votes
-//   for (const [playerSid, votes] of Object.entries(tallies)) {
-//     if (votes > maxVotes) {
-//       maxVotes = votes;
-//       targetSid = playerSid;
-//       tieCount = 1;
-//     } else if (votes === maxVotes && maxVotes > 0) {
-//       tieCount++;
-//     }
-//   }
-//
-//   // Handle tie case (throw error for now as requested)
-//   if (tieCount > 1) {
-//     throw new Error('Tie in day vote - will be implemented later');
-//   }
-//
-//   if (!targetSid) {
-//     throw new Error('No valid target found in day vote');
-//   }
-//
-//   const player = this.players.get(targetSid);
-//
-//   if (!player) {
-//     throw new Error(`Player with sid ${targetSid} not found`);
-//   }
-//
-//   return player;
-// }
-//
-// handleDayVotePlayer(votedPlayer: Player)
-// {
-//   if (!votedPlayer) {
-//     throw new Error(`Player with sid ${votedPlayer} not found`);
-//   }
-//
-//   votedPlayer.setIsAlive(false);
-//
-//   // Kill player immediately (not pending death)
-//   this.alertPlayerOfDeath(votedPlayer.getSocketId());
-//
-//   // Clear votes for next round
-//   this.dayVotes.clear();
-// }
-//
-// alertWinnersAndLosers(winner: 'villagers' | 'werewolves')
-// {
-//   if (winner === 'villagers') {
-//     for (const player of this.deathManager.getTeamVillagers()) {
-//       this.io.to(player.getSocketId()).emit('alert:player-won');
-//     }
-//     this.alertLosers('werewolves');
-//   }
-//
-//   if (winner === 'werewolves') {
-//     for (const player of this.deathManager.getTeamWerewolves()) {
-//       this.io.to(player.getSocketId()).emit('alert:player-won');
-//     }
-//     this.alertLosers('werewolves');
-//   }
-// }
-//
-// alertLosers(loser: 'villagers' | 'werewolves')
-// {
-//   if (loser === 'villagers') {
-//     for (const player of this.deathManager.getTeamVillagers()) {
-//       this.io.to(player.getSocketId()).emit('alert:player-lost');
-//     }
-//   }
-//
-//   if (loser === 'werewolves') {
-//     for (const player of this.deathManager.getTeamWerewolves()) {
-//       this.io.to(player.getSocketId()).emit('alert:player-lost');
-//     }
-//   }
-// }
-//
-// checkIfWinner();
-// {
-//   const villagers = this.deathManager
-//     .getTeamVillagers()
-//     .filter((p) => p.isAlive);
-//   const werewolves = this.deathManager
-//     .getTeamWerewolves()
-//     .filter((p) => p.isAlive);
-//
-//   console.log('villagers alive', villagers.length);
-//   console.log('werewolves alive', werewolves.length);
-//
-//   if (werewolves.length === 0) {
-//     return 'villagers';
-//   }
-//
-//   if (werewolves.length === 1 && villagers.length === 1) {
-//     const lastVillager = villagers[0];
-//     if (
-//       lastVillager.getRole() === 'WITCH' &&
-//       (this.witchHasHealPotion || this.witchHasPoisonPotion)
-//     ) {
-//       return null; // Game continues
-//     }
-//     return 'werewolves';
-//   }
-//
-//   return null; // Game continues
-// }
-// }

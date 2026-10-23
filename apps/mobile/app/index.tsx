@@ -1,15 +1,14 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ImageBackground,
   Keyboard,
-  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
   Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { Backdrop, Banner, Button, Field } from '@/components/ui';
 import type { RoomEntry } from '@/hooks/room';
 import { useConnectionStore } from '@/hooks/use-connection-store';
 import { rooms } from '@/utils/rooms';
@@ -23,10 +22,13 @@ export default function RoomScreen() {
   const router = useRouter();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<'create' | 'join' | null>(null);
   const { recoveryFailed, setRecoveryFailed } = useConnectionStore();
 
-  const enter = async (attempt: () => Promise<RoomEntry>) => {
+  const enter = async (
+    kind: 'create' | 'join',
+    attempt: () => Promise<RoomEntry>
+  ) => {
     if (busy) {
       return;
     }
@@ -34,9 +36,9 @@ export default function RoomScreen() {
     Keyboard.dismiss();
     setRecoveryFailed(false);
     setError(null);
-    setBusy(true);
+    setBusy(kind);
     const entry = await attempt();
-    setBusy(false);
+    setBusy(null);
 
     if (entry.ok) {
       router.push('/join');
@@ -45,68 +47,64 @@ export default function RoomScreen() {
     }
   };
 
-  return (
-    <ImageBackground
-      className="flex-1"
-      resizeMethod="resize"
-      source={require('@/assets/join-screen-background.png')}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <SafeAreaView className="flex-1 items-center justify-center pb-24">
-          <View className="mt-80 w-72 items-center">
-            {recoveryFailed && (
-              <View className="mb-4 rounded-xl bg-amber-500/90 px-4 py-3">
-                <Text className="text-center font-semibold text-slate-900">
-                  Cette partie n'existe plus — créez-en une autre.
-                </Text>
-              </View>
-            )}
-            {error && (
-              <View className="mb-4 rounded-xl bg-red-500/90 px-4 py-3">
-                <Text className="text-center font-semibold text-white">
-                  {error}
-                </Text>
-              </View>
-            )}
-            <TouchableOpacity
-              className={`w-full rounded-lg px-8 py-4 ${
-                busy ? 'bg-slate-400/40' : 'bg-slate-200/50'
-              }`}
-              disabled={busy}
-              onPress={() => enter(() => rooms.createAndEnter())}
-            >
-              <Text className="text-center text-lg font-bold">
-                Créer une partie
-              </Text>
-            </TouchableOpacity>
+  const joinByCode = () => enter('join', () => rooms.joinByCode(code));
 
-            <Text className="mt-10 text-center text-2xl font-bold text-white">
-              Code de la partie
-            </Text>
-            <TextInput
+  return (
+    <Backdrop variant="artwork">
+      {/* Tapping outside the field closes the keyboard; not an a11y target */}
+      <Pressable
+        accessible={false}
+        className="flex-1"
+        onPress={Keyboard.dismiss}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          className="flex-1 justify-end px-6 pb-6"
+        >
+          <View className="gap-3">
+            {recoveryFailed && (
+              <Banner tone="warning">
+                Cette partie n'existe plus — créez-en une autre.
+              </Banner>
+            )}
+            {error && <Banner tone="error">{error}</Banner>}
+
+            <Button
+              disabled={busy === 'join'}
+              label="Créer une partie"
+              loading={busy === 'create'}
+              onPress={() => enter('create', () => rooms.createAndEnter())}
+            />
+
+            <View className="my-3 flex-row items-center gap-3">
+              <View className="h-px flex-1 bg-ink-600" />
+              <Text className="text-sm text-ink-300">
+                ou rejoindre avec un code
+              </Text>
+              <View className="h-px flex-1 bg-ink-600" />
+            </View>
+
+            <Field
+              accessibilityLabel="Code de la partie"
               autoCapitalize="characters"
               autoCorrect={false}
-              className="mt-4 h-16 w-full rounded-lg border-2 border-gray-100/50 bg-slate-600 pb-2 text-center text-2xl font-bold text-white"
+              className="tracking-[4px]"
               onChangeText={setCode}
-              onSubmitEditing={() => enter(() => rooms.joinByCode(code))}
+              onSubmitEditing={joinByCode}
               placeholder="ABCD-2345"
-              placeholderTextColor="#94a3b8"
+              returnKeyType="go"
               value={code}
             />
-            <TouchableOpacity
-              className={`mt-4 w-full rounded-lg px-8 py-4 ${
-                busy ? 'bg-slate-400/40' : 'bg-slate-200/50'
-              }`}
-              disabled={busy}
-              onPress={() => enter(() => rooms.joinByCode(code))}
-            >
-              <Text className="text-center text-lg font-bold">
-                {busy ? 'Connexion…' : 'Rejoindre'}
-              </Text>
-            </TouchableOpacity>
+            <Button
+              disabled={busy === 'create' || code.trim() === ''}
+              label="Rejoindre"
+              loading={busy === 'join'}
+              onPress={joinByCode}
+              variant="secondary"
+            />
           </View>
-        </SafeAreaView>
-      </TouchableWithoutFeedback>
-    </ImageBackground>
+        </KeyboardAvoidingView>
+      </Pressable>
+    </Backdrop>
   );
 }
